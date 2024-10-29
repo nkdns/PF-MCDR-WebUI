@@ -1,0 +1,16 @@
+* {
+    padding: 0;
+    margin: 0;
+    font-weight: 500;
+    overflow: scroll; /* 保留滚动功能 */
+    -ms-overflow-style: none; /* 针对IE和Edge隐藏滚动条 */
+    scrollbar-width: none; /* 针对Firefox隐藏滚动条 */
+}
+
+::-webkit-scrollbar {
+    display: none; /* 针对Chrome、Safari隐藏滚动条 */
+}
+
+input:focus {
+    outline: none;
+}
