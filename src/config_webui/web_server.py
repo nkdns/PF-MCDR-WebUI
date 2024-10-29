@@ -11,7 +11,7 @@ from starlette.responses import RedirectResponse
 from typing import Optional
 from pydantic import BaseModel
 
-from .constant import CONFIG
+from .constant import *
 from .server_util import *
 
 app = FastAPI()
@@ -46,12 +46,6 @@ def read_root():
 @app.get("/login", response_class=HTMLResponse)
 async def login_page(request: Request):
     return templates.TemplateResponse("login.html", {"request": request})
-
-class LoginData(BaseModel):
-    username: Optional[str] = None
-    password: Optional[str] = None
-    token: Optional[str] = None
-    remember: Optional[bool] = False
 
 # 处理登录请求
 @app.post("/login")
@@ -138,21 +132,19 @@ async def check_login_status(request: Request):
         return JSONResponse({"status": "error", "message": "User not logged in"}, status_code=401) # If not logged in, return an error response
 
 @app.get("/api/toggle_plugin")
-async def toggle_plugin(plugin_id:str, status:str):
+async def toggle_plugin(plugin_id:str, status:bool):
     reload_only_plugins = ["gugubot", "cq_qq_api"]
 
     server = app.state.server_interface
+    respond_status = None
 
     if plugin_id in reload_only_plugins:
         respond_status = server.reload_plugin(plugin_id)
-    else:
-        if status == "unloaded":
-            respond_status = server.unload_plugin(plugin_id)
-        elif status == "disabled":
-            respond_status = server.disable_plugin(plugin_id)
-        elif plugin_id in server.get_disabled_plugin_list():
-            respond_status = server.enable(plugin_id)
-        else:
+    elif status == True: # # -> disabled it
+        respond_status = server.disable_plugin(plugin_id)
+    elif status == False:
+        respond_status = server.enable_plugin(plugin_id)
+        if not respond_status:
             respond_status = server.load_plugin(plugin_id)
 
     if respond_status:
@@ -167,20 +159,15 @@ async def toggle_plugin(plugin_id:str, status:str):
 @app.get("/api/get_web_config")
 async def give_web_config():
     server = app.state.server_interface
-    config = server.load_config_simple("config.json", CONFIG)
+    config = server.load_config_simple("config.json", DEFALUT_CONFIG)
     return JSONResponse(config)
-
-class saveconfig(BaseModel):
-    action: str
-    port: Optional[str] 
-    superaccount: Optional[str]
 
 @app.post("/api/save_web_config")
 async def save_web_config(config: saveconfig):
-    web_config = app.state.server_interface.load_config_simple("config.json", CONFIG)
-    if config.action == "config":
+    web_config = app.state.server_interface.load_config_simple("config.json", DEFALUT_CONFIG)
+    if config.action == "config" and config.port:
         web_config['port'] = int(config.port)
-        web_config['super_admin_account'] = int(config.superaccount)
+        web_config['super_admin_account'] = int(config.superaccount) if config.superaccount else web_config['super_admin_account']
     elif config.action == "disable_admin_login_web":
         web_config['disable_other_admin'] = not web_config['disable_other_admin']
     elif config.action == "enable_temp_login_password":
@@ -191,16 +178,3 @@ async def save_web_config(config: saveconfig):
         return JSONResponse({"status": "success"})
     except Exception as e:
         return JSONResponse({"status": "fail", "message": e})
-
-def find_open_port():
-    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-        s.bind(('', 0))  # Bind to a free port provided by the host
-        return s.getsockname()[1]  # Get the port number
-
-async def start_fastapi(server):
-    import uvicorn
-    app.state.server_interface = server
-    config = uvicorn.Config(app, host="127.0.0.1", port=find_open_port(), log_level="warning")
-    server = uvicorn.Server(config)
-    await server.serve()
-
