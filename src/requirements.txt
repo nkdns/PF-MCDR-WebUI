@@ -1,0 +1,5 @@
+fastapi
+passlib
+pydantic
+starlette
+uvicorn

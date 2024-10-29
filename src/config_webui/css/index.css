@@ -1,0 +1,193 @@
+* {
+    padding: 0;
+    margin: 0;
+    color: #2b2b2b;
+    font-weight: 500;
+}
+
+#index #bg {
+    position: fixed;
+    bottom: 0;
+    right: 0;
+    z-index: -1;
+    height: 550px;
+}
+
+#index #bg img {
+    height: 550px;
+    /* 无法选中 */
+    pointer-events: none;
+}
+
+#index #bg a {
+    position: absolute;
+    bottom: 15px;
+    right: 20px;
+    background-color: rgb(255, 255, 255, 0.6);
+    padding: 2px 5px;
+    border-radius: 5px;
+    font-size: 13px;
+    color: #392f41;
+    backdrop-filter: blur(3px);
+    box-shadow: rgb(0, 0, 0, 0.1) 1px 1px 1px;
+    /* 去除下划线 */
+    text-decoration: none;
+    cursor: pointer;
+}
+
+#index .nav {
+    margin: 30px;
+    margin-top: 60px;
+    margin-bottom: 0px;
+    display: flex;
+    justify-content: space-between;
+}
+
+#index .nav .nav-left h2 {
+    font-size: 34px;
+}
+
+#index .nav .nav-left .nav-notice span {
+    font-size: 14px;
+}
+
+#index .nav .nav-right {
+    display: flex;
+    /* align-items: center; */
+}
+
+#index .nav .nav-right .nav-name {
+    margin-right: 8px;
+}
+
+#index .nav .nav-right .nav-name #nickname {
+    font-size: 34px;
+}
+
+#index .nav .nav-right .nav-name .nav-time {
+    font-size: 14px;
+    text-align: right;
+    font-weight: 500;
+}
+
+#index .nav #user-info #avatar {
+    width: 60px;
+    border-radius: 50%;
+    /* margin-top: -2px; */
+    margin: auto;
+}
+
+#index .nav #user-info #logout {
+    padding: 7px 10px;
+    border-radius: 10px;
+    background-color: #E9F1F6;
+    margin: auto;
+    font-size: 12px;
+    color: #a1afc9;
+    display: flex;
+    justify-content: center;
+    margin-top: 15px;
+    z-index: 1;
+    cursor: pointer;
+}
+
+#index .nav #user-info #logout::before {
+    content: '';
+    display: block;
+    width: 10px;
+    height: 10px;
+    position: absolute;
+    z-index: -1;
+    background-color: #E9F1F6;
+    margin-top: -10px;
+    transform: rotate(45deg);
+}
+
+#index .nav #user-info #logout:hover {
+    background-color: #44CEF6;
+    transform: scale(1.02);
+    color: #fff;
+}
+
+#index .nav #user-info #logout:hover::before {
+    background-color: #44CEF6;
+    transform: scale(1.02) rotate(45deg);
+}
+
+#index .tabs {
+    position: fixed;
+    left: 0;
+    top: 170px;
+}
+
+#index .tabs .tab-container {
+    background-color: #f0fcff;
+    box-shadow: rgb(0, 0, 0, 0.1) 2px 2px 4px;
+    border-radius: 15px;
+    height: 60vh;
+    width: 180px;
+    padding: 20px;
+    padding-left: 30px;
+    box-sizing: border-box;
+}
+
+#index .tabs .tab-container .tab {
+    width: 130px;
+    height: 40px;
+    text-align: center;
+    line-height: 40px;
+    margin: auto;
+    border-radius: 10px;
+    color: #75878a;
+    cursor: pointer;
+}
+
+#index .tabs .tab-container .tab:hover {
+    background-color: #e0f8ff;
+}
+
+#index .tabs .tab-container .bottom {
+    position: absolute;
+    bottom: 20px;
+}
+
+#index .tabs .tab-container .bottom .tab {
+    background-color: #a1afc9;
+    color: #fff;
+}
+
+#index .tabs .tab-container .select {
+    background-color: #44cef6 !important;
+    color: #fff;
+}
+
+#index .tabs .tab-container .top .unsatisfactory {
+    /* background-color: #fff; */
+    color: #e9e7ef;
+    pointer-events: none;
+}
+
+#index .content #content-iframe {
+    position: fixed;
+    width: calc(100vw - 180px - 100px);
+    height: calc(100vh - 180px - 50px);
+    border: none;
+    top: 180px;
+    left: 200px;
+    overflow: scroll; /* 保留滚动功能 */
+    -ms-overflow-style: none; /* 针对IE和Edge隐藏滚动条 */
+    scrollbar-width: none; /* 针对Firefox隐藏滚动条 */
+}
+
+#index .content #content-iframe::-webkit-scrollbar {
+    display: none; /* 针对Chrome、Safari隐藏滚动条 */
+}
+
+
+#index .footer {
+    position: fixed;
+    left: 30px;
+    bottom: 15px;
+    font-size: 14px;
+    color: #392f41;
+}

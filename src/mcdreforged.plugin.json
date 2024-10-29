@@ -1,0 +1,14 @@
+{
+	"id": "config_webui",
+	"version": "1.0.0",
+	"name": "config_webui",
+	"description": {
+		"en_us": "Config manerager using webui interface.",
+		"zh_cn": "使用webui来管理所有插件参数设置"
+	},
+	"author": [
+		"XueK__"
+	],
+	"link": "https://github.com/XueK66/config_webui",
+	"dependencies": {}
+}

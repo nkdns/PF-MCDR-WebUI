@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GUGUbot面板 | 登录</title>
+    <link rel="stylesheet" href="/css/login.css">
+    <link rel="stylesheet" href="/css/overall.css">
+    <script src="/js/overall.js"></script>
+    <script src="/js/jquery-3.6.0.min.js"></script>
+</head>
+<body>
+
+<div class="container">
+    <h1>欢迎登录</h1>
+
+    <!-- 错误提示框 -->
+    {% if error %}
+    <div class="error-box" id="errorBox">
+        {{ error }}
+    </div>
+    {% endif %}
+    
+    <form method="POST">
+        <div class="label-container">
+            <label for="account">账号</label>
+            <span class="hint">通常为您在GUGUbot配置中设置的管理员QQ号</span>
+        </div>
+        <input type="text" id="account" name="account">
+        
+        <div class="label-container">
+            <label for="password">密码</label>
+            <span class="hint">在机器人私聊发送 派发密码 获取登录密码</span>
+        </div>
+        <input type="password" id="password" name="password">
+        
+        <div class="login-options">或</div>
+
+        <div class="label-container">
+            <label for="temp_code">临时登录</label>
+            <span class="hint">在机器人私聊发送 #登录 获取临时登录码</span>
+        </div>
+        <input type="text" id="temp_code" name="temp_code">
+        
+
+        <div class="remember-me">
+            <input style="display: none;" type="checkbox" id="remember" name="remember">
+            <label for="remember" class="checkbox"><img src="src/checkbox_select.png"></label>
+            <label for="remember" class="remember-me-text">使用账号密码登录时记住我</label>
+        </div>
+        
+        <button type="submit" class="login-button">登录</button>
+    </form>
+
+    <div class="footer">
+        GUGUbot v2.0 Web v1.0.0
+    </div>
+</div>
+
+<!-- JavaScript 控制错误框显示和隐藏 -->
+<script src="js/login.js"></script>
+
+</body>
+</html>

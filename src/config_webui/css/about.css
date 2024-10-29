@@ -1,0 +1,78 @@
+#about .title:first-of-type {
+    margin-top: 0;
+}
+
+#about .title {
+    font-size: 24px;
+    margin-top: 15px;
+    margin-bottom: 10px;
+}
+
+#about .title .tip {
+    margin-left: 20px;
+}
+
+#about .tip {
+    color: #c2ccd0;
+    font-size: 12px;
+}
+
+#about .about-list .about-item {
+    margin: 10px 0;
+    background-color: #fff;
+    max-width: 520px;
+    height: 90px;
+    border-radius: 15px;
+    padding: 10px;
+    border: 2px solid #e9f1f6;
+    position: relative;
+}
+
+#about .about-list .about-item p,
+#about .about-list .about-item a {
+    font-size: 14px;
+}
+
+#about .about-list .about-item p {
+    height: calc(100% - 25px);
+}
+
+#about .about-list .about-item a {
+    padding: 5px 10px;
+    background-color: #e9f1f6;
+    border-radius: 10px;
+    text-decoration: none;
+    transition: all 0.3s ease-in-out;
+    margin-right: 10px;
+}
+
+#about .about-list .about-item a:hover {
+    background-color: #c2ccd0;
+    color: #fff;
+}
+
+#about .contribute table th {
+    text-align: left;
+}
+
+#about .contribute table th:first-of-type,
+#about .contribute table td:first-of-type {
+    min-width: 140px;
+}
+
+#about .contribute table td {
+    font-size: 14px;
+    height: 25px;
+}
+
+#about .contribute table td a {
+    color: #447cf6;
+    text-decoration: underline;
+}
+
+#about .contribute .hr {
+    width: 140px;
+    height: 2px;
+    background-color: #e9f1f6;
+    margin: 5px 0;
+}

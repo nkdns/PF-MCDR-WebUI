@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>首页</title>
+    <link rel="stylesheet" href="css/index.css">
+    <link rel="stylesheet" href="css/overall.css">
+    <script src="js/overall.js"></script>
+</head>
+<body id="index">
+    <!-- 背景图 -->
+    <div id="bg">
+        <img src="src/bg.png" alt="背景图">
+        <a href="https://api.paugram.com/wallpaper" target="_blank">《变态王子与不笑猫》</a>
+    </div>
+    <!-- <div id="login-info"></div> -->
+    <div class="nav">
+        <div class="nav-left">
+            <h2 class="nav-title">首页</h2>
+            <p class="nav-notice">
+                <span class="nav-notice-title">标题：</span>
+                <span class="nav-notice-text">内容</span>
+            </p>
+        </div>
+        <div class="nav-right">
+            <div class="nav-name">
+                <h2 id="nickname"></h2>
+                <p class="nav-time">获取时间中...</p>
+            </div>
+            <div id="user-info">
+                <img id="avatar" src="" alt="用户头像">
+                <div id="logout" onclick="logout()">退出登录</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 选项卡 -->
+    <div class="tabs">
+        <div class="tab-container">
+            <div class="top">
+                <div id="home" onclick="changeTab('home')" class="tab select" data-text="首页">首页</div>
+                <div id="gugubot" onclick="changeTab('gugubot')" class="tab" data-text="GUGUbot配置">GUGUbot</div>
+                <div id="cq" onclick="changeTab('cq')" class="tab" data-text="CQ-QQ-API配置">cq-qq-api</div>
+                <div id="mc" onclick="changeTab('mc')" class="tab unsatisfactory" data-text="MC服务器配置">MC服务器</div>
+                <div id="mcdr" onclick="changeTab('mcdr')" class="tab unsatisfactory" data-text="Mcdr配置">MCDR配置</div>
+                <div id="plugins" onclick="changeTab('plugins')" class="tab" data-text="所有插件">所有插件</div>
+                <div id="fabric" onclick="changeTab('fabric')" class="tab unsatisfactory" data-text="Fabric配置">Fabric (部分)</div>
+            </div>
+            <div class="bottom">
+                <div id="about" onclick="changeTab('about')" class="tab" data-text="关于&贡献">关于</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 内容 -->
+    <div class="content">
+        <iframe src="/home" frameborder="0" id="content-iframe"></iframe>
+    </div>
+
+    <p class="footer">GUGUbot v2.0.0 Web v1.0.0</p>
+
+    <script src="js/index.js"></script>
+</body>
+</html>

@@ -1,0 +1,113 @@
+#home .title:first-of-type {
+    margin-top: 0;
+}
+
+#home .title {
+    font-size: 24px;
+    margin-top: 15px;
+    margin-bottom: 10px;
+}
+
+#home .title .tip {
+    margin-left: 20px;
+}
+
+#home .tip {
+    color: #c2ccd0;
+    font-size: 12px;
+}
+
+#home .status {
+    margin-bottom: 20px;
+}
+
+#home .status #gugubot-status-list {
+    margin-bottom: 5px;
+}
+
+#home .status #plugins {
+    margin-top: 5px;
+}
+
+#home .status > div {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+#home .status > div .plugin {
+    flex: 0 1 auto;
+    min-width: 80px;
+    max-width: 300px;
+    padding: 3px 10px 5px;
+    border-radius: 8px;
+    text-align: center;
+}
+
+#home .status > div .run {
+    background-color: #00bc12;
+}
+
+#home .status > div .stop {
+    background-color: #e9e7ef;
+}
+
+#home .status > div .run span {
+    color: #fff;
+    font-size: 14px;
+}
+
+#home .status > div .stop span {
+    color: #a1afc9;
+    font-size: 14px;
+}
+
+#home .status > div .plugin span:last-of-type {
+    font-size: 10px;
+    margin-left: 10px;
+}
+
+#home .web-config .web-config-item {
+    display: flex;
+    margin-bottom: 15px;
+    margin-top: 5px;
+}
+
+#home .web-config .web-config-item > div {
+    margin-right: 20px;
+}
+
+#home .web-config .web-config-item > div > p {
+    font-size: 15px;
+    margin-bottom: 5px;
+}
+
+#home .web-config .web-config-item > div > input[type="text"] {
+    height: 30px;
+    display: block;
+    min-width: 120px;
+    max-width: 100%;
+    box-sizing: border-box;
+    padding: 5px 10px ;
+    border-radius: 8px;
+    border: none;
+    background-color: #e9f1f6;
+    font-size: 16px;
+}
+
+#home .web-config .web-config-item > div > .btn {
+    height: 30px;
+    width: 80px;
+    box-sizing: border-box;
+    padding: 3px 10px;
+    border-radius: 8px;
+    background-color: #fff;
+    color: #a1afc9;
+    border: 2px solid #e9f1f6;
+    cursor: pointer;
+    font-size: 14px;
+}
+
+#home .web-config .web-config-item > div > .disabled {
+    background-color: #e9f1f6;
+}
