@@ -34,16 +34,12 @@
     <div class="status">
         <div id="gugubot-status-list">
             <!-- 点击切换状态 -->
-            <div class="plugin run" id="gugubot" onclick="toggleStatus('gugubot')">
-                <span>GUGUbot</span>
-                <span>运行中</span>
-            </div>
-            <div class="plugin run" id="cq-qq-api" onclick="toggleStatus('cq-qq-api')">
-                <span>cq-qq-api</span>
+            <div class="plugin run" id="guguweb" onclick="toggleStatus('guguweb')">
+                <span>GUGU Web</span>
                 <span>运行中</span>
             </div>
         </div>
-        <p class="tip">无法关闭GUGUbot和cq-qq-api，点击只会重启插件</p>
+        <p class="tip">无法关闭WebUI插件，点击只会重启插件</p>
         <div id="plugins" class="plugins"></div>
     </div>
     <h2 class="title">近期配置<span class="tip">点击跳转对应设置项，此处记录近期5项修改</span></h2>
@@ -64,7 +60,7 @@
              </div>
              <!-- 按钮 -->
              <div>
-                <p>保存</p>
+                <p>&nbsp;</p>
                 <div class="btn" id="save" onclick="saveWebConfig('config')">保存设置</div>
              </div>
         </div>
@@ -77,22 +73,61 @@
             </div>
             <div>
                 <p>开启临时登录密码</p>
-                <div class="btn disabled" id="enable_temp_login_password" onclick="saveWebConfig('enable_temp_login_password')">点击禁用</div>
+                <div class="btn" id="enable_temp_login_password" onclick="saveWebConfig('enable_temp_login_password')">点击启用</div>
             </div>
         </div>
-        <div class="web-config-item">
+        <div id="controls" class="web-config-item">
             <!-- 按钮 -->
             <div>
                 <p>修改Web全局CSS样式</p>
-                <div class="btn" id="modify_web_global_css" onclick="modifyWebGlobal('css')">打开文件</div>
+                <div class="btn" id="load-css">打开文件</div>
             </div>
             <div>
                 <p>修改Web全局JS脚本</p>
-                <div class="btn" id="modify_web_global_js" onclick="modifyWebGlobal('js')">打开文件</div>
+                <div class="btn" id="load-js">打开文件</div>
             </div>
         </div>
         <p class="tip">CSS和JS将在head中引用,如果你有修改或者拓展HTML或者其它的需求请使用JS</p>
     </div>
+    <!-- 代码编辑器 -->
+    <div id="overlay"></div>
+    <div id="editor-popup">
+        <div id="popup-controls">
+            <button class="btn" id="cancel">取消编辑</button>
+            <select class="btn" style="width: auto;" id="theme-select">
+                <option value="monokai">Monokai</option>
+                <option value="chrome">Chrome</option>
+                <option value="clouds">Clouds</option>
+                <option value="crimson_editor">Crimson Editor</option>
+                <option value="dawn">Dawn</option>
+                <option value="eclipse">Eclipse</option>
+                <option value="solarized_light">Solarized Light</option>
+                <option value="github">GitHub</option>
+                <option value="cobalt">Cobalt</option>
+                <option value="twilight">Twilight</option>
+                <option value="dracula">Dracula</option>
+                <option value="ambiance">Ambiance</option>
+                <option value="chaos">Chaos</option>
+                <option value="clouds_midnight">Clouds Midnight</option>
+                <option value="cobalt">Cobalt</option>
+                <option value="idle_fingers">Idle Fingers</option>
+                <option value="kr_theme">KR Theme</option>
+                <option value="merbivore">Merbivore</option>
+                <option value="merbivore_soft">Merbivore Soft</option>
+                <option value="mono_industrial">Mono Industrial</option>
+                <option value="pastel_on_dark">Pastel on Dark</option>
+                <option value="solarized_dark">Solarized Dark</option>
+                <option value="terminal">Terminal</option>
+                <option value="tomorrow">Tomorrow</option>
+                <option value="tomorrow_night">Tomorrow Night</option>
+                <option value="tomorrow_night_blue">Tomorrow Night Blue</option>
+            </select>              
+            <button class="btn" id="save" title="CTRL+S">保存提交</button>
+        </div>
+        <div id="editor">/* 在这里输入代码 */</div>
+    </div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.4.12/ace.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.4.12/ext-language_tools.js"></script>
     <script src="js/home.js"></script>
 </body>
 </html>
