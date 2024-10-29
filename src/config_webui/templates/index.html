@@ -11,8 +11,8 @@
 <body id="index">
     <!-- 背景图 -->
     <div id="bg">
-        <img src="src/bg.png" alt="背景图">
-        <a href="https://api.paugram.com/wallpaper" target="_blank">《变态王子与不笑猫》</a>
+        <img id="bg-img" src="src/bg.png" alt="背景图">
+        <a id="bg-title" href="https://api.paugram.com/wallpaper" target="_blank">《变态王子与不笑猫》</a>
     </div>
     <!-- <div id="login-info"></div> -->
     <div class="nav">
@@ -25,11 +25,11 @@
         </div>
         <div class="nav-right">
             <div class="nav-name">
-                <h2 id="nickname"></h2>
-                <p class="nav-time">获取时间中...</p>
+                <h2 id="nickname">管理员 (临时登录)</h2>
+                <p class="nav-time">猫猫头正在凝视着你，好好干活吧！</p>
             </div>
             <div id="user-info">
-                <img id="avatar" src="" alt="用户头像">
+                <img id="avatar" src="src/default_avatar.jpg" alt="用户头像">
                 <div id="logout" onclick="logout()">退出登录</div>
             </div>
         </div>
@@ -55,7 +55,7 @@
 
     <!-- 内容 -->
     <div class="content">
-        <iframe src="/home" frameborder="0" id="content-iframe"></iframe>
+        <iframe src="" frameborder="0" id="content-iframe"></iframe>
     </div>
 
     <p class="footer">Web v0.0.1 内部测试版</p>
