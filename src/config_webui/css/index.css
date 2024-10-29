@@ -118,13 +118,15 @@
     position: fixed;
     left: 0;
     top: 170px;
+    width: 185px;
+    height: 505px;
 }
 
 #index .tabs .tab-container {
     background-color: #f0fcff;
     box-shadow: rgb(0, 0, 0, 0.1) 2px 2px 4px;
     border-radius: 15px;
-    height: 60vh;
+    height: 500px;
     width: 180px;
     padding: 20px;
     padding-left: 30px;
