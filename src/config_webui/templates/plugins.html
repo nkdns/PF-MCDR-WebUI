@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>s所有插件</title>
+    <link rel="stylesheet" href="css/overall.css">
+    <script src="js/overall.js"></script>
+    
+    <link rel="stylesheet" href="css/plugins.css">
+    <script>
+        function checkIfEmbedded() {
+            if (window.top == window.self) {
+                // 跳转到首页
+                window.location.href = "{{ index_path }}";
+            }
+        }
+
+        // 当页面失去焦点时检测
+        window.onblur = checkIfEmbedded;
+        // 页面加载时检测
+        window.onload = checkIfEmbedded;
+        // 页面尺寸发生变化时
+        window.onresize = checkIfEmbedded;
+        // 页面滚动时
+        window.onscroll = checkIfEmbedded;
+        // 页面内容发生变化时
+        window.onhashchange = checkIfEmbedded;
+        // 页面内容被点击时
+        window.onclick = checkIfEmbedded;
+    </script>
+</head>
+<body >
+    <div class="title-container">
+        <h2 class="title">插件列表</h2>
+        <button class="update-all" onclick="updateAll">全部更新</button>
+    </div>
+    
+
+    <div class="plugin-list"></div>
+
+    <script src="js/plugins.js"></script>
+</body>
+</html>
