@@ -46,38 +46,26 @@ function getUserInfo(username) {
         }
     }
 
-    if (username === "") {
-        // 发起请求获取用户信息
-        fetch(`https://api.usuuu.com/qq/${username}`)
-            .then(response => response.json())
-            .then(data => {
-                if (data.code === 200) {
-                    // 缓存用户信息到本地
-                    const userInfo = {
-                        name: data.data.name,
-                        avatar: data.data.avatar
-                    };
-                    localStorage.setItem('userInfo', JSON.stringify(userInfo));
-                    localStorage.setItem('userInfoTime', Date.now().toString());
+    // 发起请求获取用户信息
+    fetch(`https://api.usuuu.com/qq/${username}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.code === 200) {
+                // 缓存用户信息到本地
+                const userInfo = {
+                    name: data.data.name,
+                    avatar: data.data.avatar
+                };
+                localStorage.setItem('userInfo', JSON.stringify(userInfo));
+                localStorage.setItem('userInfoTime', Date.now().toString());
 
-                    // 展示用户信息
-                    displayUserInfo(userInfo);
-                } else {
-                    console.error('获取用户信息失败:', data.msg);
-                }
-            })
-            .catch(error => console.error('Error fetching user info:', error));
-    } else {
-        const userInfo = {
-            name: "temp_user",
-            avatar: "/src/bg.png"
-        };
-        localStorage.setItem('userInfo', JSON.stringify(userInfo));
-        localStorage.setItem('userInfoTime', Date.now().toString());
-
-        // 展示用户信息
-        displayUserInfo(userInfo);
-    }
+                // 展示用户信息
+                displayUserInfo(userInfo);
+            } else {
+                console.error('获取用户信息失败:', data.msg);
+            }
+        })
+        .catch(error => console.error('Error fetching user info:', error));
 }
 
 // 展示用户信息的辅助函数
@@ -122,7 +110,7 @@ function logout() {
 
 const owner = 'LoosePrince'; // 替换为你的 GitHub 用户名
 const repo = 'PF-GUGUbot-Web'; // 替换为你的仓库名
-const tag = 'notice'; // 替换为你想要获取的标签
+const tag = 'notice'; // 替换为公告的标签
 async function fetchReleases() {
 
 const url = `https://api.github.com/repos/${owner}/${repo}/releases/tags/${tag}?access_token=`;
@@ -131,7 +119,9 @@ const cachedData = JSON.parse(localStorage.getItem(cacheKey));
 const now = Date.now();
 
 // 检查缓存
-if (cachedData && (now - cachedData.timestamp < 7200000)) {
+const latest = cachedData && (now - cachedData.timestamp < 7200000);
+// const latest = 0; // 禁用缓存
+if (latest) {
     displayRelease(cachedData.data);
     return;
 }
@@ -146,17 +136,35 @@ try {
     localStorage.setItem(cacheKey, JSON.stringify({ timestamp: now, data }));
     displayRelease(data);
 } catch (error) {
-    console.error('获取 Releases 失败:', error);
-    document.querySelector('.nav-notice-text').innerText = '获取 Releases 失败';
+    console.error('获取 标题 失败:', error);
+    document.querySelector('.nav-notice-text').innerText = '获取 内容 失败';
 }
 }
 
 function displayRelease(release) {
-const titleElement = document.querySelector('.nav-notice-title');
-const contentElement = document.querySelector('.nav-notice-text');
+    const titleElement = document.querySelector('.nav-notice-title');
+    const contentElement = document.querySelector('.nav-notice-text');
+    const bgImageElement = document.querySelector('#bg-img');
+    const bgTitleElement = document.querySelector('#bg-title');
 
-titleElement.innerText = release.name + ': ';
-contentElement.innerHTML = `<a href="${release.html_url}" target="_blank">${release.body}</a>`;
+    // 解析 release.body 中的 JSON 内容
+    const releaseData = JSON.parse(release.body);
+
+    // 设置标题和内容链接
+    titleElement.innerText = release.name + ': ';
+    contentElement.innerText = releaseData.text;  // 设置 nav-notice-text 的文本内容
+
+    // 设置背景图片链接
+    if (bgImageElement) {
+        bgImageElement.src = releaseData.bg;
+    }
+
+    // 设置背景标题文本
+    if (bgTitleElement) {
+        bgTitleElement.innerText = releaseData.bgtitile;
+        // 设置链接
+        bgTitleElement.setAttribute('href', releaseData.bg);
+    }
 }
 
 // 调用函数
@@ -166,6 +174,8 @@ fetchReleases();
 const hash = window.location.hash.substring(1);
 if (hash) {
     changeTab(hash);
+} else {
+    changeTab('home');
 }
 
 
@@ -196,7 +206,6 @@ function changeTab(tab) {
     // 设置页面标题
     document.querySelector('.nav-title').innerText = tabText;
 
-
     //设置iframe的src
     if (tab === 'home') {
         document.getElementById('content-iframe').src = '/home';
@@ -215,4 +224,5 @@ function changeTab(tab) {
     } else if (tab === 'fabric') {
         document.getElementById('content-iframe').src = '/fabric';
     }
+    window.location.href = "/" + tab; // unknow
 }
