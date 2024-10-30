@@ -13,10 +13,6 @@ from .constant import *
 from .server_util import *
 
 app = FastAPI()
-app.mount("/src", StaticFiles(directory=f"{STATIC_PATH}/src"), name="static")
-app.mount("/js", StaticFiles(directory=f"{STATIC_PATH}/js"), name="static")
-app.mount("/css", StaticFiles(directory=f"{STATIC_PATH}/css"), name="static")
-
 
 # 模板引擎配置
 templates = Jinja2Templates(directory=f"{STATIC_PATH}/templates")

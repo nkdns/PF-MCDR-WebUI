@@ -5,10 +5,10 @@ from typing import Optional
 
 ALGORITHM = "HS256"
 SECRET_KEY = "guguweb" 
-STATIC_PATH = "./plugins/config_webui/config_webui"
+STATIC_PATH = "./guguweb_static"
 
-CSS_FILE = Path(STATIC_PATH) / "css" / "overall.css"
-JS_FILE = Path(STATIC_PATH) / "js" / "overall.js"
+CSS_FILE = Path(STATIC_PATH) / "custom" / "overall.css"
+JS_FILE = Path(STATIC_PATH) / "custom" / "overall.js"
 
 DEFALUT_CONFIG = {
     "port": 8000,
