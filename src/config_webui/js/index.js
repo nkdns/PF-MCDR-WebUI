@@ -46,6 +46,12 @@ function getUserInfo(username) {
         }
     }
 
+    // 只对数字账号发请求
+    const num = Number(username);
+    if (!Number.isInteger(num)){
+        return;
+    }
+
     // 发起请求获取用户信息
     fetch(`https://api.usuuu.com/qq/${username}`)
         .then(response => response.json())
@@ -224,5 +230,5 @@ function changeTab(tab) {
     } else if (tab === 'fabric') {
         document.getElementById('content-iframe').src = '/fabric';
     }
-    window.location.href = "/" + tab; // unknow
+    window.location.href = "#" + tab; // unknow
 }

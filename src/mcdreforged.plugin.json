@@ -1,14 +1,15 @@
 {
-	"id": "config_webui",
+	"id": "guguweb",
 	"version": "1.0.0",
-	"name": "config_webui",
+	"name": "GUGUWeb",
 	"description": {
 		"en_us": "Config manerager using webui interface.",
 		"zh_cn": "使用webui来管理所有插件参数设置"
 	},
 	"author": [
+		"LoosePrince",
 		"XueK__"
 	],
-	"link": "https://github.com/XueK66/config_webui",
+	"link": "https://github.com/LoosePrince/PF-MCDR-WebUI",
 	"dependencies": {}
 }

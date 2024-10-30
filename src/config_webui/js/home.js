@@ -1,9 +1,25 @@
 document.addEventListener("DOMContentLoaded", function() {
     // 获取插件状态
+    load_gugu_plugins();
+
+    // 获取其他插件
+    load_other_plugins();
+});
+
+function load_gugu_plugins() {
     fetch('/api/gugubot_plugins')
         .then(response => response.json())
         .then(data => {
             const statusList = document.getElementById("gugubot-status-list");
+            statusList.innerHTML = '';
+
+            const div = document.createElement("div");
+            div.classList.add("plugin");
+            div.classList.add('run');
+            div.id = "guguweb";
+            div.onclick = () => toggleStatus("guguweb");
+            div.innerHTML = `<span>GUGU Web</span><span>运行中</span>`;
+            statusList.appendChild(div);
 
             // 按照 id 排序
             const sortedGugubotPlugins = data.gugubot_plugins.sort((a, b) => {
@@ -39,13 +55,14 @@ document.addEventListener("DOMContentLoaded", function() {
             });
         })
         .catch(error => console.error('Error fetching gugubot plugins:', error));
+}
 
-    // 获取其他插件
+function load_other_plugins() {
     fetch('/api/plugins')
         .then(response => response.json())
         .then(data => {
             const pluginsDiv = document.getElementById("plugins");
-
+            pluginsDiv.innerHTML = '';
             // 按照 id 排序
             const sortedPlugins = data.plugins.sort((a, b) => {
                 return a.id - b.id;
@@ -80,7 +97,7 @@ document.addEventListener("DOMContentLoaded", function() {
             });
         })
         .catch(error => console.error('Error fetching plugins:', error));
-});
+}
 
 function toggleStatus(pluginId) {
     const plugin = document.getElementById(pluginId);
@@ -92,12 +109,11 @@ function toggleStatus(pluginId) {
     
     // 准备请求体
     const requestBody = JSON.stringify({
-        action: 'toggle_plugin',
         plugin_id: pluginId,
         status: !isRunning
     });
     
-    fetch('api.php', {
+    fetch('/api/toggle_plugin', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json'
@@ -107,36 +123,9 @@ function toggleStatus(pluginId) {
     .then(response => response.json())
     .then(data => {
         // 更新状态
-        if (data.status === 'error') {
-            alert(data.message);
-            // 恢复到原始状态
-            plugin.classList.toggle('run', isRunning);
-            plugin.classList.toggle('stop', !isRunning);
-        } else if (data.status === 'success') {
-            if (data.message === 'loaded') {
-                // 移除stop，添加run
-                plugin.classList.remove('stop');
-                plugin.classList.add('run');
-            }
-            // 根据返回的英文状态映射到中文
-            const statusTranslation = {
-                'loaded': '运行中',
-                'disabled': '已禁用',
-                'unloaded': '未加载'
-            };
-            const statusText = statusTranslation[data.message] || data.message;
-            plugin.querySelector('span:nth-child(2)').textContent = statusText;
-        }
+        load_gugu_plugins();
 
-        // 排序插件
-        sortPlugins('gugubot-status-list'); // 调用排序函数
-        sortPlugins('plugins');
-    })
-    .catch(error => {
-        console.error('Error toggling plugin:', error);
-        // 发生错误时恢复状态
-        plugin.classList.toggle('run', isRunning);
-        plugin.classList.toggle('stop', !isRunning);
+        load_other_plugins();
     });
 }
 
@@ -170,13 +159,13 @@ function sortPlugins(pluginLists) {
 
 // 请求api.php?action=loadwebconfig，获得json
 document.addEventListener("DOMContentLoaded", function() {
-    fetch('/api/loadwebconfig')
+    fetch('/api/get_web_config')
         .then(response => response.json())
         .then(data => {
             // 端口填入id="port"输入框
             document.getElementById('port').value = data.port;
             // 禁用管理后台登录填入id="disable_admin_login_after_run"输入框
-            document.getElementById('disable_admin_login_after_run').value = data.disable_admin_login_after_run;
+            document.getElementById('disable_admin_login_after_run').value = data.super_admin_account;
 
             // 点击禁用管理后台登录 基于值（true/false） 修改id="disable_admin_login_web"的内容和class（true添加enable）
             const disableAdminLoginBtn = document.getElementById('disable_admin_login_web');
@@ -291,9 +280,9 @@ const closePopup = () => {
 
 // 从服务器加载代码
 const loadFromServer = async (lang) => {
-    const action = lang === "css" ? "load_css" : "load_js";
+    const action = lang === "css" ? "css" : "js";
     try {
-        const response = await fetch(`/api/${action}`);  //load_css or load_js
+        const response = await fetch(`/api/load_file?file=${action}`);  //load_css or load_js
         const serverContent = await response.text();
         const localContent = localStorage.getItem(localStorageKey(lang));
         
@@ -316,9 +305,9 @@ const loadFromServer = async (lang) => {
 // 保存编辑内容到服务器
 const saveToServer = async () => {
     const content = editor.getValue();
-    const action = currentLang === "css" ? "save_css" : "save_js";
+    const action = currentLang === "css" ? "css" : "js";
     try {
-        await fetch("api.php", { //save_css or save_js
+        await fetch(`/api/save_file`, { //save_css or save_js
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ action, content })
@@ -341,7 +330,7 @@ const loadLocalContent = () => {
 // 事件监听
 document.getElementById("load-css").addEventListener("click", () => loadFromServer("css"));
 document.getElementById("load-js").addEventListener("click", () => loadFromServer("javascript"));
-document.getElementById("save").addEventListener("click", saveToServer);
+document.getElementById("save_file").addEventListener("click", saveToServer);
 document.getElementById("cancel").addEventListener("click", () => {
     localStorage.removeItem(localStorageKey(currentLang));
     closePopup();

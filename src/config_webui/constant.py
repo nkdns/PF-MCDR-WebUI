@@ -1,5 +1,14 @@
-from typing import Optional
+
+from pathlib import Path
 from pydantic import BaseModel
+from typing import Optional
+
+ALGORITHM = "HS256"
+SECRET_KEY = "guguweb" 
+STATIC_PATH = "./plugins/config_webui/config_webui"
+
+CSS_FILE = Path(STATIC_PATH) / "css" / "overall.css"
+JS_FILE = Path(STATIC_PATH) / "js" / "overall.js"
 
 DEFALUT_CONFIG = {
     "port": 8000,
@@ -16,5 +25,13 @@ class LoginData(BaseModel):
 
 class saveconfig(BaseModel):
     action: str
-    port: Optional[str] 
-    superaccount: Optional[str]
+    port: Optional[str] = None
+    superaccount: Optional[str] = None
+
+class toggleconfig(BaseModel):
+    plugin_id: str
+    status: bool
+
+class SaveContent(BaseModel):
+    action: str
+    content: str
