@@ -93,8 +93,9 @@
 #home .web-config .web-config-item > div > input[type="text"] {
     height: 30px;
     display: block;
-    min-width: 120px;
-    max-width: 100%;
+    min-width: 80px;
+    width: 80px;
+    max-width: 180px;
     box-sizing: border-box;
     padding: 5px 10px ;
     border-radius: 8px;
