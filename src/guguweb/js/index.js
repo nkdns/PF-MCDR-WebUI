@@ -232,3 +232,20 @@ function changeTab(tab) {
     }
     window.location.href = "#" + tab; // unknow
 }
+
+function fullScreen() {
+    // 给class="nav"和class="tabs"和class="content"的元素添加class
+    // 先判断是否有class="xxx-full"，有的话就移除，没有的话就添加
+    const nav = document.querySelector('.nav');
+    const tabs = document.querySelector('.tabs');
+    const content = document.querySelector('.content');
+    if (nav.classList.contains('nav-full')) {
+        nav.classList.remove('nav-full');
+        tabs.classList.remove('tabs-full');
+        content.classList.remove('content-full');
+    } else {
+        nav.classList.add('nav-full');
+        tabs.classList.add('tabs-full');
+        content.classList.add('content-full');
+    }
+}
