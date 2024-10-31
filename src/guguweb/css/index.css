@@ -5,6 +5,27 @@
     font-weight: 500;
 }
 
+#index #full-screen {
+    height: 30px;
+    width: 80px;
+    box-sizing: border-box;
+    padding: 3px 10px;
+    border-radius: 8px;
+    background-color: #fff;
+    color: #a1afc9;
+    border: 2px solid #e9f1f6;
+    cursor: pointer;
+    font-size: 14px;
+    transition: 0.2s all;
+    position: fixed;
+    left: 5px;
+    top: 5px;
+}
+
+#index #full-screen:hover {
+    transform: scale(0.95);
+}
+
 #index #bg {
     position: fixed;
     bottom: 0;
