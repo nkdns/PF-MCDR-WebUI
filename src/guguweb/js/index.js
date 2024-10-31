@@ -49,6 +49,12 @@ function getUserInfo(username) {
     // 只对数字账号发请求
     const num = Number(username);
     if (!Number.isInteger(num)){
+        const userInfo = {
+            name: username,
+            avatar: "src/default_avatar.jpg"
+        };
+        localStorage.setItem('userInfo', JSON.stringify(userInfo));
+        localStorage.setItem('userInfoTime', Date.now().toString());
         return;
     }
 
@@ -104,13 +110,13 @@ function displayUserInfo(userInfo) {
 window.onload = checkLogin;
 
 function logout() {
-    // 发送退出登录请求，不接收响应
-    fetch('/logout');
     // 清除本地缓存
     localStorage.removeItem('userInfo');
     localStorage.removeItem('userInfoTime');
     // 清除cookie
     document.cookie = 'username=; expires=Thu, 01 Jan 1970 00:00:00 GMT';
+    // 发送退出登录请求，不接收响应
+    fetch('/logout');
     window.location.href = '/login';
 }
 
@@ -119,32 +125,32 @@ const repo = 'PF-GUGUbot-Web'; // 替换为你的仓库名
 const tag = 'notice'; // 替换为公告的标签
 async function fetchReleases() {
 
-const url = `https://api.github.com/repos/${owner}/${repo}/releases/tags/${tag}?access_token=`;
-const cacheKey = 'githubReleases';
-const cachedData = JSON.parse(localStorage.getItem(cacheKey));
-const now = Date.now();
+    const url = `https://api.github.com/repos/${owner}/${repo}/releases/tags/${tag}?access_token=`;
+    const cacheKey = 'githubReleases';
+    const cachedData = JSON.parse(localStorage.getItem(cacheKey));
+    const now = Date.now();
 
-// 检查缓存
-const latest = cachedData && (now - cachedData.timestamp < 7200000);
-// const latest = 0; // 禁用缓存
-if (latest) {
-    displayRelease(cachedData.data);
-    return;
-}
-
-try {
-    const response = await fetch(url);
-    if (!response.ok) {
-        throw new Error('网络响应错误');
+    // 检查缓存
+    const latest = cachedData && (now - cachedData.timestamp < 7200000);
+    // const latest = 0; // 禁用缓存
+    if (latest) {
+        displayRelease(cachedData.data);
+        return;
     }
 
-    const data = await response.json();
-    localStorage.setItem(cacheKey, JSON.stringify({ timestamp: now, data }));
-    displayRelease(data);
-} catch (error) {
-    console.error('获取 标题 失败:', error);
-    document.querySelector('.nav-notice-text').innerText = '获取 内容 失败';
-}
+    try {
+        const response = await fetch(url);
+        if (!response.ok) {
+            throw new Error('网络响应错误');
+        }
+
+        const data = await response.json();
+        localStorage.setItem(cacheKey, JSON.stringify({ timestamp: now, data }));
+        displayRelease(data);
+    } catch (error) {
+        console.error('获取 标题 失败:', error);
+        document.querySelector('.nav-notice-text').innerText = '获取 内容 失败';
+    }
 }
 
 function displayRelease(release) {
@@ -230,7 +236,7 @@ function changeTab(tab) {
     } else if (tab === 'fabric') {
         document.getElementById('content-iframe').src = '/fabric';
     }
-    window.location.href = "#" + tab; // unknow
+    window.location.href = "#" + tab; 
 }
 
 function fullScreen() {
