@@ -216,6 +216,9 @@ function saveWebConfig(action) {
     .then(data => {
         if (data.status === 'success') {
             const btn = document.getElementById(action);
+            if (action === 'config') {
+                alert("保存成功");
+            }
             if (action !== 'config') { 
                 if (data.message) {
                     btn.classList.add('enable');
@@ -330,7 +333,7 @@ const loadLocalContent = () => {
 // 事件监听
 document.getElementById("load-css").addEventListener("click", () => loadFromServer("css"));
 document.getElementById("load-js").addEventListener("click", () => loadFromServer("javascript"));
-document.getElementById("save_file").addEventListener("click", saveToServer);
+document.getElementById("save-file").addEventListener("click", saveToServer);
 document.getElementById("cancel").addEventListener("click", () => {
     localStorage.removeItem(localStorageKey(currentLang));
     closePopup();
@@ -348,4 +351,27 @@ document.addEventListener("keydown", (event) => {
         event.preventDefault(); // 阻止默认保存操作
         saveToServer(); // 调用保存函数
     }
+});
+
+// 为每个文本输入框添加动态宽度调整
+function adjustWidth(input) {
+    const tempSpan = document.createElement("span");
+    tempSpan.style.visibility = "hidden";
+    tempSpan.style.position = "absolute";
+    tempSpan.style.whiteSpace = "pre"; // 保持空格宽度
+    tempSpan.textContent = input.value || " "; // 确保有最小宽度
+    document.body.appendChild(tempSpan);
+
+    // 根据 span 的宽度调整输入框宽度
+    input.style.width = `${tempSpan.offsetWidth + 20}px`;
+
+    // 清理临时的 span 元素
+    document.body.removeChild(tempSpan);
+}
+
+// 获取所有的文本输入框并添加事件监听器
+document.querySelectorAll('input[type="text"]').forEach(input => {
+    input.addEventListener('input', function () {
+        adjustWidth(input);
+    });
 });
