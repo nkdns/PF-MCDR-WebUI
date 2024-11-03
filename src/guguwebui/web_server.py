@@ -35,11 +35,23 @@ def read_root():
 async def login_page(request: Request):
     # token is valid
     token = request.cookies.get("token")
+    server:PluginServerInterface = app.state.server_interface
+    server_config = server.load_config_simple("config.json", DEFALUT_CONFIG)
+
+    disable_other_admin = server_config.get("disable_other_admin", False)
+    super_admin_account = server_config.get("super_admin_account")
+
+    def login_admin_check(account, disable_other_admin, super_admin_account):
+        if disable_other_admin and account != super_admin_account:
+            return False
+        return True
+
     if (
         token
         and user_db["token"].get(token)
         and user_db["token"][token]["expire_time"]
         > str(datetime.datetime.now(datetime.timezone.utc))
+        and login_admin_check(user_db["token"][token]["user_name"], disable_other_admin, super_admin_account)
     ):
         request.session["logged_in"] = True
         request.session["token"] = token
@@ -69,9 +81,19 @@ async def login(
         "login.html", {"request": request, "error": "未知错误。"}
     )
     now = datetime.datetime.now(datetime.timezone.utc)
+    server:PluginServerInterface = app.state.server_interface
+    server_config = server.load_config_simple("config.json", DEFALUT_CONFIG)
 
     # check account & password
     if account and password:
+        # check if super admin & only_super_admin
+        disable_other_admin = server_config.get("disable_other_admin", False)
+        super_admin_account = str(server_config.get("super_admin_account"))
+        if disable_other_admin and account != super_admin_account:
+            return templates.TemplateResponse(
+                "login.html", {"request": request, "error": "只有超级管理才能登录。"}
+            )
+
         if account in user_db["user"] and verify_password(
             password, user_db["user"][account]
         ):
@@ -103,6 +125,13 @@ async def login(
 
     # temp password
     elif temp_code:
+        # disallow temp_password check
+        allow_temp_password = server_config.get('allow_temp_password', True)
+        if not allow_temp_password:
+            return templates.TemplateResponse(
+                "login.html", {"request": request, "error": "已禁止临时登录码登录。"}
+            )
+
         if temp_code in user_db["temp"] and user_db["temp"][temp_code] > str(now):
             # token Generation
             token = secrets.token_hex(16)
