@@ -3,10 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>首页</title>
-    <link rel="stylesheet" href="css/overall.css">
-    <script src="js/overall.js"></script>
-    <link rel="stylesheet" href="css/gugubot.css">
+    <title>Fabric配置</title>
+    <link rel="stylesheet" href="custom/overall.css">
+    <script src="custom/overall.js"></script>
+    <!-- <link rel="stylesheet" href="css/fabric.css"> -->
     <style>
         * {
             padding: 0;
@@ -19,7 +19,7 @@
         function checkIfEmbedded() {
             if (window.top == window.self) {
                 // 跳转到首页
-                window.location.href = '/index';
+                window.location.href = "{{ index_path }}";
             }
         }
 
@@ -37,7 +37,7 @@
         window.onclick = checkIfEmbedded;
     </script>
 </head>
-<body id="gugubot">
+<body id="fabric">
     
 </body>
 </html>

@@ -5,6 +5,27 @@
     font-weight: 500;
 }
 
+#index #full-screen {
+    height: 30px;
+    width: 80px;
+    box-sizing: border-box;
+    padding: 3px 10px;
+    border-radius: 8px;
+    background-color: #fff;
+    color: #a1afc9;
+    border: 2px solid #e9f1f6;
+    cursor: pointer;
+    font-size: 14px;
+    transition: 0.2s all;
+    position: fixed;
+    left: 5px;
+    top: 5px;
+}
+
+#index #full-screen:hover {
+    transform: scale(0.95);
+}
+
 #index #bg {
     position: fixed;
     bottom: 0;
@@ -37,10 +58,14 @@
 
 #index .nav {
     margin: 30px;
-    margin-top: 60px;
+    margin-top: 40px;
     margin-bottom: 0px;
     display: flex;
     justify-content: space-between;
+}
+
+#index .nav-full {
+    display: none;
 }
 
 #index .nav .nav-left h2 {
@@ -111,20 +136,27 @@
 
 #index .nav #user-info #logout:hover::before {
     background-color: #44CEF6;
-    transform: scale(1.02) rotate(45deg);
+    transform: scale(1.1) rotate(45deg);
 }
 
 #index .tabs {
     position: fixed;
     left: 0;
     top: 170px;
+    width: 185px;
+    height: 505px;
+    transition: all 0.3s ease;
+}
+
+#index .tabs-full {
+    left: -140px;
 }
 
 #index .tabs .tab-container {
     background-color: #f0fcff;
     box-shadow: rgb(0, 0, 0, 0.1) 2px 2px 4px;
     border-radius: 15px;
-    height: 60vh;
+    height: 500px;
     width: 180px;
     padding: 20px;
     padding-left: 30px;
@@ -165,22 +197,31 @@
     /* background-color: #fff; */
     color: #e9e7ef;
     pointer-events: none;
+    display: none;
 }
 
 #index .content #content-iframe {
     position: fixed;
-    width: calc(100vw - 180px - 100px);
-    height: calc(100vh - 180px - 50px);
+    width: calc(100vw - 180px - 50px);
+    height: calc(100vh - 150px - 50px);
     border: none;
-    top: 180px;
+    top: 150px;
     left: 200px;
     overflow: scroll; /* 保留滚动功能 */
     -ms-overflow-style: none; /* 针对IE和Edge隐藏滚动条 */
     scrollbar-width: none; /* 针对Firefox隐藏滚动条 */
+    transition: all 0.3s ease;
 }
 
 #index .content #content-iframe::-webkit-scrollbar {
     display: none; /* 针对Chrome、Safari隐藏滚动条 */
+}
+
+#index .content-full #content-iframe {
+    top: 50px;
+    left: 70px;
+    width: calc(100vw - 100px);
+    height: calc(100vh - 100px);
 }
 
 

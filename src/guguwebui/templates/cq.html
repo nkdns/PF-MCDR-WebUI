@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CQ QQ API</title>
+    <link rel="stylesheet" href="css/cq.css">
+    <link rel="stylesheet" href="custom/overall.css">
+    <script src="custom/overall.js"></script>
+
+    <style>
+        * {
+            padding: 0;
+            margin: 0;
+            color: #2b2b2b;
+            font-weight: 500;
+        }
+    </style>
+    <script>
+        function checkIfEmbedded() {
+            if (window.top == window.self) {
+                // 跳转到首页
+                window.location.href = "{{ index_path }}";
+            }
+        }
+
+        // 当页面失去焦点时检测
+        window.onblur = checkIfEmbedded;
+        // 页面加载时检测
+        window.onload = checkIfEmbedded;
+        // 页面尺寸发生变化时
+        window.onresize = checkIfEmbedded;
+        // 页面滚动时
+        window.onscroll = checkIfEmbedded;
+        // 页面内容发生变化时
+        window.onhashchange = checkIfEmbedded;
+        // 页面内容被点击时
+        window.onclick = checkIfEmbedded;
+    </script>
+</head>
+<body id="cq">
+    <!-- 未安装插件提示 -->
+    <div id="no-plugin-hint" class="no-hint" style="display: none;">
+        <div class="no-plugin-hint-content">
+            <p>抱歉，您未安装cq插件无法进行配置，请前往<a href="https://mcdreforged.com/zh-CN/plugin/cq_qq_api" target="_blank">MCDR仓库</a>下载安装。</p>
+            <p>安装后请刷新页面。</p>
+            <p>或者点击以下按钮安装插件：</p>
+            <div onclick="installPlugin('cq_qq_api')" class="btn">安装插件</div>
+        </div>
+    </div>
+    <!-- 未运行插件提示 -->
+    <div id="no-run-hint" class="no-hint" style="display:none;">
+        <div class="no-run-hint-content">
+            <p>您未运行cq插件，请先运行插件。</p>
+            <div onclick="runPlugin('cq_qq_api')" class="btn">运行插件</div>
+        </div>
+    </div>
+    <div id="container" style="display: none;">
+        <h2 class="title">说明</h2>
+        <div class="about-list">
+            <div class="about-item">
+                <p>cq_qq_api: <span>基于CQ码的正向WebsocketQQ连接机器人，提供MCDR机器人插件接口，方便聊天类机器人的构建。</span></p>
+                <a href="https://mcdreforged.com/zh-CN/plugin/cq_qq_api" target="_blank">MCDR仓库</a>
+                <a href="https://github.com/XueK66/PF-cq_qq_api" target="_blank">Github仓库</a>
+                <a href="#about" id="cq_qq_api-version">版本：获取中...</a>
+            </div>
+        </div>
+        <div class="config" id="config">
+            <div id="./config/cq_qq_api/config.json"></div>
+        </div>
+        <div class="btn" id="save" onclick="saveConfig('./config/cq_qq_api/config.json', 'cq_qq_api')">保存设置</div>
+        <script>
+            // 加载配置
+            fetch('/api/load_config?path=./config/cq_qq_api/config.json')
+                .then(response => response.json())
+                .then(jsonData => {
+                    buildHtmlFromJson(jsonData, './config/cq_qq_api/config.json', 'cq_qq_api');
+                })
+                .catch(error => console.error('Error fetching data:', error));
+        </script>
+        <script>
+            // 调用 GET /api/gugubot_plugins
+            document.addEventListener("DOMContentLoaded", function () {
+                // 获取插件状态
+                set_gugu_plugin('cq_qq_api') 
+            });
+        </script>
+        <script src="js/plugins.js"></script>
+    </div>
+    <pre id="JSON">
+
+    </pre>
+    
+</body>
+</html>
