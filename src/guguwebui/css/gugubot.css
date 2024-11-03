@@ -1,0 +1,192 @@
+:is(#gugubot-page, #cq) .title:first-of-type {
+    margin-top: 0;
+}
+
+:is(#gugubot-page, #cq) .title {
+    font-size: 24px;
+    margin-top: 15px;
+    margin-bottom: 10px;
+}
+
+:is(#gugubot-page, #cq) .title .tip {
+    margin-left: 20px;
+}
+
+:is(#gugubot-page, #cq) .tip {
+    color: #c2ccd0;
+    font-size: 12px;
+    margin-left: 5px;
+}
+
+:is(#gugubot-page, #cq) .about-list .about-item {
+    margin: 10px 0;
+    background-color: #fff;
+    max-width: 520px;
+    height: 90px;
+    border-radius: 15px;
+    padding: 10px;
+    border: 2px solid #e9f1f6;
+    position: relative;
+}
+
+:is(#gugubot-page, #cq) .about-list .about-item p,
+:is(#gugubot-page, #cq) .about-list .about-item a {
+    font-size: 14px;
+}
+
+:is(#gugubot-page, #cq) .about-list .about-item p {
+    height: calc(100% - 25px);
+}
+
+:is(#gugubot-page, #cq) .about-list .about-item a {
+    padding: 5px 10px;
+    background-color: #e9f1f6;
+    border-radius: 10px;
+    text-decoration: none;
+    transition: all 0.3s ease-in-out;
+    margin-right: 10px;
+}
+
+:is(#gugubot-page, #cq) .about-list .about-item a:hover {
+    background-color: #c2ccd0;
+    color: #fff;
+}
+
+
+:is(#gugubot-page, #cq) .config .config-item,
+:is(#gugubot-page, #cq) .config .config-item-child {
+    display: flex;
+    margin-bottom: 15px;
+    margin-top: 5px;
+    /* 自动换行 */
+    flex-wrap: wrap;
+}
+
+:is(#gugubot-page, #cq) .config .config-item-child > div {
+    margin-right: 10px;
+    min-width: 170px;
+}
+
+.Group {
+    border: 2px solid #e9f1f6;
+    border-radius: 15px;
+    padding: 10px;
+    background-color: #fff;
+    margin-bottom: 5px;
+}
+
+:is(#gugubot-page, #cq) .config .config-item > div {
+    margin-right: 20px;
+    min-width: 180px;
+}
+
+:is(#gugubot-page, #cq) .config div > p {
+    font-size: 15px;
+    margin-bottom: 5px;
+    background: #fff;
+    padding: 0 5px 2px;
+    border-radius: 5px;
+    margin-top: 10px;
+}
+
+:is(#gugubot-page, #cq) .config .config-item-input {
+    display: flex;
+}
+
+:is(#gugubot-page, #cq) .config .input-container {
+    display: flex;
+}
+
+:is(#gugubot-page, #cq) .config input[type="text"] {
+    height: 30px;
+    display: block;
+    min-width: 80px;
+    width: 80px;
+    max-width: 180px;
+    box-sizing: border-box;
+    padding: 5px 10px ;
+    border-radius: 8px;
+    border: none;
+    background-color: #e9f1f6;
+    font-size: 16px;
+    margin-right: 2px;
+}
+
+:is(#gugubot-page, #cq) .config input[type="checkbox"] {
+    width: 0;
+    height: 30px;
+}
+
+/* 选中状态 */
+:is(#gugubot-page, #cq) .config input[type="checkbox"]::after {
+    position: absolute;
+    content: "点击开启";
+    color: #2b2b2b;
+    height: 30px;
+    width: 80px;
+    box-sizing: border-box;
+    padding: 3px 10px;
+    border-radius: 8px;
+    background-color: #fff;
+    color: #a1afc9;
+    border: 2px solid #e9f1f6;
+    cursor: pointer;
+    font-size: 14px;
+    transition: 0.2s all;
+}
+
+:is(#gugubot-page, #cq) .config input[type="checkbox"]:hover::after {
+    transform: scale(0.95);
+}
+
+:is(#gugubot-page, #cq) .config input[type="checkbox"]:checked::after {
+    content: "点击关闭";
+    background-color: #e9f1f6;
+}
+
+:is(#gugubot-page, #cq) .config div button {
+    width: 25px;
+    border: 0;
+    background: #E9F1F6;
+    cursor: pointer;
+    margin: 5px;
+    margin-left: -35px;
+    margin-right: 10px;
+}
+
+
+:is(#gugubot-page, #cq) .btn {
+    height: 30px;
+    width: 80px;
+    box-sizing: border-box;
+    padding: 3px 10px;
+    border-radius: 8px;
+    background-color: #fff;
+    color: #a1afc9;
+    border: 2px solid #e9f1f6;
+    cursor: pointer;
+    font-size: 14px;
+    transition: 0.2s all;
+}
+
+:is(#gugubot-page, #cq) .btn:hover {
+    transform: scale(0.95);
+}
+
+:is(#gugubot-page, #cq) .btn.enable {
+    background-color: #e9f1f6;
+}
+
+:is(#gugubot-page, #cq) .no-hint {
+    max-width: 520px;
+    background: #fff;
+    padding: 10px;
+    border-radius: 15px;
+    border: 2px solid #e9f1f6;
+    font-size: 14px;
+    color: #a1afc9;
+}
+
+:is(#gugubot-page, #cq) .no-hint p{
+    margin-bottom: 5px;
+}

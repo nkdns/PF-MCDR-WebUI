@@ -24,7 +24,6 @@ function checkLogin() {
         });
 }
 
-
 function getUserInfo(username) {
     const cachedUserInfo = localStorage.getItem('userInfo');
     const cachedTime = localStorage.getItem('userInfoTime');
@@ -55,6 +54,8 @@ function getUserInfo(username) {
         };
         localStorage.setItem('userInfo', JSON.stringify(userInfo));
         localStorage.setItem('userInfoTime', Date.now().toString());
+        // 展示用户信息
+        displayUserInfo(userInfo);
         return;
     }
 
@@ -82,7 +83,9 @@ function getUserInfo(username) {
 
 // 展示用户信息的辅助函数
 function displayUserInfo(userInfo) {
-    document.getElementById('nickname').innerText = userInfo.name;
+    if (userInfo.name !== "tempuser") {
+        document.getElementById('nickname').innerText = userInfo.name;
+    }
     const avatar = document.getElementById('avatar');
     avatar.src = userInfo.avatar;
     avatar.style.display = 'block'; // 显示头像
@@ -107,17 +110,23 @@ function displayUserInfo(userInfo) {
 }
 
 // 页面加载时检查登录状态
-window.onload = checkLogin;
+window.onload = function() {
+    // 页面及其所有资源已加载完毕
+    checkLogin();
+};
 
 function logout() {
     // 清除本地缓存
     localStorage.removeItem('userInfo');
     localStorage.removeItem('userInfoTime');
     // 清除cookie
-    document.cookie = 'username=; expires=Thu, 01 Jan 1970 00:00:00 GMT';
+    document.cookie = 'token=; expires=Thu, 01 Jan 1970 00:00:00 GMT';
     // 发送退出登录请求，不接收响应
-    fetch('/logout');
-    window.location.href = '/login';
+    fetch('/logout')
+    .then(
+        window.location.href = "/login"
+    );
+
 }
 
 const owner = 'LoosePrince'; // 替换为你的 GitHub 用户名

@@ -160,3 +160,9 @@
     background: #fff;
     border-bottom: 2px solid #e9f1f6;
 }
+
+/* 提示框的渐隐动画 */
+@keyframes fadeOut {
+    from { opacity: 1; }
+    to { opacity: 0; }
+}

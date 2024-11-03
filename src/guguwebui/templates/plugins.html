@@ -3,10 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>首页</title>
+    <title>s所有插件</title>
     <link rel="stylesheet" href="custom/overall.css">
     <script src="custom/overall.js"></script>
-    <link rel="stylesheet" href="css/home.css">
+    
+    <link rel="stylesheet" href="css/plugins.css">
     <script>
         function checkIfEmbedded() {
             if (window.top == window.self) {
@@ -29,67 +30,30 @@
         window.onclick = checkIfEmbedded;
     </script>
 </head>
-<body id="home">
-    <h2 class="title">状态<span class="tip">点击切换运行状态</span></h2>
-    <div class="status">
-        <!-- 插件列表 -->
-        <div id="gugubot-status-list"></div>
+<body id="plugins">
 
-        <p class="tip">无法关闭WebUI插件，点击只会重启插件</p>
-        <div id="plugins" class="plugins"></div>
+    <div class="about-list">
+        <h2>插件列表<span class="tip">可以在此处进行全部插件的通用化配置，注意，由于是通用化配置，所以不可能支持所有的配置！</span></h2>
+        <a href="https://mcdreforged.com/zh-CN/plugin/" target="_blank">插件仓库</a>
+        <a href="#" onclick="loadPlugins();return false;">刷新插件列表</a>
     </div>
-    <h2 class="title">近期配置<span class="tip">点击跳转对应设置项，此处记录近期5项修改</span></h2>
-    <div class="plugins-config">
-        暂未开放
+    
+    <div id="plugin-list"></div>
+
+    <div id="pagination"></div>
+
+    <h2>配置列表<span class="tip">请点击上方插件列表的“插件配置”按钮加载文件列表</span></h2>
+    <div id="config" class="modal">
+
     </div>
-    <h2 class="title">Web配置<span class="tip">修改不会立即生效，需要重启GUGUbot</span></h2>
-    <div class="web-config">
-        <div class="web-config-item">
-            <!-- 输入框 -->
-             <div>
-                <p>端口</p>
-                <input type="text" id="port" value="">
-             </div>
-             <div>
-                <p>禁止管理员登录后运行登录的账号</p>
-                <input type="text" id="disable_admin_login_after_run" value="">
-             </div>
-             <!-- 按钮 -->
-             <div>
-                <p>&nbsp;</p>
-                <div class="btn" id="save" onclick="saveWebConfig('config')">保存设置</div>
-             </div>
-        </div>
-        <p class="tip">以上两项为必填项，修改账号请仔细核对，以防无法登录</p>
-        <div class="web-config-item">
-            <!-- 按钮 -->
-            <div>
-                <p>禁止管理员登录Web</p>
-                <div class="btn" id="disable_admin_login_web" onclick="saveWebConfig('disable_admin_login_web')">点击启用</div>
-            </div>
-            <div>
-                <p>开启临时登录密码</p>
-                <div class="btn" id="enable_temp_login_password" onclick="saveWebConfig('enable_temp_login_password')">点击启用</div>
-            </div>
-        </div>
-        <div id="controls" class="web-config-item">
-            <!-- 按钮 -->
-            <div>
-                <p>修改Web全局CSS样式</p>
-                <div class="btn" id="load-css">打开文件</div>
-            </div>
-            <div>
-                <p>修改Web全局JS脚本</p>
-                <div class="btn" id="load-js">打开文件</div>
-            </div>
-        </div>
-        <p class="tip">CSS和JS将在head中引用,如果你有修改或者拓展HTML或者其它的需求请使用JS</p>
-    </div>
+
+    <pre id="JSON"></pre>
+
     <!-- 代码编辑器 -->
     <div id="overlay"></div>
     <div id="editor-popup">
         <div id="popup-controls">
-            <button class="btn" id="cancel">取消编辑</button>
+            <button class="btn" id="cancel">返回</button>
             <select class="btn" style="width: auto;" id="theme-select">
                 <option value="monokai">Monokai</option>
                 <option value="chrome">Chrome</option>
@@ -124,6 +88,56 @@
     </div>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.4.12/ace.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.4.12/ext-language_tools.js"></script>
-    <script src="js/home.js"></script>
+    <script>
+        // 编辑器
+        const editor = ace.edit("editor");
+        const overlay = document.getElementById("overlay");
+        const editorPopup = document.getElementById("editor-popup");
+        let current_path = '';
+        const localStorageKey = (current_path) => `editor_content_${current_path}`;
+
+        // 读取本地存储中的主题
+        const savedTheme = localStorage.getItem('editor_theme');
+        if (savedTheme) {
+            editor.setTheme("ace/theme/" + savedTheme);
+        } else {
+            editor.setTheme("ace/theme/monokai"); // 默认主题
+        }
+
+        editor.setOptions({
+            enableBasicAutocompletion: true,
+            enableLiveAutocompletion: true,
+            fontSize: "14px",
+            useSoftTabs: true,
+        });
+
+        // 主题选择事件
+        document.getElementById("theme-select").addEventListener("change", function() {
+            const selectedTheme = this.value;
+            editor.setTheme("ace/theme/" + selectedTheme);
+            localStorage.setItem('editor_theme', selectedTheme); // 缓存主题到本地
+        });
+
+        // 事件监听
+        document.getElementById("save-file").addEventListener("click", () => saveToServer());
+        document.getElementById("cancel").addEventListener("click", () => {
+            localStorage.removeItem(localStorageKey(current_path));
+            closePopup();
+        });
+
+        // 输入时实时保存到本地存储
+        editor.on("input", () => {
+            localStorage.setItem(localStorageKey(current_path), editor.getValue());
+        });
+    </script>
+
+    <script>
+        const itemsPerPage = 7;
+        let currentPage = 1;
+    </script>
+    <script src="js/plugins.js"></script>
+    <script>
+        loadPlugins();
+    </script>
 </body>
 </html>

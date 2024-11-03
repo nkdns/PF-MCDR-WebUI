@@ -16,9 +16,8 @@ function load_gugu_plugins() {
             const div = document.createElement("div");
             div.classList.add("plugin");
             div.classList.add('run');
-            div.id = "guguweb";
-            div.onclick = () => toggleStatus("guguweb");
-            div.innerHTML = `<span>GUGU Web</span><span>运行中</span>`;
+            div.id = "guguwebui";
+            div.innerHTML = `<span>GUGUWebUI</span><span>运行中</span>`;
             statusList.appendChild(div);
 
             // 按照 id 排序
@@ -134,8 +133,8 @@ function sortPlugins(pluginLists) {
     const plugins = Array.from(pluginList.children);
 
     // 找到特定 ID 的插件
-    const fixedPlugin = plugins.find(plugin => plugin.id === 'guguweb');
-    const otherPlugins = plugins.filter(plugin => plugin.id !== 'guguweb');
+    const fixedPlugin = plugins.find(plugin => plugin.id === 'guguwebui');
+    const otherPlugins = plugins.filter(plugin => plugin.id !== 'guguwebui');
 
     // 按状态和 ID 对其他插件排序
     otherPlugins.sort((a, b) => {
@@ -217,7 +216,7 @@ function saveWebConfig(action) {
         if (data.status === 'success') {
             const btn = document.getElementById(action);
             if (action === 'config') {
-                alert("保存成功");
+                showAutoCloseAlert("保存成功", "#00BC12");
             }
             if (action !== 'config') { 
                 if (data.message) {
@@ -235,6 +234,28 @@ function saveWebConfig(action) {
     .catch(error => {
         console.error('Error:', error);
     });
+}
+
+function showAutoCloseAlert(message, backgroundColor) {
+    // 创建一个 div 元素用于显示消息
+    const alertBox = document.createElement('div');
+    alertBox.textContent = message;
+    alertBox.style.position = 'fixed';
+    alertBox.style.top = '60px';
+    alertBox.style.right = '20px';
+    alertBox.style.backgroundColor = backgroundColor;
+    alertBox.style.color = 'white';
+    alertBox.style.padding = '15px';
+    alertBox.style.borderRadius = '5px';
+    alertBox.style.zIndex = '1000';
+    alertBox.style.animation = "fadeOut 5s ease-out forwards";
+    
+    document.body.appendChild(alertBox);
+
+    // 自动关闭提示框
+    setTimeout(() => {
+        alertBox.remove();
+    }, 5000); // 5秒后自动关闭
 }
 
 // 编辑器
@@ -316,7 +337,7 @@ const saveToServer = async () => {
             body: JSON.stringify({ action, content })
         });
         localStorage.removeItem(localStorageKey(currentLang));
-        alert("保存成功");
+        showAutoCloseAlert("保存成功", "#00BC12");
     } catch (error) {
         alert("保存失败：" + error);
     }
@@ -330,6 +351,7 @@ const loadLocalContent = () => {
     }
 };
 
+
 // 事件监听
 document.getElementById("load-css").addEventListener("click", () => loadFromServer("css"));
 document.getElementById("load-js").addEventListener("click", () => loadFromServer("javascript"));
@@ -337,7 +359,6 @@ document.getElementById("save-file").addEventListener("click", saveToServer);
 document.getElementById("cancel").addEventListener("click", () => {
     localStorage.removeItem(localStorageKey(currentLang));
     closePopup();
-    alert("已取消编辑并清除本地缓存");
 });
 
 // 输入时实时保存到本地存储
