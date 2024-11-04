@@ -44,6 +44,7 @@ class LoginData(BaseModel):
 
 class saveconfig(BaseModel):
     action: str
+    host: Optional[str] = None
     port: Optional[str] = None
     superaccount: Optional[str] = None
 

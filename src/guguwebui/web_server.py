@@ -364,7 +364,8 @@ async def get_web_config(token_valid: bool = Depends(verify_token)):
     server = app.state.server_interface
     config = server.load_config_simple("config.json", DEFALUT_CONFIG)
     return JSONResponse(
-        {
+        {   
+            "host": config["host"],
             "port": config["port"],
             "super_admin_account": config["super_admin_account"],
             "disable_admin_login_web": config["disable_other_admin"],
@@ -382,6 +383,7 @@ async def save_web_config(
     )
     # change port & account
     if config.action == "config" and config.port:
+        web_config["host"] = config.host
         web_config["port"] = int(config.port)
         web_config["super_admin_account"] = (
             int(config.superaccount)
