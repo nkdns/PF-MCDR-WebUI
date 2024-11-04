@@ -27,6 +27,7 @@ DEFALUT_DB = {
     "temp": {}
 }
 DEFALUT_CONFIG = {
+    "host": "127.0.0.1",
     "port": 8000,
     "super_admin_account": 123456789123456789,
     "disable_other_admin": False,

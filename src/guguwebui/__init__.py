@@ -12,22 +12,24 @@ from .web_server import *
 def on_load(server: PluginServerInterface, old):
     global web_server_interface, port
 
-    port = server.load_config_simple("config.json", DEFALUT_CONFIG)['port']
-
     server.logger.info("[MCDR WebUI] 启动 WebUI 中...")
-    register_command(server)
 
-    amount_static_files(server)
+    plugin_config = server.load_config_simple("config.json", DEFALUT_CONFIG)
+    host = plugin_config['host']
+    port = plugin_config['port']
+    register_command(server) # register MCDR command
+
+    amount_static_files(server) # move static resource
     app.mount("/src", StaticFiles(directory=f"{STATIC_PATH}/src"), name="static")
     app.mount("/js", StaticFiles(directory=f"{STATIC_PATH}/js"), name="static")
     app.mount("/css", StaticFiles(directory=f"{STATIC_PATH}/css"), name="static")
     app.mount("/custom", StaticFiles(directory=f"{STATIC_PATH}/custom"), name="static")
-    app.state.server_interface = server
-    config = uvicorn.Config(app, host="127.0.0.1", port=port, log_level="warning")
-
+    app.state.server_interface = server # save server into app.state
+    
+    config = uvicorn.Config(app, host=host, port=port, log_level="warning")
     web_server_interface = ThreadedUvicorn(config)
 
-    server.logger.info(f"[MCDR WebUI] 网页地址: http://127.0.0.1:{port}")
+    server.logger.info(f"[MCDR WebUI] 网页地址: http://{host}:{port}")
     web_server_interface.start()
 
 
@@ -65,6 +67,6 @@ def register_command(server:PluginServerInterface):
             Literal('temp').runs(lambda src, ctx: get_temp_password_command(src, ctx, port))
         )
     )
-    server.register_help_message('!!webui create <account> <password>','注册 guguwebui 账户')
+    server.register_help_message('!!webui create <account> <password>', '注册 guguwebui 账户')
     server.register_help_message('!!webui change <account> <old password> <new password>', '修改 guguwebui 账户密码')
     server.register_help_message('!!webui temp', '获取 guguwebui 临时密码')
