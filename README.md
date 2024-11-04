@@ -13,7 +13,19 @@
   - yml文件识别每项上一行注释作为中文标题，使用 `::` 分割，第二项为副标题，例 `标题::副标题` ，请注意，使用的是英文的符号；
   - json文件需要创建 `需要加标题的配置文件名_note.josn` 例如 `abc_note.json` 则会为 `abc.json` 创建中文标题，使用 `[标题,副标题]` 创建标题和副标题
 
+**自定义：** 支持全局css和js配置文件，在首页提供在线编辑。
+
 ## 示例图
+
+> 第1张和第7张为内测用户提供
+
+![image](https://github.com/user-attachments/assets/fdcf5cf2-549a-4b83-a260-e9c54690734b)
+![image](https://github.com/user-attachments/assets/06ee0b63-7463-4a3e-a940-d01e2a4f649b)
+![image](https://github.com/user-attachments/assets/e09fd9ab-d04e-44ca-a06f-fa80fb085804)
+![image](https://github.com/user-attachments/assets/c8ea77cf-7022-4fdc-b72a-3c8189d69f7a)
+![image](https://github.com/user-attachments/assets/a4bd1b41-bbff-473b-bfe7-c3d0ebf18d82)
+![image](https://github.com/user-attachments/assets/22558ae4-21b2-46a9-b309-7900e85e2eca)
+![image](https://github.com/user-attachments/assets/038753a0-8814-4a04-bd6b-e266540f6bf7)
 
 
 ## 开发进度
