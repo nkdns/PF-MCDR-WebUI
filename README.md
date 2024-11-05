@@ -11,7 +11,7 @@
 
 **支持的配置：** `yaml` 格式或者 `json` 文件。
   - yml文件识别每项上一行注释作为中文标题，使用 `::` 分割，第二项为副标题，例 `标题::副标题` ，请注意，使用的是英文的符号；
-  - json文件需要创建 `需要加标题的配置文件名_note.josn` 例如 `abc_note.json` 则会为 `abc.json` 创建中文标题，使用 `[标题,副标题]` 创建标题和副标题
+  - json文件需要创建 `需要加标题的配置文件名_note.josn` 例如 `abc_note.json` 则会为 `abc.json` 创建中文标题，使用 `[标题,副标题]` 创建标题和副标题，参考示例 ：[config_note.json](https://github.com/LoosePrince/PF-MCDR-WebUI/blob/main/config_note.json)
 
 **自定义：** 支持全局css和js配置文件，在首页提供在线编辑。
 
