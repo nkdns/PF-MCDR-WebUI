@@ -40,26 +40,26 @@ def change_user_account(user_name:str, old_password:str, new_password:str)->bool
         return True
     return False
 # MCDR command
-def create_account_command(src, ctx, port):
+def create_account_command(src, ctx, host:str, port:int):
     account, password = ctx['account'], ctx['password']
     success = create_user_account(account, password)
     if success:
-        src.reply(f"账户: {account} 创建成功。\nguguwebui 地址: http://127.0.0.1:{port}")
+        src.reply(f"账户: {account} 创建成功。\nguguwebui 地址: http://{host}:{port}")
     else:
         src.reply("账户已存在！")
 # MCDR command
-def change_account_command(src, ctx, port):
+def change_account_command(src, ctx, host:str, port:int):
     account = ctx['account']
     old_password, new_password = ctx['old password'], ctx['new password']
     success = change_user_account(account, old_password, new_password)
     if success:
-        src.reply(f"账户: {account} 修改成功。\nguguwebui 地址: http://127.0.0.1:{port}")
+        src.reply(f"账户: {account} 修改成功。\nguguwebui 地址: http://{host}:{port}")
     else:
         src.reply("用户不存在 或 密码错误！")
 # MCDR command
-def get_temp_password_command(src, ctx, port):
+def get_temp_password_command(src, ctx, host:str, port:int):
     temp_password = create_temp_password()
-    src.reply(f"临时密码(15分钟后过期): {temp_password}\nguguwebui 地址: http://127.0.0.1:{port}")
+    src.reply(f"临时密码(15分钟后过期): {temp_password}\nguguwebui 地址: http://{host}:{port}")
 #============================================================#
 # Find all configs for a plugin
 def find_plugin_config_paths(plugin_id:str)->list:

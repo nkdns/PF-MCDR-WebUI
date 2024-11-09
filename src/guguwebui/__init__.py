@@ -10,14 +10,14 @@ from .web_server import *
 #============================================================#
 
 def on_load(server: PluginServerInterface, old):
-    global web_server_interface, port
+    global web_server_interface
 
     server.logger.info("[MCDR WebUI] 启动 WebUI 中...")
 
     plugin_config = server.load_config_simple("config.json", DEFALUT_CONFIG)
     host = plugin_config['host']
     port = plugin_config['port']
-    register_command(server) # register MCDR command
+    register_command(server, host, port) # register MCDR command
 
     amount_static_files(server) # move static resource
     app.mount("/src", StaticFiles(directory=f"{STATIC_PATH}/src"), name="static")
@@ -38,7 +38,7 @@ def on_unload(server: PluginServerInterface):
     server.logger.info("[MCDR WebUI] WebUI 已卸载")
 
 
-def register_command(server:PluginServerInterface):
+def register_command(server:PluginServerInterface, host:str, port:int):
     # 注册指令
     server.register_command(
         Literal('!!webui')
@@ -48,7 +48,7 @@ def register_command(server:PluginServerInterface):
             .then(
                 Text('account')
                 .then(
-                    Text('password').runs(lambda src, ctx: create_account_command(src, ctx, port))
+                    Text('password').runs(lambda src, ctx: create_account_command(src, ctx, host, port))
                 )
             )
         )
@@ -58,13 +58,13 @@ def register_command(server:PluginServerInterface):
                 Text('account').suggests(lambda: [i for i in user_db['user'].keys()])
                 .then(
                     Text('old password').then(
-                        Text('new password').runs(lambda src, ctx: change_account_command(src, ctx, port))
+                        Text('new password').runs(lambda src, ctx: change_account_command(src, ctx, host, port))
                     )
                 )
             )
         )
         .then(
-            Literal('temp').runs(lambda src, ctx: get_temp_password_command(src, ctx, port))
+            Literal('temp').runs(lambda src, ctx: get_temp_password_command(src, ctx, host, port))
         )
     )
     server.register_help_message('!!webui create <account> <password>', '注册 guguwebui 账户')
