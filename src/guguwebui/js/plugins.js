@@ -303,7 +303,7 @@ function configPlugin(plugin_id) {
                 saveButton.className = 'btn';
                 saveButton.textContent = '保存配置';
                 saveButton.style.display = "none";
-                saveButton.onclick = () => saveConfig(path, plugin_id);
+                saveButton.onclick = () => saveConfig(path);
 
                 container.appendChild(configtitleDiv);
                 container.appendChild(configDiv);
@@ -318,14 +318,20 @@ function configPlugin(plugin_id) {
         });
 }
 // * 调用 GET /api/load_config {path}
-function loadconfigPlugin(file_path, plugin_id) { 
+function loadconfigPlugin(file_path) { 
     fetch(`/api/load_config?path=${encodeURIComponent(file_path)}`)
         .then(response => response.json())
         .then(jsonData => {
 
             clean_config();
             
-            buildHtmlFromJson(jsonData, file_path, plugin_id);
+            buildHtmlFromJson(jsonData, file_path);
+
+            if (file_path === 'server/server.properties') { 
+                // 设置服务器 MOTD
+                const statusServerMotd = document.getElementById('Status-server-motd');
+                statusServerMotd.textContent = jsonData['motd'];
+            }
         })
         .catch(error => console.error('Error fetching data:', error));
 }
@@ -371,7 +377,7 @@ function fillTemplate(template, data) {
     return result;
 }
 // 调用 POST /api/save_config {file_path, config_data}
-async function saveConfig(file_path, plugin_id) {
+async function saveConfig(file_path) {
     try {
         // 加载配置模板
         const template = await loadConfigTemplate(file_path);
@@ -625,7 +631,7 @@ async function loadNoteConfig(file_path) {
     }
 }
 
-function buildHtmlFromJson(jsonData, file_path, plugin_id) {
+function buildHtmlFromJson(jsonData, file_path) {
     const container = document.getElementById(file_path);
     container.innerHTML = ''; // 清空容器
 
