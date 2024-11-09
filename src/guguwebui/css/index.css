@@ -150,6 +150,12 @@
 
 #index .tabs-full {
     left: -140px;
+    position: absolute;
+    z-index: 99;
+}
+
+#index .tabs-full:hover {
+    left: 0;
 }
 
 #index .tabs .tab-container {
@@ -190,14 +196,36 @@
 
 #index .tabs .tab-container .select {
     background-color: #44cef6 !important;
-    color: #fff;
+    color: #fff !important;
 }
 
 #index .tabs .tab-container .top .unsatisfactory {
-    /* background-color: #fff; */
     color: #e9e7ef;
     pointer-events: none;
-    display: none;
+}
+
+#index .tabs .tab-container .tab-fold {
+    width: 130px;
+    text-align: center;
+    line-height: 40px;
+    margin: auto;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-sizing: border-box;
+}
+
+#index .tabs .tab-container .tab-fold:hover {
+    background-color: #e0f8ff;
+}
+
+#index .tabs .tab-container .tab-fold div {
+    color: #75878a;
+    transition: all 0.3s ease;
+}
+
+#index .tabs .tab-container .tab-fold div:hover {
+    color: #392f41;
 }
 
 #index .content #content-iframe {
