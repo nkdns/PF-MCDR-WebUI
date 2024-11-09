@@ -1,40 +1,41 @@
-/* #plugins .title:first-of-type {
-    margin-top: 0;
-} */
+#plugins >div:has(>h2) {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
 
-/* #plugins .title {
+#plugins >div:has(>h2) >div {
+    display: flex;
+    align-items: center;
+}
+
+#plugins >div:has(>h2) >div >a {
+    margin-right: 10px;
+    text-decoration: none;
+}
+
+#plugins >div:has(>h2) >div >a:last-of-type {
+    margin-right: 0;
+}
+
+#plugins .title:first-of-type {
+    margin-top: 0;
+}
+
+#plugins .title {
     font-size: 24px;
     margin-top: 15px;
     margin-bottom: 10px;
-} */
+}
 
 #plugins .title .tip {
     margin-left: 20px;
 }
 
 #plugins .tip {
-    color: #c2ccd0;
+    color: #a1afc9;
     font-size: 12px;
     margin-left: 5px;
-}
-
-.about-list {
-    display: grid; /* Use flexbox for the main container */
-    grid-template-columns: 6fr 1fr 1fr
-}
-
-.about-list a {
-    max-width: 120px;
-    font-size: 14px;
-    display: flex;
-    padding: 5px 10px;
-    background-color: #e9f1f6;
-    border-radius: 10px;
-    text-decoration: none;
-    transition: all 0.3s ease-in-out;
-    margin-right: 10px;
-    align-items: center;
-    justify-content: center;
 }
 
 #plugins .about-list a:hover {
@@ -64,6 +65,30 @@
     animation: slideIn 0.5s forwards;
 }
 
+#plugins #plugin-list .plugin .description {
+    position: fixed; /* 使用 fixed 以避免父元素偏移的影响 */
+    visibility: hidden;
+    background-color: #333;
+    color: #fff;
+    text-align: left;
+    border-radius: 4px;
+    padding: 5px;
+    z-index: 1000;
+    white-space: nowrap;
+    pointer-events: none; /* 避免影响鼠标行为 */
+    opacity: 0;
+    transition: opacity 0.2s ease;
+}
+
+#plugins #plugin-list .plugin .description span {
+    color: #fff;
+}
+
+#plugins #plugin-list .plugin:hover .description {
+    visibility: visible;
+    opacity: 1;
+}
+
 @keyframes slideIn {
     to {
         opacity: 1;
@@ -86,8 +111,15 @@
 
 #plugins #plugin-list .plugin a {
     font-size: 16px;
-    color: #6473E8;
+    text-decoration: none;
+    color: #a1afc9;
     /* margin-right: 10px; */
+}
+
+#plugins #plugin-list .plugin .plugin-mcdr,
+#plugins #plugin-list .plugin .plugin-github {
+    color: #6473E8;
+    text-decoration: underline;
 }
 
 #plugins #plugin-list .plugin .plugin-version {
@@ -159,25 +191,68 @@
 #plugins .config .config-item-child > div {
     margin-right: 10px;
     min-width: 170px;
+    margin-right: 10px;
+    margin-bottom: 10px;
+    max-width: 150px;
+    background-color: #ffffffcc;
+    padding: 5px;
+    border: 2px solid #e9f1f6;
+    border-radius: 15px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    animation: slideIn 0.5s forwards;
+    opacity: 0;
+    transform: translateY(10px);
 }
 
 .Group {
     border: 2px solid #e9f1f6;
     border-radius: 15px;
     padding: 10px;
-    background-color: #fff;
+    background-color: #ffffff60;
     margin-bottom: 5px;
+    backdrop-filter: blur(3px);
 }
 
 #plugins .config .config-item > div {
-    margin-right: 20px;
     min-width: 180px;
+    margin-right: 10px;
+    margin-bottom: 10px;
+    max-width: 150px;
+    background-color: #ffffffcc;
+    padding: 5px;
+    border: 2px solid #e9f1f6;
+    border-radius: 15px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    animation: slideIn 0.5s forwards;
+    opacity: 0;
+    transform: translateY(10px);
+}
+
+#plugins .config .config-item > div .tip {
+    display: block;
+    margin: 0;
+}
+
+#plugins .config .config-item-child > div .tip {
+    display: block;
+    margin: 0;
+}
+
+@keyframes slideIn {
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
 }
 
 #plugins .config div > p {
     font-size: 15px;
     margin-bottom: 5px;
-    background: #fff;
+    background: #ffffff60;
     padding: 0 5px 2px;
     border-radius: 5px;
     margin-top: 10px;
@@ -185,6 +260,7 @@
 
 #plugins .config .config-item-input {
     display: flex;
+    flex-wrap: wrap;
 }
 
 #plugins .config .input-container {
@@ -204,6 +280,7 @@
     background-color: #e9f1f6;
     font-size: 16px;
     margin-right: 2px;
+    margin-bottom: 2px;
 }
 
 #plugins .config input[type="checkbox"] {
@@ -261,6 +338,7 @@
     cursor: pointer;
     font-size: 14px;
     transition: 0.2s all;
+    display: inline-block;
 }
 
 #plugins .btn:hover {
