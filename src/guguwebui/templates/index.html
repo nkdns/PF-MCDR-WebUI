@@ -40,11 +40,16 @@
         <div class="tab-container">
             <div class="top">
                 <div id="home" onclick="changeTab('home')" class="tab select" data-text="首页">首页</div>
-                <div id="gugubot" onclick="changeTab('gugubot')" class="tab" data-text="GUGUbot配置">GUGUbot</div>
-                <div id="cq" onclick="changeTab('cq')" class="tab" data-text="CQ-QQ-API配置">cq-qq-api</div>
-                <div id="mc" onclick="changeTab('mc')" class="tab unsatisfactory" data-text="MC服务器配置">MC服务器</div>
-                <div id="mcdr" onclick="changeTab('mcdr')" class="tab unsatisfactory" data-text="Mcdr配置">MCDR配置</div>
+                <div class="tab-fold" id="fold1">
+                    <div class="expand" onclick="changeTabFromFold('fold1')" class="tab" style="display: block; height: 40px;">GUGUbot相关</div>
+                    <div class="fold" onclick="changeTabFromFold('fold1')" class="tab" style="display: none; height: 0px;">折叠⇡</div>
+                    <div id="gugubot" onclick="changeTab('gugubot')" class="tab" data-text="GUGUbot配置" style="display: none; height: 0px;">GUGUbot</div>
+                    <div id="cq" onclick="changeTab('cq')" class="tab" data-text="CQ-QQ-API配置" style="display: none; height: 0px;">cq-qq-api</div>
+                </div>
+                <div id="mc" onclick="changeTab('mc')" class="tab" data-text="MC服务器配置">MC服务器</div>
+                <div id="mcdr" onclick="changeTab('mcdr')" class="tab" data-text="MCDR配置">MCDR配置</div>
                 <div id="plugins" onclick="changeTab('plugins')" class="tab" data-text="所有插件">所有插件</div>
+                <div id="mc" onclick="changeTab('server-terminal')" class="tab unsatisfactory" data-text="服务器终端">服务器终端</div>
                 <div id="fabric" onclick="changeTab('fabric')" class="tab unsatisfactory" data-text="Fabric配置">Fabric (部分)</div>
             </div>
             <div class="bottom">
@@ -58,7 +63,7 @@
         <iframe src="" frameborder="0" id="content-iframe"></iframe>
     </div>
 
-    <p class="footer">Web v0.1.0 内部测试版</p>
+    <p class="footer">Web 1.0.0-beta.1 公开测试版</p>
 
     <script src="js/index.js"></script>
 </body>
