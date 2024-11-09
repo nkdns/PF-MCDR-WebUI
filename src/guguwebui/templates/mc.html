@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>MC服务器配置</title>
+    <link rel="stylesheet" href="css/mc.css">
     <link rel="stylesheet" href="custom/overall.css">
     <script src="custom/overall.js"></script>
     <!-- <link rel="stylesheet" href="css/mc.css"> -->
@@ -38,6 +39,32 @@
     </script>
 </head>
 <body id="mc">
-    
+    <div id="container">
+        <div class="about-list">
+            <div class="about-item">
+                <p>服务器：
+                    <span id="Status-server-status">加载中...</span>
+                    <span id="Status-server-version">加载中...</span>
+                    <span id="Status-players-online">加载中...</span><br>
+                    <span id="Status-server-motd">加载中...</span><br>
+                </p>
+                <a href="javascript:void(0);" onclick="restartServer()">重启服务器</a>
+                <a href="javascript:void(0);" onclick="saveConfig('server/server.properties')">保存server.properties文件</a>
+            </div>
+        </div>
+        <div class="config" id="config">
+            <h4>服务器配置文件<span class="tip">server.properties</span></h4>
+            <div id="server/server.properties"></div>
+        </div>
+        <div class="btn" id="save" onclick="saveConfig('server/server.properties')">保存文件</div>
+        <script src="js/mc.js"></script>
+        <script>
+            getServerStatus();
+            laodconfigPlugin('server/server.properties');
+        </script>
+    </div>
+    <pre id="JSON">
+
+    </pre>
 </body>
 </html>
