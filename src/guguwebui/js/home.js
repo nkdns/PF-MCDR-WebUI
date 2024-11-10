@@ -161,6 +161,8 @@ document.addEventListener("DOMContentLoaded", function() {
     fetch('/api/get_web_config')
         .then(response => response.json())
         .then(data => {
+            // 端口填入id="host"输入框
+            document.getElementById('host').value = data.host;
             // 端口填入id="port"输入框
             document.getElementById('port').value = data.port;
             // 禁用管理后台登录填入id="disable_admin_login_after_run"输入框
@@ -197,9 +199,11 @@ function saveWebConfig(action) {
 
     // 根据不同的按钮，决定是否传递其他参数
     if (action === 'config') {
+        const host = document.getElementById('host').value;
         const port = document.getElementById('port').value;
         const superaccount = document.getElementById('disable_admin_login_after_run').value;
 
+        requestData.host = host;
         requestData.port = port;
         requestData.superaccount = superaccount;
     }

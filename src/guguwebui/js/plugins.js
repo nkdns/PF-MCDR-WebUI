@@ -24,6 +24,46 @@ function set_gugu_plugin(plugin_id) {
     })
     .catch(error => console.log("查询失败(忽略此报错):", error));
 };
+
+// plugin.html
+function paginate(list_id, pagination) {
+    const contentDiv = document.getElementById(list_id);
+    const items = Array.from(contentDiv.children);
+    const totalPages = Math.ceil(items.length / itemsPerPage);
+
+    items.forEach((item, index) => {
+        item.style.display = (index >= (currentPage - 1) * itemsPerPage && index < currentPage * itemsPerPage) ? 'flex' : 'none';
+    });
+
+    const paginationDiv = document.getElementById(pagination);
+    paginationDiv.innerHTML = `
+        ${currentPage > 1 ? '<button class="btn" onclick="changePage(-1)">上一页</button>' : ''}
+        第 ${currentPage} 页 / 共 ${totalPages} 页
+        ${currentPage < totalPages ? '<button class="btn" onclick="changePage(1)">下一页</button>' : ''}
+    `;
+}
+function changePage(direction) {
+    clean_config();
+    currentPage += direction;
+    paginate('plugin-list','pagination');
+}
+// author & description 显示函数
+function listPluginsTip() {
+    document.querySelectorAll('.plugin>div:first-child').forEach(container => {
+        const tooltip = container.querySelector('.description');
+
+        container.addEventListener('mousemove', (e) => {
+            tooltip.style.left = e.pageX + 10 + 'px'; // 使用页面坐标
+            tooltip.style.visibility = 'visible';
+            tooltip.style.opacity = '1';
+        });
+
+        container.addEventListener('mouseleave', () => {
+            tooltip.style.visibility = 'hidden';
+            tooltip.style.opacity = '0';
+        });
+    });
+}
 // 加载插件信息 GET /api/plugins?detail=true 
 function loadPlugins() {
     const pluginList = document.getElementById('plugin-list');
@@ -36,31 +76,44 @@ function loadPlugins() {
         const plugins = data.plugins;
         // 遍历插件数组，创建插件列表
         plugins.forEach(plugin => {
-            const { id, name, author, github, version, version_latest, status } = plugin;
+            const { id, name, description, author, github, version, version_latest, status, config_file } = plugin;
 
             // 创建插件的 HTML 结构
             const pluginDiv = document.createElement('div');
             pluginDiv.className = 'plugin';
             pluginDiv.id = `${id}`;
 
-            // 决定一键更新按钮的显示
+            // 决定是否显示 一键更新按钮
             const updateButtonStyle = version === version_latest ? 'visibility: hidden;' : 'visibility: visible;';
+            // 决定是否显示 状态切换和重载按钮
+            const pluginStatusStyle = id === 'guguwebui' ? 'visibility: hidden;' : 'visibility: visible;';
+            // 决定是否显示 GitHub链接
+            const githubStyle = github ? 'visibility: visible;' : 'visibility: hidden;';
+            // 决定是否显示 插件配置按钮
+            const configButtonStyle = config_file === true ? 'visibility: visible;' : 'visibility: hidden;';
             
             // 决定运行按钮的状态
             const runButtonClass = status === 'loaded' ? 'plugin-run run' : 'plugin-run stop';
             const runButtonText = status === 'loaded' ? '点击停止' : '点击运行';
 
             pluginDiv.innerHTML = `
+                <div>
+                    <div class="description">
+                        <span class="plugin-author">作者：${author}</span>
+                        <span class="plugin-description">说明：${description}</span>
+                    </div>
                     <span class="plugin-name">${name}</span>
-                    <span class="plugin-author">${author}</span>
                     <a href="https://mcdreforged.com/zh-CN/plugin/${id}" class="plugin-mcdr" target="_blank">MCDR</a>
-                    <a href="${github}" class="plugin-github" target="_blank">Github</a>
+                    <a href="${github}" class="plugin-github" style="${githubStyle}" target="_blank">Github</a>
                     <span class="plugin-version">${version}</span>
                     <span class="plugin-latest-version" style="${updateButtonStyle}">${version_latest}</span>
+                </div>
+                <div>
                     <button class="plugin-update list-btn" style="${updateButtonStyle}" onclick="updatePlugin('${id}')">一键更新</button>
-                    <button class="${runButtonClass} list-btn" onclick="toggleStatus('${id}')">${runButtonText}</button>
-                    <button class="plugin-reload list-btn" onclick="reloadPlugin('${id}')">点击重载</button>
-                    <button class="plugin-config list-btn" onclick="configPlugin('${id}')">插件配置</button>
+                    <button class="${runButtonClass} list-btn" style="${pluginStatusStyle}" onclick="toggleStatus('${id}')">${runButtonText}</button>
+                    <button class="plugin-reload list-btn" style="${pluginStatusStyle}" onclick="reloadPlugin('${id}')">点击重载</button>
+                    <button class="plugin-config list-btn" style="${configButtonStyle}" onclick="configPlugin('${id}')">插件配置</button>
+                </div>
             `;
 
             // 将新创建的插件添加到插件列表中
@@ -71,7 +124,8 @@ function loadPlugins() {
                 const intraGroupDelay = (index % itemsPerPage) * 0.2; // 每组内的项按顺序增加 0.2s
                 item.style.animationDelay = `${intraGroupDelay}s`;
             });
-            paginate('plugin-list','pagination');
+            paginate('plugin-list', 'pagination');
+            listPluginsTip();
         });
     })
     .catch(error => console.error('Error fetching plugins:', error));
@@ -213,6 +267,7 @@ function toggleStatus(plugin_id) {
     });
 }
 
+
 // 清空配置
 function clean_config() {
     if (window.self !== window.top && window.location.pathname === "/plugins"){
@@ -303,7 +358,7 @@ function configPlugin(plugin_id) {
                 saveButton.className = 'btn';
                 saveButton.textContent = '保存配置';
                 saveButton.style.display = "none";
-                saveButton.onclick = () => saveConfig(path, plugin_id);
+                saveButton.onclick = () => saveConfig(path);
 
                 container.appendChild(configtitleDiv);
                 container.appendChild(configDiv);
@@ -318,14 +373,20 @@ function configPlugin(plugin_id) {
         });
 }
 // * 调用 GET /api/load_config {path}
-function loadconfigPlugin(file_path, plugin_id) { 
+function loadconfigPlugin(file_path, containerId = undefined) { 
     fetch(`/api/load_config?path=${encodeURIComponent(file_path)}`)
         .then(response => response.json())
         .then(jsonData => {
 
             clean_config();
             
-            buildHtmlFromJson(jsonData, file_path, plugin_id);
+            buildHtmlFromJson(jsonData, file_path, containerId);
+
+            if (file_path === 'server/server.properties') { 
+                // 设置服务器 MOTD
+                const statusServerMotd = document.getElementById('Status-server-motd');
+                statusServerMotd.textContent = jsonData['motd'];
+            }
         })
         .catch(error => console.error('Error fetching data:', error));
 }
@@ -343,7 +404,7 @@ async function loadConfigTemplate(file_path) {
 function fillTemplate(template, data) {
     const result = {};
     for (const key in template) {
-        if (typeof template[key] === "object" && !Array.isArray(template[key])) {
+        if (typeof template[key] === "object" && !Array.isArray(template[key]) && template[key] !== null) {
             result[key] = fillTemplate(template[key], data[key] || {});
         } else {
             if (data[key] !== undefined) {
@@ -371,7 +432,7 @@ function fillTemplate(template, data) {
     return result;
 }
 // 调用 POST /api/save_config {file_path, config_data}
-async function saveConfig(file_path, plugin_id) {
+async function saveConfig(file_path) {
     try {
         // 加载配置模板
         const template = await loadConfigTemplate(file_path);
@@ -491,8 +552,16 @@ function addInput(containerId) {
 
 }
 // addplusButton 辅助函数
-function addPlusButtonToContainer(containerSelector) {
-    document.querySelectorAll(containerSelector).forEach((item) => {
+function addPlusButtonToContainer(containerSelector, containerId = undefined) {
+    let configDiv;
+
+    if (containerId !== undefined){
+        configDiv = document.getElementById(containerId).querySelectorAll(containerSelector);
+    } else {
+        configDiv = document.querySelectorAll(containerSelector);
+    }
+
+    configDiv.forEach((item) => {
         const pTag = item.querySelector('p');
         if (!pTag) return;
 
@@ -514,12 +583,12 @@ function addPlusButtonToContainer(containerSelector) {
     });
 }
 // buildHtmlFromJson 辅助函数
-function addplusButton() {
-    addPlusButtonToContainer('.config-item > div');
-    addPlusButtonToContainer('.config-item-child > div');
+function addplusButton(containerId = undefined) {
+    addPlusButtonToContainer('.config-item > div', containerId);
+    addPlusButtonToContainer('.config-item-child > div', containerId);
 }
 // buildHtmlFromJson 辅助函数 调用 GET /api/load_config?path=file_path
-function loadConfig(file_path) {
+function loadConfig(file_path, containerId = "config") {
     fetch(`/api/load_config?path=${encodeURIComponent(file_path)}`)
         .then(response => {
             if (!response.ok) {
@@ -529,7 +598,7 @@ function loadConfig(file_path) {
         })
         .then(data => {
             const configData = data;
-            const configDiv = document.getElementById('config');
+            const configDiv = document.getElementById(containerId);
 
             // 填充非分组项目
             configDiv.querySelectorAll('.config-item > div').forEach(item => {
@@ -556,6 +625,9 @@ function loadConfig(file_path) {
                 } else {
                     // 单项值处理
                     inputContainer.querySelector('input').value = configData[key];
+                    if (typeof configData[key] === 'boolean') {
+                        inputContainer.querySelector('input').checked = configData[key];
+                    }
                 }
             });
 
@@ -569,6 +641,9 @@ function loadConfig(file_path) {
                     const input = item.querySelector('input');
                     const value = groupData[key];
                     input.value = value;
+                    if (typeof value === 'boolean') {
+                        input.checked = value;
+                    }
                 });
             });
             
@@ -625,10 +700,9 @@ async function loadNoteConfig(file_path) {
     }
 }
 
-function buildHtmlFromJson(jsonData, file_path, plugin_id) {
+function buildHtmlFromJson(jsonData, file_path, containerId = undefined) {
     const container = document.getElementById(file_path);
-    container.innerHTML = ''; // 清空容器
-
+    
     if (window.self !== window.top && window.location.pathname === "/plugins") {
         // 获取父元素
         const parent = container.parentElement.parentElement;
@@ -637,6 +711,16 @@ function buildHtmlFromJson(jsonData, file_path, plugin_id) {
         const saveButton = Array.from(buttons).find(btn => btn.textContent === '保存配置');
         saveButton.style.display = "block";
     }
+    if (container.innerHTML){
+        if (containerId !== undefined){
+            addplusButton(containerId);
+            loadConfig(file_path, containerId);
+            loadNoteConfig(file_path, containerId)
+            return;
+        }
+    } 
+
+    container.innerHTML = ''; // 清空容器
     
     function createElement(key, value) {
         const itemDiv = document.createElement('div');
@@ -729,29 +813,6 @@ function buildHtmlFromJson(jsonData, file_path, plugin_id) {
 }
 
 
-// plugin.html
-function paginate(list_id, pagination) {
-    const contentDiv = document.getElementById(list_id);
-    const items = Array.from(contentDiv.children);
-    const totalPages = Math.ceil(items.length / itemsPerPage);
-
-    items.forEach((item, index) => {
-        item.style.display = (index >= (currentPage - 1) * itemsPerPage && index < currentPage * itemsPerPage) ? 'grid' : 'none';
-    });
-
-    const paginationDiv = document.getElementById(pagination);
-    paginationDiv.innerHTML = `
-        ${currentPage > 1 ? '<button class="btn" onclick="changePage(-1)">上一页</button>' : ''}
-        第 ${currentPage} 页 / 共 ${totalPages} 页
-        ${currentPage < totalPages ? '<button class="btn" onclick="changePage(1)">下一页</button>' : ''}
-    `;
-}
-function changePage(direction) {
-    clean_config();
-    currentPage += direction;
-    paginate('plugin-list','pagination');
-}
-
 // 保存提示
 function showAutoCloseAlert(message, backgroundColor) {
     // 创建一个 div 元素用于显示消息
@@ -774,6 +835,7 @@ function showAutoCloseAlert(message, backgroundColor) {
         alertBox.remove();
     }, 5000); // 5秒后自动关闭
 }
+
 
 // 为每个文本输入框添加动态宽度调整
 function adjustWidth(input) {

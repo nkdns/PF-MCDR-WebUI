@@ -1,24 +1,24 @@
-:is(#gugubot-page, #cq) .title:first-of-type {
+:is(#mc, #mcdr) .title:first-of-type {
     margin-top: 0;
 }
 
-:is(#gugubot-page, #cq) .title {
+:is(#mc, #mcdr) .title {
     font-size: 24px;
     margin-top: 15px;
     margin-bottom: 10px;
 }
 
-:is(#gugubot-page, #cq) .title .tip {
+:is(#mc, #mcdr) .title .tip {
     margin-left: 20px;
 }
 
-:is(#gugubot-page, #cq) .tip {
+:is(#mc, #mcdr) .tip {
     color: #a1afc9;
     font-size: 12px;
     margin-left: 5px;
 }
 
-:is(#gugubot-page, #cq) .about-list .about-item {
+:is(#mc, #mcdr) .about-list .about-item {
     margin: 10px 0;
     background-color: #fff;
     max-width: 520px;
@@ -29,16 +29,20 @@
     position: relative;
 }
 
-:is(#gugubot-page, #cq) .about-list .about-item p,
-:is(#gugubot-page, #cq) .about-list .about-item a {
+:is(#mc, #mcdr) .about-list .about-item p,
+:is(#mc, #mcdr) .about-list .about-item a {
     font-size: 14px;
 }
 
-:is(#gugubot-page, #cq) .about-list .about-item p {
+:is(#mc, #mcdr) .about-list .about-item p {
     height: calc(100% - 25px);
 }
 
-:is(#gugubot-page, #cq) .about-list .about-item a {
+:is(#mc, #mcdr) .about-list .about-item p span{
+    margin-right: 10px;
+}
+
+:is(#mc, #mcdr) .about-list .about-item a {
     padding: 5px 10px;
     background-color: #e9f1f6;
     border-radius: 10px;
@@ -47,27 +51,71 @@
     margin-right: 10px;
 }
 
-:is(#gugubot-page, #cq) .about-list .about-item a:hover {
+:is(#mc, #mcdr) .about-list .about-item a:hover {
     background-color: #c2ccd0;
     color: #fff;
 }
 
+:is(#mc, #mcdr) .config .config-item .about-list .about-item {
+    height: auto;
+    max-height: 120px;
+    max-width: 100%;
+    margin: 0;
+    margin-bottom: 10px;
+}
 
-:is(#gugubot-page, #cq) .config .config-item,
-:is(#gugubot-page, #cq) .config .config-item-child {
+:is(#mc, #mcdr) .config .config-item .about-list .about-item p {
+    color: #a1afc9;
+    font-size: 12px;
+    margin: 0;
+}
+
+:is(#mc, #mcdr) .config .config-item .about-list .about-item a {
+    color: #6473E8;
+    text-decoration: underline;
+    padding: 0;
+    background: none;
+}
+
+:is(#mc, #mcdr) .config .config-item .about-list .about-item ul li {
+    list-style: inside;
+    color: rgb(161, 175, 201);
+    font-size: 12px;
+    margin: 0px;
+    margin-left: 10px;
+}
+
+:is(#mc, #mcdr) .config .config-item .about-list .about-item .tip {
+    color: #4674c5;
+    margin-right: 5px;
+    font-size: 14px;
+}
+
+:is(#mc, #mcdr) .config .config-item,
+:is(#mc, #mcdr) .config .config-item-child {
     display: flex;
     margin-bottom: 15px;
     margin-top: 5px;
     /* 自动换行 */
     flex-wrap: wrap;
+    border: 2px solid #e9f1f6;
+    border-radius: 15px;
+    padding: 10px;
+    background-color: #ffffff60;
+    backdrop-filter: blur(3px);
+    
 }
 
-:is(#gugubot-page, #cq) .config .config-item-child > div {
+#mcdr .config .config-item {
+    display: block;
+}
+
+:is(#mc, #mcdr) .config .config-item-child > div {
     margin-right: 10px;
     min-width: 170px;
     animation: slideIn 0.5s forwards;
     opacity: 0;
-    transform: translateY(10px);
+    transform: translateY(50px);
 }
 
 .Group {
@@ -79,8 +127,15 @@
     backdrop-filter: blur(3px);
 }
 
-:is(#gugubot-page, #cq) .config .config-item > div {
+:is(#mc, #mcdr) .config .config-item > div {
+    margin-right: 20px;
     min-width: 180px;
+    animation: slideIn 0.5s forwards;
+    opacity: 0;
+    transform: translateY(50px);
+}
+
+#mc .config .config-item > div {
     margin-right: 10px;
     margin-bottom: 10px;
     max-width: 150px;
@@ -91,9 +146,11 @@
     display: flex;
     flex-direction: column;
     justify-content: space-between;
-    animation: slideIn 0.5s forwards;
-    opacity: 0;
-    transform: translateY(10px);
+}
+
+#mc .config .config-item > div .tip {
+    display: block;
+    margin: 0;
 }
 
 @keyframes slideIn {
@@ -103,53 +160,30 @@
     }
 }
 
-#gugubot .config .config-item > div .tip {
-    display: block;
-    margin: 0;
-}
-
-#gugubot .config .config-item-child > div {
-    margin-right: 10px;
-    margin-bottom: 10px;
-    max-width: 150px;
-    background-color: #ffffffcc;
-    padding: 5px;
-    border: 2px solid #e9f1f6;
-    border-radius: 15px;
-    display: flex;
-    flex-direction: column;
-    justify-content: space-between;
-}
-
-#gugubot .config .config-item-child > div .tip {
-    display: block;
-    margin: 0;
-}
-
-:is(#gugubot-page, #cq) .config div > p {
+:is(#mc, #mcdr) .config div > p {
     font-size: 15px;
     margin-bottom: 5px;
-    background: #ffffff60;
+    background-color: #ffffff60;
     padding: 0 5px 2px;
     border-radius: 5px;
     margin-top: 10px;
 }
 
-:is(#gugubot-page, #cq) .config .config-item-input {
+:is(#mc, #mcdr) .config .config-item-input {
     display: flex;
     flex-wrap: wrap;
 }
 
-:is(#gugubot-page, #cq) .config .input-container {
+:is(#mc, #mcdr) .config .input-container {
     display: flex;
 }
 
-:is(#gugubot-page, #cq) .config input[type="text"] {
+:is(#mc, #mcdr) .config input[type="text"] {
     height: 30px;
     display: block;
     min-width: 80px;
     width: 80px;
-    max-width: 180px;
+    max-width: 100%;
     box-sizing: border-box;
     padding: 5px 10px ;
     border-radius: 8px;
@@ -160,13 +194,18 @@
     margin-bottom: 2px;
 }
 
-:is(#gugubot-page, #cq) .config input[type="checkbox"] {
+#mcdr .config #permission\.yml .config-item-input input[type="text"] {
+    min-width: 200px;
+    max-width: 200px;
+}
+
+:is(#mc, #mcdr) .config input[type="checkbox"] {
     width: 0;
     height: 30px;
 }
 
 /* 选中状态 */
-:is(#gugubot-page, #cq) .config input[type="checkbox"]::after {
+:is(#mc, #mcdr) .config input[type="checkbox"]::after {
     position: absolute;
     content: "点击开启";
     color: #2b2b2b;
@@ -183,16 +222,16 @@
     transition: 0.2s all;
 }
 
-:is(#gugubot-page, #cq) .config input[type="checkbox"]:hover::after {
+:is(#mc, #mcdr) .config input[type="checkbox"]:hover::after {
     transform: scale(0.95);
 }
 
-:is(#gugubot-page, #cq) .config input[type="checkbox"]:checked::after {
+:is(#mc, #mcdr) .config input[type="checkbox"]:checked::after {
     content: "点击关闭";
     background-color: #e9f1f6;
 }
 
-:is(#gugubot-page, #cq) .config div button {
+:is(#mc, #mcdr) .config div button {
     width: 25px;
     border: 0;
     background: #E9F1F6;
@@ -203,7 +242,7 @@
 }
 
 
-:is(#gugubot-page, #cq) .btn {
+:is(#mc, #mcdr) .btn {
     height: 30px;
     width: 80px;
     box-sizing: border-box;
@@ -217,15 +256,15 @@
     transition: 0.2s all;
 }
 
-:is(#gugubot-page, #cq) .btn:hover {
+:is(#mc, #mcdr) .btn:hover {
     transform: scale(0.95);
 }
 
-:is(#gugubot-page, #cq) .btn.enable {
+:is(#mc, #mcdr) .btn.enable {
     background-color: #e9f1f6;
 }
 
-:is(#gugubot-page, #cq) .no-hint {
+:is(#mc, #mcdr) .no-hint {
     max-width: 520px;
     background: #fff;
     padding: 10px;
@@ -235,6 +274,6 @@
     color: #a1afc9;
 }
 
-:is(#gugubot-page, #cq) .no-hint p{
+:is(#mc, #mcdr) .no-hint p{
     margin-bottom: 5px;
 }

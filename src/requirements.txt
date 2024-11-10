@@ -1,4 +1,5 @@
 fastapi
+javaproperties
 passlib
 pydantic
 ruamel.yaml

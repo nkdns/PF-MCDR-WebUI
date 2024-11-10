@@ -31,7 +31,7 @@ function getUserInfo(username) {
     // 检查缓存是否存在且有效
     if (cachedUserInfo && cachedTime) {
         const currentTime = Date.now();
-        const expiryTime = parseInt(cachedTime) + (24 * 60 * 60 * 1000); // 1 天的有效期
+        const expiryTime = parseInt(cachedTime) + (2 * 60 * 60 * 1000); // 1 天的有效期
 
         if (currentTime < expiryTime) {
             // 解析缓存的用户信息并展示
@@ -49,7 +49,7 @@ function getUserInfo(username) {
     const num = Number(username);
     if (!Number.isInteger(num)){
         const userInfo = {
-            name: username,
+            nickname: username,
             avatar: "src/default_avatar.jpg"
         };
         localStorage.setItem('userInfo', JSON.stringify(userInfo));
@@ -60,14 +60,14 @@ function getUserInfo(username) {
     }
 
     // 发起请求获取用户信息
-    fetch(`https://api.usuuu.com/qq/${username}`)
+    fetch(`https://api.leafone.cn/api/qqnick?qq=${username}`)
         .then(response => response.json())
         .then(data => {
             if (data.code === 200) {
-                // 缓存用户信息到本地
+                // 使用指定的头像链接
                 const userInfo = {
-                    name: data.data.name,
-                    avatar: data.data.avatar
+                    nickname: data.data.nickname,
+                    avatar: `https://q1.qlogo.cn/g?b=qq&nk=${username}&s=640`
                 };
                 localStorage.setItem('userInfo', JSON.stringify(userInfo));
                 localStorage.setItem('userInfoTime', Date.now().toString());
@@ -83,8 +83,8 @@ function getUserInfo(username) {
 
 // 展示用户信息的辅助函数
 function displayUserInfo(userInfo) {
-    if (userInfo.name !== "tempuser") {
-        document.getElementById('nickname').innerText = userInfo.name;
+    if (userInfo.nickname !== "tempuser") {
+        document.getElementById('nickname').innerText = userInfo.nickname;
     }
     const avatar = document.getElementById('avatar');
     avatar.src = userInfo.avatar;
@@ -219,6 +219,26 @@ function changeTab(tab) {
     about.classList.remove('select');
     fabric.classList.remove('select');
 
+    // 清除所有.expand的.select
+    const expandElements = document.querySelectorAll('.expand');
+    expandElements.forEach(element => {
+        element.classList.remove('select');
+    });
+
+    // 获取指定的 tab 元素
+    const tabElement = document.getElementById(tab);
+    const parentElement = tabElement ? tabElement.parentElement : null;
+    if (parentElement && parentElement.classList.contains('tab-fold')) {
+        const siblings = Array.from(parentElement.children);
+        siblings.forEach(sibling => {
+            // 只为符合条件的兄弟元素添加 .select 类
+            if (sibling !== tabElement && sibling.classList.contains('expand')) {
+                sibling.classList.remove('select');
+                sibling.classList.add('select');
+            }
+        });
+    }
+
     document.getElementById(tab).classList.add('select');
 
     // 获取tab对应的data-text文本
@@ -242,10 +262,57 @@ function changeTab(tab) {
         document.getElementById('content-iframe').src = '/plugins';
     } else if (tab === 'about') {
         document.getElementById('content-iframe').src = '/about';
+    } else if (tab === 'server-terminal') {
+        document.getElementById('content-iframe').src = '/server-terminal';
     } else if (tab === 'fabric') {
         document.getElementById('content-iframe').src = '/fabric';
     }
     window.location.href = "#" + tab; 
+}
+
+// 折叠函数
+function changeTabFromFold(foldId) {
+    const foldElement = document.getElementById(foldId);
+    if (!foldElement) return;
+
+    const expandButton = foldElement.querySelector('.expand');
+    const foldButton = foldElement.querySelector('.fold');
+    const contentTabs = foldElement.querySelectorAll('.tab:not(.expand):not(.fold)');
+
+    const isContentVisible = contentTabs[0].style.display !== 'none';
+
+    if (isContentVisible) {
+        contentTabs.forEach(tab => {
+            tab.style.height = '0';
+            // 延迟0.5s
+            setTimeout(() => {
+                tab.style.display = 'none';
+            }, 500);
+        });
+        expandButton.style.display = 'block';
+        foldButton.style.height = '0';
+        setTimeout(() => {
+            foldButton.style.display = 'none';
+            expandButton.style.height = '40px';
+            foldElement.style.border = 'none';
+            foldElement.style.margin = '0';
+        }, 500);
+    } else {
+        contentTabs.forEach(tab => {
+            tab.style.display = 'block';
+            setTimeout(() => {
+                tab.style.height = '40px';
+            }, 500);
+        });
+        expandButton.style.height = '0';
+        foldButton.style.display = 'block';
+        setTimeout(() => {
+            expandButton.style.display = 'none';
+            foldButton.style.height = '40px';
+            foldElement.style.border = '2px solid #e9f1f6';
+            foldElement.style.margin = '5px auto';
+        }, 500);
+    }
 }
 
 function fullScreen() {

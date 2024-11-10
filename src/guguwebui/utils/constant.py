@@ -16,6 +16,8 @@ PATH_DB_PATH = Path("./config") / "guguwebui" / "config_path.json"
 CSS_FILE = Path(STATIC_PATH) / "custom" / "overall.css"
 JS_FILE = Path(STATIC_PATH) / "custom" / "overall.js"
 
+SERVER_PROPERTIES_PATH = "server/server.properties"
+
 pwd_context = CryptContext(schemes=["argon2"], deprecated="auto")
 
 # token: {token : {expire_time, user_name}}
@@ -27,6 +29,7 @@ DEFALUT_DB = {
     "temp": {}
 }
 DEFALUT_CONFIG = {
+    "host": "127.0.0.1",
     "port": 8000,
     "super_admin_account": 123456789123456789,
     "disable_other_admin": False,
@@ -43,6 +46,7 @@ class LoginData(BaseModel):
 
 class saveconfig(BaseModel):
     action: str
+    host: Optional[str] = None
     port: Optional[str] = None
     superaccount: Optional[str] = None
 

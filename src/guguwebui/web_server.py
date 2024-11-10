@@ -1,4 +1,5 @@
 import datetime
+import javaproperties
 import secrets
 
 from fastapi import Depends, FastAPI, Form, Request, status, HTTPException
@@ -9,6 +10,7 @@ from fastapi.responses import (
     PlainTextResponse,
 )
 from fastapi.templating import Jinja2Templates
+from ruamel.yaml.comments import CommentedSeq
 from starlette.exceptions import HTTPException as StarletteHTTPException
 from starlette.middleware.sessions import SessionMiddleware
 
@@ -297,7 +299,7 @@ async def toggle_plugin(
     server:PluginServerInterface = app.state.server_interface
     plugin_id = request_body.plugin_id
     target_status = request_body.status
-    print(plugin_id)
+
     # reload only for guguwebui
     if plugin_id == "guguwebui":
         server.reload_plugin(plugin_id)
@@ -364,7 +366,8 @@ async def get_web_config(token_valid: bool = Depends(verify_token)):
     server = app.state.server_interface
     config = server.load_config_simple("config.json", DEFALUT_CONFIG)
     return JSONResponse(
-        {
+        {   
+            "host": config["host"],
             "port": config["port"],
             "super_admin_account": config["super_admin_account"],
             "disable_admin_login_web": config["disable_other_admin"],
@@ -382,6 +385,7 @@ async def save_web_config(
     )
     # change port & account
     if config.action == "config" and config.port:
+        web_config["host"] = config.host
         web_config["port"] = int(config.port)
         web_config["super_admin_account"] = (
             int(config.superaccount)
@@ -420,8 +424,11 @@ async def load_config(
     MCDR_language:str = server.get_mcdr_language()
 
     # Translation for xxx.json -> xxx_lang.json
-    if translation and path.suffix == ".json":
-        path = path.with_stem(f"{path.stem}_lang")
+    if translation:
+        if path.suffix in [".json", ".properties"]:
+            path = path.with_stem(f"{path.stem}_lang")
+        if path.suffix == ".properties":
+            path = path.with_suffix(f".json")
         
     if not path.exists(): # file not exists
         return JSONResponse({})  
@@ -431,10 +438,16 @@ async def load_config(
             config = json.load(f)
         elif path.suffix in [".yml", ".yaml"]:
             config = yaml.load(f)
+        elif path.suffix == ".properties":
+            config = javaproperties.load(f)
+            # convert string "true" "false" to True False
+            config = {k:v if v not in ["true", "false"] else 
+                      True if v == "true" else False 
+                      for k,v in config.items()}
 
     if translation:
         # Get corresponding language
-        if path.suffix == ".json":
+        if path.suffix in [".json", ".properties"]:
             config = config.get(MCDR_language) or config.get("en_us") or {}
         # Translation for yaml -> comment in yaml file
         elif translation and path.suffix in [".yml", ".yaml"]:
@@ -447,20 +460,35 @@ async def load_config(
 # ensure consistent data type
 def consistent_type_update(original, updates):
     for key, value in updates.items():
+        # setting to None
+        if key in original and original[key] is None and \
+            (not value or (isinstance(value,list) and not any(value))):
+            continue
         # dict -> recurssive update
-        if isinstance(value, dict) and key in original:
+        elif isinstance(value, dict) and key in original:
             consistent_type_update(original[key], value)
         # get previous type 
         elif isinstance(value, list) and key in original:
+            # save old comment
+            original_ca = original[key].ca.items if isinstance(original[key], CommentedSeq) else None
+
             targe_type = list( # search the first type in the original list
                 {type(item) for item in original[key] if item}
-            )
-            original[key] = [
+            ) if original[key] else None
+
+            temp_list = [
                 (targe_type[0](item) if targe_type else item) if item else None
                 for item in value
             ]
+
+            if original_ca: # save comment to last attribute
+                original[key] = CommentedSeq(temp_list)
+                original[key].ca.items[len(original[key])-1] = original_ca[max(original_ca)]
+            else:
+                original[key] = temp_list
+
         # Force type convertion
-        elif key in original:
+        elif key in original and original[key]:
             original_type = type(original[key])
             original[key] = original_type(value)  
         # new attributes
@@ -485,16 +513,23 @@ async def save_config(
             data = json.load(f)
         elif config_path.suffix in [".yml", ".yaml"]:
             data = yaml.load(f)
+        elif config_path.suffix == ".properties":
+            data = javaproperties.load(f)
+            # convert back the True False to "true" "false"
+            plugin_config = {k:v if not isinstance(v, bool) else 
+                             "true" if v else "false" 
+                             for k,v in plugin_config.items()}
 
     # ensure type will not change
     consistent_type_update(data, plugin_config)
 
     with open(config_path, "w", encoding="UTF-8") as f:
         if config_path.suffix == ".json":
-            json.dump(data, f, ensure_ascii=False)
+            json.dump(data, f, ensure_ascii=False, indent=4)
         elif config_path.suffix in [".yml", ".yaml"]:
             yaml.dump(data, f)
-
+        elif config_path.suffix == ".properties":
+            javaproperties.dump(data, f)
 
 # load overall.js / overall.css
 @app.get("/api/load_file", response_class=PlainTextResponse)
@@ -532,3 +567,25 @@ async def save_config_file(data: SaveContent, token_valid: bool = Depends(verify
     with open(path, "w", encoding="utf-8") as file:
         file.write(data.content)
     return {"status": "success", "message": f"{data.action} saved successfully"}
+
+# read MC server status
+@app.get("/api/get_server_status")
+async def get_server_status(token_valid: bool = Depends(verify_token)):
+    server:PluginServerInterface = app.state.server_interface
+
+    server_status = "online" if server.is_server_running() or server.is_server_startup() else "offline"
+    server_message = get_java_server_info()
+
+    server_version = server_message.get("server_version", "")
+    version_string = f"Version: {server_version}" if server_version else ""
+    player_count = server_message.get("server_player_count")
+    max_player = server_message.get("server_maxinum_player_count")
+    player_string = f"{player_count}/{max_player}" if player_count and max_player else ""
+
+    result = {
+        "status": server_status,
+        "version": version_string, 
+        "players": player_string, 
+    }
+
+    return JSONResponse(result)

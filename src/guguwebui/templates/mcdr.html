@@ -6,7 +6,7 @@
     <title>MCDR配置</title>
     <link rel="stylesheet" href="custom/overall.css">
     <script src="custom/overall.js"></script>
-    <!-- <link rel="stylesheet" href="css/mcdr.css"> -->
+    <link rel="stylesheet" href="css/mc.css">
     <style>
         * {
             padding: 0;
@@ -38,6 +38,299 @@
     </script>
 </head>
 <body id="mcdr">
-    
+    <div id="container">
+        <div class="about-list">
+            <div class="about-item">
+                <p>MCDReforged 的​​配置文件<br>
+                    <span>检查 https://docs.mcdreforged.com/zh-cn/latest/configuration.html#basic-configuration 了解详细信息</span>
+                </p>
+                <a href="https://docs.mcdreforged.com/zh-cn/latest/configuration.html#basic-configuration" target="_blank">查看官方配置文档</a>
+                <a href="https://mcdreforged.com/zh-CN" target="_blank">访问MCDReforged官网</a>
+            </div>
+        </div>
+        <div class="config" id="config">
+            <div id="config.yml">
+                <div class="config-item">
+                    <div>
+                        <p id="language">MCDR 用于输出信息的语言<span class="tip">默认值: en_us 可用选项: en_us, zh_cn</span></p>
+                        <div class="config-item-input"><input type="text"></div>
+                    </div>
+                    <div>
+                        <p id="working_directory">服务端的工作目录<span class="tip">默认值: server, 通常不建议修改</span></p>
+                        <div class="config-item-input"><input type="text"></div>
+                    </div>
+                    <div>
+                        <p id="start_command">启动服务端的控制台命令<span class="tip">将你的启动命令粘贴于此（如需使用 exec模式 请修改配置文件）</span></p>
+                        <div class="about-list">
+                            <div class="about-item">
+                                <p>示例（fabric启动命令）: java -Xmx16G -jar fabric-server-launch.jar nogui<br>
+                                    如果命令中存在一些 YAML 不喜欢的字符（如 "、\）, 详细信息请查看: <a href="https://docs.mcdreforged.com/zh-cn/latest/configuration.html#start-command" target="_blank">https://docs.mcdreforged.com/zh-cn/latest/configuration.html#start-command</a>                                  
+                                </p>
+                            </div>
+                        </div>
+                        <div class="config-item-input"><input type="text"></div>
+                    </div>
+                    <div>
+                        <p id="handler">服务端处理器<span class="tip">默认值: vanilla_handler, 底下详细介绍可以滚动</span></p>
+                        <div class="about-list">
+                            <div class="about-item">
+                                <p>不同服务端有着截然不同的输出和命令。服务端处理器是用于在各种服务端之间进行处理的模块, 也是 MCDR 控制服务端的接入点<br>
+                                    处理器确定解析服务端标准输出文本的特定方法, 并使用正确的命令控制服务端<br>
+                                    目前支持的处理器: </p>
+                                <ul>
+                                    <li><span class="tip">vanilla_handler</span>用于 原版 / Carpet / Fabric 服务端。只要服务端足够原版就行</li>
+                                    <li><span class="tip">beta18_handler</span>用于低版本的原版服务端, 如 MC &lt; 1.7 的低版本, 甚至到 beta1.8 版本。只在 1.6.4 和 beta 1.8.1 版本中进行了测试</li>
+                                    <li><span class="tip">bukkit_handler</span>用于 1.14 版本以下的 Bukkit / Spigot 服务端, 以及所有版本的 Paper / Mohistmc 服务端</li>
+                                    <li><span class="tip">bukkit14_handler</span>用于 1.14 或以上版本的 Bukkit / Spigot 服务端</li>
+                                    <li><span class="tip">forge_handler</span>用于 Forge 服务端</li>
+                                    <li><span class="tip">cat_server_handler</span>适用于 CatServer 服务端</li>
+                                    <li><span class="tip">arclight_handler</span>适用于 Arclight 服务端</li>
+                                    <li><span class="tip">bungeecord_handler</span>用于 BungeeCord 服务端。请在启动命令的 -jar 参数之前添加 -Djline.terminal=jline.UnsupportedTerminal 参数以支持 MCDR。详见 此处</li>
+                                    <li><span class="tip">waterfall_handler</span>用于 WaterFall 服务端</li>
+                                    <li><span class="tip">velocity_handler</span>用于 Velocity 服务端</li>
+                                    <li><span class="tip">basic_handler</span>不进行任何分析并返回原始文本的处理器。除非你想使用 MCDR 启动非 Minecraft 相关的服务端, 否则无需使用</li>
+                                </ul>
+                            </div>
+                        </div>
+                        <div class="config-item-input"><input type="text"></div>
+                    </div>
+                    <div>
+                        <p id="encoding">MCDR -> Server (encoding)<span class="tip">默认值: utf8</span></p>
+                        <div class="about-list">
+                            <div class="about-item">
+                                <p>encoding, decoding 用于编码消息至服务端标准输入 / 从服务端标准输出解码消息时, 所用的编码 / 解码格式</p>
+                            </div>
+                        </div>
+                        <div class="config-item-input"><input type="text"></div>
+                    </div>
+                    <div>
+                        <p id="decoding">Server -> MCDR (decoding)<span class="tip">默认值: utf8</span></p>
+                        <div class="config-item-input"><input type="text"></div>
+                    </div>
+                    <div>
+                        <p id="plugin_directories">插件的目录列表<span class="tip">MCDR 搜索将要加载插件的目录列表, 不建议修改</span></p>
+                        <div class="config-item-input"><input class="multiple_input_boxes" type="text"></div>
+                    </div>
+                    <div>
+                        <p id="check_update">检查更新<span class="tip">默认值: true, 开启后 MCDR 将会每隔 24 小时执行一次更新检测</span></p>
+                        <div class="config-item-input"><input type="checkbox"></div>
+                    </div>
+                    <div>
+                        <p id="advanced_console">高级控制台<span class="tip">基于 prompt-toolkit, 如果你需要重定向 MCDR 的标准输入/输出, 或者仅仅是不喜欢这个高级控制台, 把它设置为 false (关闭)</span></p>
+                        <div class="config-item-input"><input type="checkbox"></div>
+                    </div>
+                    <div>
+                        <p id="disable_console_thread">关闭启动控制台线程来处理控制台命令输入 （请保持默认值, 除非你清楚地知道这是什么）<span class="tip">设置为 true 时, MCDR 将不会启动控制台线程来处理控制台命令输入</span></p>
+                        <div class="config-item-input"><input type="checkbox"></div>
+                    </div>
+                    <div>
+                        <p id="disable_console_color">关闭控制台样式<span class="tip">设置为 true 时, MCDR 将在所有消息打印到控制台之前删除所有控制台字体格式化程序代码 (颜色 / 背景色 / 样式)</span></p>
+                        <div class="config-item-input"><input type="checkbox"></div>
+                    </div>
+                    <div>
+                        <p id="custom_handlers">自定义 服务端处理器 类<span class="tip">多条请直接修改配置文件</span></p>
+                        <div class="about-list">
+                            <div class="about-item">
+                                <p>自定义 服务端处理器 类所组成的列表。这些类应当是 ServerHandler 的子类<br>
+                                    这样你就可以在 handler 选项中通过处理器的名称指派其解析标准输出文本<br>
+                                    处理器名称通过 get_name() 方法定义<br>
+                                    详细信息请查看: <a href="https://docs.mcdreforged.com/zh-cn/latest/configuration.html#custom-handlers" target="_blank">https://docs.mcdreforged.com/zh-cn/latest/configuration.html#custom-handlers</a>
+                                </p>
+                            </div>
+                        </div>
+                        <div class="config-item-input"><input class="multiple_input_boxes" type="text"></div>
+                    </div>
+                    <div>
+                        <p id="custom_info_reactors">处理 info 对象的自定义 Info 响应器 类</p>
+                        <div class="about-list">
+                            <div class="about-item">
+                                <p>用于处理 info 对象的自定义 Info 响应器 类所组成的列表。这些类应当是 AbstractInfoReactor 的子类<br>
+                                    所有自定义 info 响应器都将注册到反应堆列表中, 以处理来自服务端的信息<br>
+                                    详细信息请查看: <a href="https://docs.mcdreforged.com/zh-cn/latest/configuration.html#custom-info-reactors" target="_blank">https://docs.mcdreforged.com/zh-cn/latest/configuration.html#custom-info-reactors</a>
+                                </p>
+                            </div>
+                        </div>
+                        <div class="config-item-input"><input class="multiple_input_boxes" type="text"></div>
+                    </div>
+                    <div>
+                        <p id="watchdog_threshold"><a href="https://docs.mcdreforged.com/zh-cn/latest/plugin_dev/watchdog.html" target="_blank">看门狗</a> 响应时间阈值<span class="tip">使得 看门狗 认为任务执行者 (task executor) 线程已经未响应所需的时间间隔。将其设为 0 以禁用 看门狗</span></p>
+                        <div class="config-item-input"><input type="text"></div>
+                    </div>
+                    <div>
+                        <p id="handler_detection">服务端处理器检测逻辑</p>
+                        <div class="about-list">
+                            <div class="about-item">
+                                <p>在默认情况下, MCDR 会在启动时弃用服务端处理器正确性检测, 并运行一段时间, 用于检测可能出现的 服务端处理器 配置错误<br>
+                                    将其设为 false 以禁用服务端处理器检测逻辑, 以减少部分 MCDR 开始运行时的性能损耗。这主要在性能分析 MCDR 时使用<br>
+                                </p>
+                            </div>
+                        </div>
+                        <div class="config-item-input"><input type="checkbox"></div>
+                    </div>
+                    <div>
+                        <p id="catalogue_meta_cache_ttl">拉取的插件仓库元信息的缓存有效期<span class="tip">MCDR 会在缓存的有效期内, 使用缓存的元信息作为后续与插件仓库有关操作的数据源</span></p>
+                        <div class="config-item-input"><input type="text"></div>
+                    </div>
+                    <div>
+                        <p id="catalogue_meta_fetch_timeout">拉取插件仓库元信息的超时时间<span class="tip">单位: 秒</span></p>
+                        <div class="config-item-input"><input type="text"></div>
+                    </div>
+                    <div>
+                        <p id="catalogue_meta_url">重写用于拉取插件仓库元信息链接<span class="tip">指向的 "everything.json" 或 "everything_slim.json" 文件的 URL, 若它以 ".gz" (gzip) 或 ".xz" (lzma) 结尾，则将自动应用对应的解压操作</span></p>
+                        <div class="config-item-input"><input type="text"></div>
+                    </div>
+                    <div>
+                        <p id="plugin_download_url">重写插件文件的下载链接<span class="tip">应该是一个合法的 str.format() 字符串</span></p>
+                        <div class="about-list">
+                            <div class="about-item">
+                                <p>详细信息请查看: <a href="https://docs.mcdreforged.com/zh-cn/latest/configuration.html#plugin-download-url">https://docs.mcdreforged.com/zh-cn/latest/configuration.html#plugin-download-url</a><br>
+                                    可用的变量</p>
+                                <ul>
+                                    <li><span class="tip">{url}</span>: 原始的 GitHub asset 下载链接</li>
+                                    <li><span class="tip">{repos_owner}</span>: 插件的 GitHub 仓库的所有者名</li>
+                                    <li><span class="tip">{repos_name}</span>: 插件的 GitHub 仓库的仓库名</li>
+                                    <li><span class="tip">{tag}</span>: 与该 release 关联的 git tag 的名字</li>
+                                    <li><span class="tip">{asset_name}</span>: asset 的名字，即要被下载的插件文件的文件名</li>
+                                    <li><span class="tip">{asset_id}</span>: GitHub asset ID</li>
+                                </ul>
+                                <p>示例: <span class="tip">https://github.com/{repos_owner}/{repos_name}/releases/download/{tag}/{asset_name}</span></p>
+                            </div>
+                        </div>
+                        <div class="config-item-input"><input type="text"></div>
+                    </div>
+                    <div>
+                        <p id="plugin_download_timeout">下载插件文件的超时时间<span class="tip">单位: 秒</span></p>
+                        <div class="config-item-input"><input type="text"></div>
+                    </div>
+                    <div>
+                        <p id="plugin_pip_install_extra_args">在插件安装过程中，安装插件依赖的 python 包时，传递给 pip 子进程的额外参数</p>
+                        <div class="config-item-input"><input type="text"></div>
+                    </div>
+                    <div>
+                        <p id="http_proxy">http_proxy</p>
+                        <div class="about-list">
+                            <div class="about-item">
+                                <p>为 MCDR 所有对外的 HTTP 请求的代理设置<br>
+                                    如果打算配置，建议同时配置 http_proxy 和 https_proxy 的值<br>
+                                    取值举例:
+                                </p>
+                                <ul>
+                                    <li>http_proxy: 'http://127.0.0.1:1081'</li>
+                                    <li>https_proxy: 'http://127.0.0.1:1081'</li>
+                                    <li></li>
+                                    <li>http_proxy: 'http://user:pass@192.168.0.1:8888'</li>
+                                    <li>https_proxy: 'http://user:pass@192.168.0.1:8888'</li>
+                                </ul>
+                            </div>
+                        </div>
+                        <div class="config-item-input"><input type="text"></div>
+                    </div>
+                    <div>
+                        <p id="https_proxy">https_proxy</p>
+                        <div class="config-item-input"><input type="text"></div>
+                    </div>
+                </div>
+                <div id="rcon" class="Group">
+                    <p>RCON <span class="tip">若启用 rcon，则在 Minecraft rcon 服务端启动后，MCDR将自动连接到 rcon 服务端。这样插件就可以通过 rcon 向服务端发送命令</span></p>
+                    <div class="config-item-child">
+                        <div>
+                            <p id="enable">开启RCON<span class="tip">默认值: false</span></p>
+                            <div class="config-item-input"><input type="checkbox"></div>
+                        </div>
+                        <div>
+                            <p id="address">RCON连接地址<span class="tip">默认值: 127.0.0.1</span></p>
+                            <div class="config-item-input"><input type="text"></div>
+                        </div>
+                        <div>
+                            <p id="port">RCON端口<span class="tip">默认值: 25575</span></p>
+                            <div class="config-item-input"><input type="text"></div>
+                        </div>
+                        <div>
+                            <p id="password">RCON密码<span class="tip">默认值: password</span>
+                            <div class="config-item-input"><input type="text"></div>
+                        </div>
+                    </div>
+                </div>
+                <div id="debug" class="Group">
+                    <p>调试日志模式<span class="tip">将 all 设置为 true 以启用所有的调试输出。也可以打开部分选项，以启用某些调试输出。默认全部为 false (关闭)</span></p>
+                    <div class="config-item-child">
+                        <div>
+                            <p id="all">all<span class="tip">全部</span></p>
+                            <div class="config-item-input"><input type="checkbox"></div>
+                        </div>
+                        <div>
+                            <p id="mcdr">mcdr<span class="tip">MCDR 内部日志</span></p>
+                            <div class="config-item-input"><input type="checkbox"></div>
+                        </div>
+                        <div>
+                            <p id="handler">handler<span class="tip">服务端处理器日志</span></p>
+                            <div class="config-item-input"><input type="checkbox"></div>
+                        </div>
+                        <div>
+                            <p id="reactor">reactor<span class="tip">Info 响应器日志</span></p>
+                            <div class="config-item-input"><input type="checkbox"></div>
+                        </div>
+                        <div>
+                            <p id="plugin">plugin<span class="tip">插件日志</span></p>
+                            <div class="config-item-input"><input type="checkbox"></div>
+                        </div>
+                        <div>
+                            <p id="permission">permission<span class="tip">权限管理日志</span></p>
+                            <div class="config-item-input"><input type="checkbox"></div>
+                        </div>
+                        <div>
+                            <p id="command">command<span class="tip">命令处理器日志</span></p>
+                            <div class="config-item-input"><input type="checkbox"></div>
+                        </div>
+                        <div>
+                            <p id="task_executor">task_executor<span class="tip">任务执行器日志</span></p>
+                            <div class="config-item-input"><input type="checkbox"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="btn" id="save" onclick="saveConfig('config.yml')">保存设置</div>
+            <div id="permission.yml">
+                <div class="config-item">
+                    <div>
+                        <p id="default_level">默认权限等级<span class="tip">default_level</span></p>
+                        <div class="config-item-input"><input type="text"></div>
+                    </div>
+                    <div>
+                        <p id="owner">服主(4级, owner)<span class="tip">最高权限, 所有者, 具有控制物理服务器的能力。例子: 服务器拥有者</span></p>
+                        <div class="config-item-input"><input class="multiple_input_boxes" type="text"></div>
+                    </div>
+                    <div>
+                        <p id="admin">管理员(3级, admin)<span class="tip">管理员, 拥有控制 MCDR 与 Minecraft 服务器的能力。例子: Minecraft 中的 OP</span></p>
+                        <div class="config-item-input"><input class="multiple_input_boxes" type="text"></div>
+                    </div>
+                    <div>
+                        <p id="helper">协助者(2级, helper)<span class="tip">助手, 可以协助管理员进行服务器管理。提示: QB是2级权限, 例子: 值得信赖的成员</span></p>
+                        <div class="config-item-input"><input class="multiple_input_boxes" type="text"></div>
+                    </div>
+                    <div>
+                        <p id="user">用户(1级, user)<span class="tip">普通玩家, 可以进行游戏。例子: 普通玩家</span>
+                        <div class="config-item-input"><input class="multiple_input_boxes" type="text"></div>
+                    </div>
+                    <div>
+                        <p id="guest">游客(0级, guest)<span class="tip">游客, 只能查看服务器信息。例子: 最低权限, 如访客或者熊孩子</span>
+                        <div class="config-item-input"><input class="multiple_input_boxes" type="text"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="btn" id="save" onclick="saveConfig('permission.yml')">保存设置</div>
+        </div>
+    </div>
+
+    <script src="js/mc.js"></script>
+    <script src="js/plugins.js"></script>
+
+    <script>
+        loadconfigPlugin('config.yml', 'config.yml');
+        loadconfigPlugin('permission.yml', 'permission.yml');
+    </script>
+
+    <pre id="JSON"></pre>
+
 </body>
 </html>
