@@ -10,6 +10,7 @@ from fastapi.responses import (
     PlainTextResponse,
 )
 from fastapi.templating import Jinja2Templates
+from ruamel.yaml.comments import CommentedSeq
 from starlette.exceptions import HTTPException as StarletteHTTPException
 from starlette.middleware.sessions import SessionMiddleware
 
@@ -459,25 +460,37 @@ async def load_config(
 # ensure consistent data type
 def consistent_type_update(original, updates):
     for key, value in updates.items():
+        # setting to None
+        if key in original and original[key] is None and \
+            (not value or (isinstance(value,list) and not any(value))):
+            continue
         # dict -> recurssive update
-        if isinstance(value, dict) and key in original:
+        elif isinstance(value, dict) and key in original:
             consistent_type_update(original[key], value)
         # get previous type 
         elif isinstance(value, list) and key in original:
+            # save old comment
+            original_ca = original[key].ca.items if isinstance(original[key], CommentedSeq) else None
+
             targe_type = list( # search the first type in the original list
                 {type(item) for item in original[key] if item}
             ) if original[key] else None
-            original[key] = [
+
+            temp_list = [
                 (targe_type[0](item) if targe_type else item) if item else None
                 for item in value
             ]
+
+            if original_ca: # save comment to last attribute
+                original[key] = CommentedSeq(temp_list)
+                original[key].ca.items[len(original[key])-1] = original_ca[max(original_ca)]
+            else:
+                original[key] = temp_list
+
         # Force type convertion
         elif key in original and original[key]:
             original_type = type(original[key])
             original[key] = original_type(value)  
-        # setting to None
-        elif key in original and original[key] is None and not value:
-            continue
         # new attributes
         else:
             original[key] = value
