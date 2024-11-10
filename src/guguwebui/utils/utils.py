@@ -296,7 +296,6 @@ def __copyFile(server, path, target_path):
         
 def amount_static_files(server):
     __copyFile(server, 'guguwebui/css/about.css', './guguwebui_static/css/about.css')
-    __copyFile(server, 'guguwebui/css/cq.css', './guguwebui_static/css/cq.css')
     __copyFile(server, 'guguwebui/css/gugubot.css', './guguwebui_static/css/gugubot.css')
     __copyFile(server, 'guguwebui/css/home.css', './guguwebui_static/css/home.css')
     __copyFile(server, 'guguwebui/css/index.css', './guguwebui_static/css/index.css')
