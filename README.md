@@ -26,9 +26,9 @@
 
 ## 示例图
 
-> 第1张和第7张为内测用户提供
+> 截图来源本地测试
 
-![image](https://github.com/user-attachments/assets/fdcf5cf2-549a-4b83-a260-e9c54690734b)
+![image](https://github.com/user-attachments/assets/b8556f19-25b1-433d-9691-72bb21816480)
 ![image](https://github.com/user-attachments/assets/5b868779-ec5c-4082-bf3e-f7564ba06e4b)
 ![image](https://github.com/user-attachments/assets/c1633bb7-de4d-4e5b-a091-ebae30322e19)
 ![image](https://github.com/user-attachments/assets/b1154e22-a111-4094-aab4-da3cefde7e14)
