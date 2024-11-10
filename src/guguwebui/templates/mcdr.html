@@ -138,7 +138,7 @@
                                 </p>
                             </div>
                         </div>
-                        <div class="config-item-input"><input type="text"></div>
+                        <div class="config-item-input"><input class="multiple_input_boxes" type="text"></div>
                     </div>
                     <div>
                         <p id="custom_info_reactors">处理 info 对象的自定义 Info 响应器 类</p>
@@ -150,7 +150,7 @@
                                 </p>
                             </div>
                         </div>
-                        <div class="config-item-input"><input type="text"></div>
+                        <div class="config-item-input"><input class="multiple_input_boxes" type="text"></div>
                     </div>
                     <div>
                         <p id="watchdog_threshold"><a href="https://docs.mcdreforged.com/zh-cn/latest/plugin_dev/watchdog.html" target="_blank">看门狗</a> 响应时间阈值<span class="tip">使得 看门狗 认为任务执行者 (task executor) 线程已经未响应所需的时间间隔。将其设为 0 以禁用 看门狗</span></p>
@@ -302,7 +302,7 @@
                     </div>
                     <div>
                         <p id="admin">管理员(3级, admin)<span class="tip">管理员, 拥有控制 MCDR 与 Minecraft 服务器的能力。例子: Minecraft 中的 OP</span></p>
-                        <div class="config-item-input"><input type="text"></div>
+                        <div class="config-item-input"><input class="multiple_input_boxes" type="text"></div>
                     </div>
                     <div>
                         <p id="helper">协助者(2级, helper)<span class="tip">助手, 可以协助管理员进行服务器管理。提示: QB是2级权限, 例子: 值得信赖的成员</span></p>
@@ -314,22 +314,23 @@
                     </div>
                     <div>
                         <p id="guest">游客(0级, guest)<span class="tip">游客, 只能查看服务器信息。例子: 最低权限, 如访客或者熊孩子</span>
-                        <div class="config-item-input"><input type="text"></div>
+                        <div class="config-item-input"><input class="multiple_input_boxes" type="text"></div>
                     </div>
                 </div>
             </div>
             <div class="btn" id="save" onclick="saveConfig('permission.yml')">保存设置</div>
         </div>
-        <script src="js/mc.js"></script>
-        <script>
-            loadconfigPlugin('config.yml');
-        </script>
-        <script>
-            loadconfigPlugin('permission.yml');
-        </script>
     </div>
-    <pre id="JSON">
 
-    </pre>
+    <script src="js/mc.js"></script>
+    <script src="js/plugins.js"></script>
+
+    <script>
+        loadconfigPlugin('config.yml', 'config.yml');
+        loadconfigPlugin('permission.yml', 'permission.yml');
+    </script>
+
+    <pre id="JSON"></pre>
+
 </body>
 </html>
