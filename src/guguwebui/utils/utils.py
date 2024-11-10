@@ -1,5 +1,6 @@
 import copy
 import importlib
+import javaproperties
 import json
 import os
 import string
@@ -12,7 +13,7 @@ from mcdreforged.api.types import PluginServerInterface
 from mcdreforged.plugin.meta.metadata import Metadata
 from pathlib import Path
 
-from .constant import user_db, pwd_context
+from .constant import user_db, pwd_context, SERVER_PROPERTIES_PATH
 
 #============================================================#
 # verify password
@@ -68,7 +69,7 @@ def find_plugin_config_paths(plugin_id:str)->list:
 
     response = [] # list[config_path]
     config_suffix = [".json", ".yml", ".yaml"]
-    single_file_paths = [single_file_path / suffix for suffix in config_suffix]
+    single_file_paths = [single_file_path.with_suffix(suffix) for suffix in config_suffix]
 
     # Configs in ./config/plugin_id/
     response += [file for file in Path(MCDR_plugin_folder).rglob("*") if file.suffix in config_suffix]
@@ -164,16 +165,20 @@ def get_plugins_info(server_interface:PluginServerInterface, detail=False):
                 "path": plugin_name if plugin_name in unloaded_plugins + disabled_plugins else ""
             })
         elif detail: # plugin-list info
-
+            description = plugin_metadata.description
+            description = (description.get(server_interface.get_mcdr_language()) or description.get("en_us")) \
+                if isinstance(description, dict) else description
             respond.append({
                 "id": str(plugin_metadata.id),
                 "name": str(plugin_metadata.name),
+                "description": str(description),
                 "author": ", ".join(plugin_metadata.author),
                 "github": str(plugin_metadata.link),
                 "version": str(plugin_metadata.version),
                 "version_latest": str(plugin_metadata.version),
                 "status": "loaded" if str(plugin_metadata.id) in loaded_metadata else "disabled" if str(plugin_metadata.id) in disabled_plugins else "unloaded",
-                "path": plugin_name if plugin_name in unloaded_plugins + disabled_plugins else ""
+                "path": plugin_name if plugin_name in unloaded_plugins + disabled_plugins else "",
+                "config_file": bool(find_plugin_config_paths(str(plugin_metadata.id)))
             })
 
     return respond
@@ -243,6 +248,41 @@ def get_comment(config:dict)->dict:
 
     return name_map
 #============================================================#
+# read server status
+import socket
+
+# Get server port
+def get_server_port()->int:
+    with open(SERVER_PROPERTIES_PATH, "r", encoding="UTF-8") as f:
+        data = javaproperties.load(f)
+    return int( data["server-port"] )
+
+# Get java MC status
+# original code from https://github.com/Spark-Code-China/MC-Server-Info
+def get_java_server_info():
+    temp_ip = "127.0.0.1"
+    port = get_server_port()
+    result_dict = {}
+    tcp_client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    try:
+        tcp_client.connect((temp_ip, port))
+        tcp_client.sendall(b'\xfe\x01')
+        data = tcp_client.recv(1024)
+        if data:
+            if data[:2] == b'\xff\x00':
+                data_parts = data.split(b'\x00\x00\x00')
+                if len(data_parts) >= 6:
+                    result_dict["server_version"] = data_parts[2].decode('latin1').replace('\x00', '')
+                    result_dict["server_player_count"] =  data_parts[4].decode('latin1').replace('\x00', '')
+                    result_dict["server_maxinum_player_count"] = data_parts[5].decode('latin1').replace('\x00', '')
+                    return result_dict
+        return result_dict
+    except socket.error as e:
+        return result_dict
+    finally:
+        tcp_client.close()
+ 
+#============================================================#
 # move file from MCDR package
 def __copyFile(server, path, target_path): 
     if "custom" in Path(target_path).parts and os.path.exists(target_path):
@@ -261,6 +301,7 @@ def amount_static_files(server):
     __copyFile(server, 'guguwebui/css/home.css', './guguwebui_static/css/home.css')
     __copyFile(server, 'guguwebui/css/index.css', './guguwebui_static/css/index.css')
     __copyFile(server, 'guguwebui/css/login.css', './guguwebui_static/css/login.css')
+    __copyFile(server, 'guguwebui/css/mc.css', './guguwebui_static/css/mc.css')
     __copyFile(server, 'guguwebui/css/plugins.css', './guguwebui_static/css/plugins.css')
     __copyFile(server, 'guguwebui/custom/overall.css', './guguwebui_static/custom/overall.css')
     __copyFile(server, 'guguwebui/custom/overall.js', './guguwebui_static/custom/overall.js')
@@ -268,6 +309,7 @@ def amount_static_files(server):
     __copyFile(server, 'guguwebui/js/home.js', './guguwebui_static/js/home.js')
     __copyFile(server, 'guguwebui/js/index.js', './guguwebui_static/js/index.js')
     __copyFile(server, 'guguwebui/js/login.js', './guguwebui_static/js/login.js')
+    __copyFile(server, 'guguwebui/js/mc.js', './guguwebui_static/js/mc.js')
     __copyFile(server, 'guguwebui/js/plugins.js', './guguwebui_static/js/plugins.js')
     __copyFile(server, 'guguwebui/src/bg.png', './guguwebui_static/src/bg.png')
     __copyFile(server, 'guguwebui/src/checkbox_select.png', './guguwebui_static/src/checkbox_select.png')

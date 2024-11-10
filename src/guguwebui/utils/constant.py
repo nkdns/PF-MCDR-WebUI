@@ -16,6 +16,8 @@ PATH_DB_PATH = Path("./config") / "guguwebui" / "config_path.json"
 CSS_FILE = Path(STATIC_PATH) / "custom" / "overall.css"
 JS_FILE = Path(STATIC_PATH) / "custom" / "overall.js"
 
+SERVER_PROPERTIES_PATH = "server/server.properties"
+
 pwd_context = CryptContext(schemes=["argon2"], deprecated="auto")
 
 # token: {token : {expire_time, user_name}}

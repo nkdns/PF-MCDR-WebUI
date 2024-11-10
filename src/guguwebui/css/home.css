@@ -13,7 +13,7 @@
 }
 
 #home .tip {
-    color: #c2ccd0;
+    color: #a1afc9;
     font-size: 12px;
 }
 
@@ -46,6 +46,16 @@
     cursor: pointer;
     transition: 0.2s all;
     line-height: 25px;
+    animation: slideIn 0.5s forwards;
+    opacity: 0;
+    transform: translateX(10px);
+}
+
+@keyframes slideIn {
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
 }
 
 #home .status > div .plugin:hover {
