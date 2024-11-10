@@ -29,12 +29,14 @@
 > 第1张和第7张为内测用户提供
 
 ![image](https://github.com/user-attachments/assets/fdcf5cf2-549a-4b83-a260-e9c54690734b)
-![image](https://github.com/user-attachments/assets/06ee0b63-7463-4a3e-a940-d01e2a4f649b)
-![image](https://github.com/user-attachments/assets/e09fd9ab-d04e-44ca-a06f-fa80fb085804)
-![image](https://github.com/user-attachments/assets/c8ea77cf-7022-4fdc-b72a-3c8189d69f7a)
-![image](https://github.com/user-attachments/assets/a4bd1b41-bbff-473b-bfe7-c3d0ebf18d82)
-![image](https://github.com/user-attachments/assets/22558ae4-21b2-46a9-b309-7900e85e2eca)
-![image](https://github.com/user-attachments/assets/038753a0-8814-4a04-bd6b-e266540f6bf7)
+![image](https://github.com/user-attachments/assets/5b868779-ec5c-4082-bf3e-f7564ba06e4b)
+![image](https://github.com/user-attachments/assets/c1633bb7-de4d-4e5b-a091-ebae30322e19)
+![image](https://github.com/user-attachments/assets/b1154e22-a111-4094-aab4-da3cefde7e14)
+![image](https://github.com/user-attachments/assets/5b2ab04f-a4fb-4be5-b3a1-9da3a97709e3)
+![image](https://github.com/user-attachments/assets/808c22e5-e3b4-46d7-8549-417c94438c16)
+![image](https://github.com/user-attachments/assets/a50991e6-a281-4ec7-99e8-d8a921d15e95)
+![image](https://github.com/user-attachments/assets/92ca8d19-40b1-444b-8aed-6c080c1b91a9)
+
 
 
 ## 开发进度
@@ -49,10 +51,8 @@
   - 配置：100%
   - 文档：0%
   - 附加功能：0%
-- MC服务器配置：正在开发中...
-  - 配置：前端已完成
-- MCDR配置：正在开发中..
-  - 配置：前端已完成
+- MC服务器配置：100%
+- MCDR配置：100%
 - 所有插件管理：90%
   - 管理：100%
   - 更新：100%
