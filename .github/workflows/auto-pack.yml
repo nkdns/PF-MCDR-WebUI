@@ -1,0 +1,50 @@
+name: Build Package and Create Pre-release on PR
+
+on:
+  pull_request:
+    paths:
+      - 'src/*'  # 仅当 src/ 目录中的文件发生变化时才会触发
+    branches:
+      - main  # 监听对 main 分支的 PR
+
+jobs:
+  build:
+    runs-on: ubuntu-latest  # 运行环境使用 Ubuntu
+
+    steps:
+      # 检出代码
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      # 安装打包工具（根据你的需求选择，如 zip 或其他）
+      - name: Set up packaging tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install zip  # 例如安装 zip 工具，用于压缩文件
+
+      # 获取 Git 版本号
+      - name: Get version number from git
+        id: version
+        run: |
+          VERSION=$(git describe --tags --always)  # 获取最近的 Git 标签作为版本号
+          echo "VERSION=$VERSION" >> $GITHUB_ENV  # 将版本号传递给后续步骤
+
+      # 打包 src 目录
+      - name: Package src/* into guguwebui.mcdr
+        run: |
+          zip -r guguwebui-${{ env.VERSION }}.mcdr src/*  # 使用 Git 版本号作为文件名的一部分
+
+      # 上传构建产物
+      - name: Upload packaged file
+        uses: actions/upload-artifact@v3
+        with:
+          name: guguwebui-${{ env.VERSION }}.mcdr  # 上传的文件名
+          path: guguwebui-${{ env.VERSION }}.mcdr  # 要上传的文件路径
+
+      # 创建 Pre-release
+      - name: Create a pre-release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: guguwebui-${{ env.VERSION }}.mcdr  # 使用自动生成的版本号
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}  # 使用 GitHub 提供的 TOKEN
