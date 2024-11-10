@@ -12,7 +12,7 @@ from .web_server import *
 def on_load(server: PluginServerInterface, old):
     global web_server_interface
 
-    server.logger.info("[MCDR WebUI] 启动 WebUI 中...")
+    server.logger.info("[GUGUWebUI] 启动 WebUI 中...")
 
     plugin_config = server.load_config_simple("config.json", DEFALUT_CONFIG)
     host = plugin_config['host']
@@ -29,13 +29,13 @@ def on_load(server: PluginServerInterface, old):
     config = uvicorn.Config(app, host=host, port=port, log_level="warning")
     web_server_interface = ThreadedUvicorn(config)
 
-    server.logger.info(f"[MCDR WebUI] 网页地址: http://{host}:{port}")
+    server.logger.info(f"[GUGUWebUI] 网页地址: http://{host}:{port}")
     web_server_interface.start()
 
 
 def on_unload(server: PluginServerInterface):
     web_server_interface.stop()
-    server.logger.info("[MCDR WebUI] WebUI 已卸载")
+    server.logger.info("[GUGUWebUI] WebUI 已卸载")
 
 
 def register_command(server:PluginServerInterface, host:str, port:int):
