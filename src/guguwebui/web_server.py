@@ -423,8 +423,11 @@ async def load_config(
     MCDR_language:str = server.get_mcdr_language()
 
     # Translation for xxx.json -> xxx_lang.json
-    if translation and path.suffix == ".json":
-        path = path.with_stem(f"{path.stem}_lang")
+    if translation:
+        if path.suffix in [".json", ".properties"]:
+            path = path.with_stem(f"{path.stem}_lang")
+        if path.suffix == ".properties":
+            path = path.with_suffix(f".json")
         
     if not path.exists(): # file not exists
         return JSONResponse({})  
@@ -443,13 +446,11 @@ async def load_config(
 
     if translation:
         # Get corresponding language
-        if path.suffix == ".json":
+        if path.suffix in [".json", ".properties"]:
             config = config.get(MCDR_language) or config.get("en_us") or {}
         # Translation for yaml -> comment in yaml file
         elif translation and path.suffix in [".yml", ".yaml"]:
             config = get_comment(config)
-        else:
-            config = {}
 
     return JSONResponse(config)
 

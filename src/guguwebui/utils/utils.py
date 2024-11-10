@@ -304,6 +304,7 @@ def amount_static_files(server):
     __copyFile(server, 'guguwebui/css/plugins.css', './guguwebui_static/css/plugins.css')
     __copyFile(server, 'guguwebui/custom/overall.css', './guguwebui_static/custom/overall.css')
     __copyFile(server, 'guguwebui/custom/overall.js', './guguwebui_static/custom/overall.js')
+    __copyFile(server, 'guguwebui/custom/server_lang.json', './server/server_lang.json')
     __copyFile(server, 'guguwebui/js/about.js', './guguwebui_static/js/about.js')
     __copyFile(server, 'guguwebui/js/home.js', './guguwebui_static/js/home.js')
     __copyFile(server, 'guguwebui/js/index.js', './guguwebui_static/js/index.js')
