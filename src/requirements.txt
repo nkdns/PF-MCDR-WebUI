@@ -1,5 +1,6 @@
 fastapi
 javaproperties
+mcdreforged>=2.3.0
 passlib
 pydantic
 ruamel.yaml
