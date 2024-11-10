@@ -1,4 +1,5 @@
 import datetime
+import javaproperties
 import secrets
 
 from fastapi import Depends, FastAPI, Form, Request, status, HTTPException
@@ -297,7 +298,7 @@ async def toggle_plugin(
     server:PluginServerInterface = app.state.server_interface
     plugin_id = request_body.plugin_id
     target_status = request_body.status
-    print(plugin_id)
+
     # reload only for guguwebui
     if plugin_id == "guguwebui":
         server.reload_plugin(plugin_id)
@@ -433,6 +434,12 @@ async def load_config(
             config = json.load(f)
         elif path.suffix in [".yml", ".yaml"]:
             config = yaml.load(f)
+        elif path.suffix == ".properties":
+            config = javaproperties.load(f)
+            # convert string "true" "false" to True False
+            config = {k:v if v not in ["true", "false"] else 
+                      True if v == "true" else False 
+                      for k,v in config.items()}
 
     if translation:
         # Get corresponding language
@@ -441,6 +448,8 @@ async def load_config(
         # Translation for yaml -> comment in yaml file
         elif translation and path.suffix in [".yml", ".yaml"]:
             config = get_comment(config)
+        else:
+            config = {}
 
     return JSONResponse(config)
 
@@ -456,15 +465,18 @@ def consistent_type_update(original, updates):
         elif isinstance(value, list) and key in original:
             targe_type = list( # search the first type in the original list
                 {type(item) for item in original[key] if item}
-            )
+            ) if original[key] else None
             original[key] = [
                 (targe_type[0](item) if targe_type else item) if item else None
                 for item in value
             ]
         # Force type convertion
-        elif key in original:
+        elif key in original and original[key]:
             original_type = type(original[key])
             original[key] = original_type(value)  
+        # setting to None
+        elif key in original and original[key] is None and not value:
+            continue
         # new attributes
         else:
             original[key] = value
@@ -487,6 +499,12 @@ async def save_config(
             data = json.load(f)
         elif config_path.suffix in [".yml", ".yaml"]:
             data = yaml.load(f)
+        elif config_path.suffix == ".properties":
+            data = javaproperties.load(f)
+            # convert back the True False to "true" "false"
+            plugin_config = {k:v if not isinstance(v, bool) else 
+                             "true" if v else "false" 
+                             for k,v in plugin_config.items()}
 
     # ensure type will not change
     consistent_type_update(data, plugin_config)
@@ -496,7 +514,8 @@ async def save_config(
             json.dump(data, f, ensure_ascii=False)
         elif config_path.suffix in [".yml", ".yaml"]:
             yaml.dump(data, f)
-
+        elif config_path.suffix == ".properties":
+            javaproperties.dump(data, f)
 
 # load overall.js / overall.css
 @app.get("/api/load_file", response_class=PlainTextResponse)
@@ -534,3 +553,17 @@ async def save_config_file(data: SaveContent, token_valid: bool = Depends(verify
     with open(path, "w", encoding="utf-8") as file:
         file.write(data.content)
     return {"status": "success", "message": f"{data.action} saved successfully"}
+
+# read MC server status
+@app.get("/api/get_server_status")
+async def get_server_status(token_valid: bool = Depends(verify_token)):
+    server:PluginServerInterface = app.state.server_interface
+
+    server_status = "online" if server.is_server_running() or server.is_server_startup() else "offline"
+    result = {
+        "status": server_status,
+        "version": "", # unimplemented
+        "players": "", # unimplemented
+    }
+
+    return JSONResponse(result)
