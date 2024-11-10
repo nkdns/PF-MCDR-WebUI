@@ -10,7 +10,7 @@
 [![下载量](https://img.shields.io/github/downloads/LoosePrince/PF-MCDR-WebUI/total?style=flat-square&label=下载量)](https://github.com/LoosePrince/PF-MCDR-WebUI/releases)
 [![最新发布下载量](https://img.shields.io/github/downloads/LoosePrince/PF-MCDR-WebUI/latest/total?style=flat-square&label=最新版本下载量)](https://github.com/LoosePrince/PF-MCDR-WebUI/releases/latest)
 
-## 说明
+## 插件说明
 
 **主要功能：** 为MCDR提供一个在线WebUI管理界面（并不管理MC服务器，如有这方面的需求请查询MC服务器面板），和MCDR插件管理和表单配置功能（可选使用在线编辑器）。
 
@@ -23,6 +23,26 @@
   - json文件需要创建 `需要加标题的配置文件名_lang.josn` 例如 `abc_lang.json` 则会为 `abc.json` 创建中文标题，使用 `[标题,副标题]` 创建标题和副标题，参考示例 ：[config_lang.json](https://github.com/LoosePrince/PF-MCDR-WebUI/blob/main/config_lang.json)
 
 **自定义：** 支持全局css和js配置文件，在首页提供在线编辑。
+
+## 使用方式
+
+**创建账户**
+
+```bash
+!!webui create <username> <password>
+```
+
+**更改密码**
+
+```bash
+!!webui change <username> <old password> <newpassword>
+```
+
+**临时密码**
+
+```bash
+!!webui temp
+```
 
 ## 示例图
 
