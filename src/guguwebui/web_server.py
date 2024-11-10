@@ -525,7 +525,7 @@ async def save_config(
 
     with open(config_path, "w", encoding="UTF-8") as f:
         if config_path.suffix == ".json":
-            json.dump(data, f, ensure_ascii=False)
+            json.dump(data, f, ensure_ascii=False, indent=4)
         elif config_path.suffix in [".yml", ".yaml"]:
             yaml.dump(data, f)
         elif config_path.suffix == ".properties":
