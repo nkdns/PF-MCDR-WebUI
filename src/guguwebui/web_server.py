@@ -560,10 +560,18 @@ async def get_server_status(token_valid: bool = Depends(verify_token)):
     server:PluginServerInterface = app.state.server_interface
 
     server_status = "online" if server.is_server_running() or server.is_server_startup() else "offline"
+    server_message = get_java_server_info()
+
+    server_version = server_message.get("server_version", "")
+    version_string = f"Version: {server_version}" if server_version else ""
+    player_count = server_message.get("server_player_count")
+    max_player = server_message.get("server_maxinum_player_count")
+    player_string = f"{player_count}/{max_player}" if player_count and max_player else ""
+
     result = {
         "status": server_status,
-        "version": "", # unimplemented
-        "players": "", # unimplemented
+        "version": version_string, 
+        "players": player_string, 
     }
 
     return JSONResponse(result)

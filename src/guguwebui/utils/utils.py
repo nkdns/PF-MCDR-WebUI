@@ -1,5 +1,6 @@
 import copy
 import importlib
+import javaproperties
 import json
 import os
 import string
@@ -12,7 +13,7 @@ from mcdreforged.api.types import PluginServerInterface
 from mcdreforged.plugin.meta.metadata import Metadata
 from pathlib import Path
 
-from .constant import user_db, pwd_context
+from .constant import user_db, pwd_context, SERVER_PROPERTIES_PATH
 
 #============================================================#
 # verify password
@@ -246,6 +247,41 @@ def get_comment(config:dict)->dict:
             name_map.update(get_comment(v))
 
     return name_map
+#============================================================#
+# read server status
+import socket
+
+# Get server port
+def get_server_port()->int:
+    with open(SERVER_PROPERTIES_PATH, "w", encoding="UTF-8") as f:
+        data = javaproperties.load(f)
+    return int( data["server-port"] )
+
+# Get java MC status
+# original code from https://github.com/Spark-Code-China/MC-Server-Info
+def get_java_server_info():
+    temp_ip = "127.0.0.1"
+    port = get_server_port()
+    result_dict = {}
+    tcp_client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    try:
+        tcp_client.connect((temp_ip, port))
+        tcp_client.sendall(b'\xfe\x01')
+        data = tcp_client.recv(1024)
+        if data:
+            if data[:2] == b'\xff\x00':
+                data_parts = data.split(b'\x00\x00\x00')
+                if len(data_parts) >= 6:
+                    result_dict["server_version"] = data_parts[2].decode('latin1').replace('\x00', '')
+                    result_dict["server_player_count"] =  data_parts[4].decode('latin1').replace('\x00', '')
+                    result_dict["server_maxinum_player_count"] = data_parts[5].decode('latin1').replace('\x00', '')
+                    return result_dict
+        return result_dict
+    except socket.error as e:
+        return result_dict
+    finally:
+        tcp_client.close()
+ 
 #============================================================#
 # move file from MCDR package
 def __copyFile(server, path, target_path): 
