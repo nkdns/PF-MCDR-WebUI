@@ -38,7 +38,36 @@
     margin-left: 5px;
 }
 
-#plugins .about-list a:hover {
+#plugins .about-list .about-item {
+    margin: 10px 0;
+    background-color: #fff;
+    max-width: 520px;
+    height: 90px;
+    border-radius: 15px;
+    padding: 10px;
+    border: 2px solid #e9f1f6;
+    position: relative;
+}
+
+#plugins .about-list .about-item p,
+#plugins .about-list .about-item a {
+    font-size: 14px;
+}
+
+#plugins .about-list .about-item p {
+    height: calc(100% - 25px);
+}
+
+#plugins .about-list .about-item a {
+    padding: 5px 10px;
+    background-color: #e9f1f6;
+    border-radius: 10px;
+    text-decoration: none;
+    transition: all 0.3s ease-in-out;
+    margin-right: 10px;
+}
+
+#plugins .about-list .about-item a:hover {
     background-color: #c2ccd0;
     color: #fff;
 }
@@ -55,10 +84,10 @@
 }
 
 #plugins #plugin-list .plugin {
-    display: grid;
-    grid-template-columns: 1fr 1.3fr 0.6fr 0.6fr 0.6fr 0.3fr 0.6fr 0.6fr 0.6fr 0.6fr;
-    /* justify-content: space-between; */
+    display: flex;
+    justify-content: space-between;
     align-items: center;
+    /* height: 40px; */
     padding: 5px 5px 5px 10px;
     opacity: 0;
     transform: translateX(20px);
@@ -98,22 +127,22 @@
 
 #plugins #plugin-list .plugin .plugin-name {
     font-size: 16px;
-    /* margin-right: 20px; */
-    /* width: 150px; */
+    margin-right: 20px;
+    width: 150px;
     display: inline-flex;
 }
 
 #plugins #plugin-list .plugin .plugin-author {
     font-size: 14px;
     color: #75878a;
-    /* margin-right: 50px; */
+    margin-right: 20px;
 }
 
 #plugins #plugin-list .plugin a {
     font-size: 16px;
     text-decoration: none;
     color: #a1afc9;
-    /* margin-right: 10px; */
+    margin-right: 10px;
 }
 
 #plugins #plugin-list .plugin .plugin-mcdr,
@@ -125,15 +154,15 @@
 #plugins #plugin-list .plugin .plugin-version {
     font-size: 14px;
     color: #75878a;
-    /* margin-left: 40px; */
-    /* width: 70px; */
+    margin-left: 40px;
+    width: 70px;
     display: inline-flex;
 }
 
 #plugins #plugin-list .plugin .plugin-latest-version {
     font-size: 14px;
     color: #75878a;
-    /* margin-left: 10px; */
+    margin-left: 10px;
 }
 
 #plugins .list-btn {
