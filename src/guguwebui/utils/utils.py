@@ -68,7 +68,7 @@ def find_plugin_config_paths(plugin_id:str)->list:
 
     response = [] # list[config_path]
     config_suffix = [".json", ".yml", ".yaml"]
-    single_file_paths = [single_file_path / suffix for suffix in config_suffix]
+    single_file_paths = [single_file_path.with_suffix(suffix) for suffix in config_suffix]
 
     # Configs in ./config/plugin_id/
     response += [file for file in Path(MCDR_plugin_folder).rglob("*") if file.suffix in config_suffix]
@@ -164,16 +164,20 @@ def get_plugins_info(server_interface:PluginServerInterface, detail=False):
                 "path": plugin_name if plugin_name in unloaded_plugins + disabled_plugins else ""
             })
         elif detail: # plugin-list info
-
+            description = plugin_metadata.description
+            description = (description.get(server_interface.get_mcdr_language()) or description.get("en_us")) \
+                if isinstance(description, dict) else description
             respond.append({
                 "id": str(plugin_metadata.id),
                 "name": str(plugin_metadata.name),
+                "description": str(description),
                 "author": ", ".join(plugin_metadata.author),
                 "github": str(plugin_metadata.link),
                 "version": str(plugin_metadata.version),
                 "version_latest": str(plugin_metadata.version),
                 "status": "loaded" if str(plugin_metadata.id) in loaded_metadata else "disabled" if str(plugin_metadata.id) in disabled_plugins else "unloaded",
-                "path": plugin_name if plugin_name in unloaded_plugins + disabled_plugins else ""
+                "path": plugin_name if plugin_name in unloaded_plugins + disabled_plugins else "",
+                "config_file": bool(find_plugin_config_paths(str(plugin_metadata.id)))
             })
 
     return respond
@@ -261,6 +265,7 @@ def amount_static_files(server):
     __copyFile(server, 'guguwebui/css/home.css', './guguwebui_static/css/home.css')
     __copyFile(server, 'guguwebui/css/index.css', './guguwebui_static/css/index.css')
     __copyFile(server, 'guguwebui/css/login.css', './guguwebui_static/css/login.css')
+    __copyFile(server, 'guguwebui/css/mc.css', './guguwebui_static/css/mc.css')
     __copyFile(server, 'guguwebui/css/plugins.css', './guguwebui_static/css/plugins.css')
     __copyFile(server, 'guguwebui/custom/overall.css', './guguwebui_static/custom/overall.css')
     __copyFile(server, 'guguwebui/custom/overall.js', './guguwebui_static/custom/overall.js')
@@ -268,6 +273,7 @@ def amount_static_files(server):
     __copyFile(server, 'guguwebui/js/home.js', './guguwebui_static/js/home.js')
     __copyFile(server, 'guguwebui/js/index.js', './guguwebui_static/js/index.js')
     __copyFile(server, 'guguwebui/js/login.js', './guguwebui_static/js/login.js')
+    __copyFile(server, 'guguwebui/js/mc.js', './guguwebui_static/js/mc.js')
     __copyFile(server, 'guguwebui/js/plugins.js', './guguwebui_static/js/plugins.js')
     __copyFile(server, 'guguwebui/src/bg.png', './guguwebui_static/src/bg.png')
     __copyFile(server, 'guguwebui/src/checkbox_select.png', './guguwebui_static/src/checkbox_select.png')
