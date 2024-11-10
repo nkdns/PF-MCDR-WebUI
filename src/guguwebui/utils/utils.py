@@ -253,7 +253,7 @@ import socket
 
 # Get server port
 def get_server_port()->int:
-    with open(SERVER_PROPERTIES_PATH, "w", encoding="UTF-8") as f:
+    with open(SERVER_PROPERTIES_PATH, "r", encoding="UTF-8") as f:
         data = javaproperties.load(f)
     return int( data["server-port"] )
 
