@@ -72,6 +72,7 @@
 | 贡献项目 | 说明 |
 |---|---|
 | [Ace Editor](https://ace.c9.io/) | 在线编辑器 |
+| [MC-Server-Info](https://github.com/Spark-Code-China/MC-Server-Info) | Python Minecraft 服务器信息查询 |
 
 
 | 特别鸣谢 |  |
