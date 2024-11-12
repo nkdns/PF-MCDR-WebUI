@@ -1,7 +1,7 @@
 {
 	"id": "guguwebui",
 	"version": "1.0.0",
-	"name": "GUGUWebUI",
+	"name": "GUGU WebUI",
 	"description": {
 		"en_us": "Config manerager using webui interface.",
 		"zh_cn": "使用webui来管理所有插件参数设置"
