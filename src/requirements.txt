@@ -1,3 +1,4 @@
+argon2-cffi
 fastapi
 javaproperties
 mcdreforged>=2.3.0
