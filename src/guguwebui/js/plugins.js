@@ -10,7 +10,7 @@ function set_gugu_plugin(plugin_id) {
                 const container = document.getElementById('container');
                 container.style.display = 'block';
             } else {
-                const noRunHint = document.getElementById(`${plugin_id}-no-run-hint`);
+                const noRunHint = document.getElementById(`no-run-hint`);
                 const container = document.getElementById('container');
                 noRunHint.style.display = 'block';
                 container.style.display = 'block';
@@ -18,7 +18,7 @@ function set_gugu_plugin(plugin_id) {
             const gugubot_version = document.getElementById(`${plugin_id}-version`);
             gugubot_version.innerText = `版本: ${Plugin.version}`;
         } else {
-            const noPluginHint = document.getElementById(`${plugin_id}-no-plugin-hint`);
+            const noPluginHint = document.getElementById(`no-plugin-hint`);
             noPluginHint.style.display = 'block';
         }
     })
