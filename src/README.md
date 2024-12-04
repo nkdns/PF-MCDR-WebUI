@@ -27,6 +27,14 @@
 > [!IMPORTANT]
 > **关于更新:** 涉及 `HTML` 更新部分更新后请删除 `guguwebui_static` 文件夹中的数据文件，如果您修改过内部的文件请自行备份，更新时 *本插件* **不会**为您自动删除和更新 `guguwebui_static` 文件夹中的内容，以防您的数据丢失。
 
+## 依赖配置
+
+**Python 包:** 请确保已安装 [Python™](https://www.python.org/) 和 [pip](https://pypi.org/project/pip/) (pip通常在安装完python后会默认安装)。
+
+**Python 模块:** 参考插件目录内的 `requirements.txt` 文件，使用命令 `pip install -r requirements.txt` 进行安装。
+
+**前置插件:** 无
+
 ## 使用方式
 
 > 目前未对接GUGUbot账号系统；当账号为QQ号时会显示QQ头像和昵称作为管理员名称和头像。
