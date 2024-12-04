@@ -116,7 +116,7 @@ A:因为这就是为它所开发。
 
 # TODO
 
-- [ ] 对接 GUGUbot 插件
+- [ ] [[更新] 关于后续（饼）](https://github.com/LoosePrince/PF-MCDR-WebUI/issues/8) #8
 
 # 有BUG或是新的IDEA
 
