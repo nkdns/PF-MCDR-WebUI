@@ -132,13 +132,13 @@ A:因为这就是为它所开发。
 | [雪开 (XueK66)](https://github.com/XueK66) | 代码开发、维护、功能设计 |
 
 
-| 贡献项目 | 说明 | |
+| 贡献项目 | 功能 | 备注 |
 |---|---|---|
 | [Ace Editor](https://ace.c9.io/) | 在线编辑器 | |
 | [MC-Server-Info](https://github.com/Spark-Code-China/MC-Server-Info) | Python Minecraft 服务器信息查询 | 仓库被作者删除 |
 
 
-| 特别鸣谢 |  |
+| 特别鸣谢 | 说明 |
 |---|---|
 | 反馈者 | 感谢你们的反馈 |
 | [ChatGPT](https://chatgpt.com) | ChatGPT协助编写 |
