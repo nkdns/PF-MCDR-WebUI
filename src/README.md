@@ -10,6 +10,10 @@
 [![下载量](https://img.shields.io/github/downloads/LoosePrince/PF-MCDR-WebUI/total?style=flat-square&label=下载量)](https://github.com/LoosePrince/PF-MCDR-WebUI/releases)
 [![最新发布下载量](https://img.shields.io/github/downloads/LoosePrince/PF-MCDR-WebUI/latest/total?style=flat-square&label=最新版本下载量)](https://github.com/LoosePrince/PF-MCDR-WebUI/releases/latest)
 
+> [!NOTE]
+> 由于 **GUGUbot** 和 **WebUI** 项目庞大，但迄今为止仅有开发者一名，所以我们从现在开始招募有志者加入我们！<br>
+> 有意者请加 QQ1377820366 或 QQ群726741344
+
 ## 插件说明
 
 **主要功能:** 为MCDR提供一个在线WebUI管理界面和MCDR插件管理和表单配置功能（可选使用在线编辑器）。
