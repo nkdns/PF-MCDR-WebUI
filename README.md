@@ -12,7 +12,7 @@
 
 > [!NOTE]
 > 由于 **GUGUbot** 和 **WebUI** 项目庞大，但迄今为止仅有开发者一名，所以我们从现在开始招募有志者加入我们！<br>
-> 有意者请加 QQ1377820366 或 QQ群726741344
+> 有意者请加 QQ[1377820366](http://wpa.qq.com/msgrd?v=3&uin=1377820366&site=qq&menu=yes) 或 QQ群[726741344](https://qm.qq.com/q/TqmRHmTmcU)
 
 ## 插件说明
 
