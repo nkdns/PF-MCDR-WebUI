@@ -130,13 +130,11 @@
 
 #index .nav #user-info #logout:hover {
     background-color: #44CEF6;
-    transform: scale(1.02);
     color: #fff;
 }
 
 #index .nav #user-info #logout:hover::before {
     background-color: #44CEF6;
-    transform: scale(1.1) rotate(45deg);
 }
 
 #index .tabs {
