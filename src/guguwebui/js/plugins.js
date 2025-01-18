@@ -90,7 +90,7 @@ function loadPlugins() {
             // 决定是否显示 GitHub链接
             const githubStyle = github ? 'visibility: visible;' : 'visibility: hidden;';
             // 决定是否显示 插件配置按钮
-            const configButtonStyle = config_file === true ? 'visibility: visible;' : 'visibility: hidden;';
+            const configButtonStyle = config_file === true && id != 'guguwebui' ? 'visibility: visible;' : 'visibility: hidden;';
             
             // 决定运行按钮的状态
             const runButtonClass = status === 'loaded' ? 'plugin-run run' : 'plugin-run stop';
