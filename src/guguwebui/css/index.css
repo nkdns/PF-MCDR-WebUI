@@ -176,10 +176,12 @@
     border-radius: 10px;
     color: #75878a;
     cursor: pointer;
+    transition: 0.2s all;
 }
 
 #index .tabs .tab-container .tab:hover {
     background-color: #e0f8ff;
+    transform: scale(0.95);
 }
 
 #index .tabs .tab-container .bottom {
@@ -211,13 +213,16 @@
     cursor: pointer;
     transition: all 0.3s ease;
     box-sizing: border-box;
+    border: 0 solid rgb(233, 241, 246);
 }
 
 #index .tabs .tab-container .tab-fold:hover {
     background-color: #e0f8ff;
+    transform: scale(0.95);
 }
 
 #index .tabs .tab-container .tab-fold div {
+    width: 100%;
     color: #75878a;
     transition: all 0.3s ease;
 }
