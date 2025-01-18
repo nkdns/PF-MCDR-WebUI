@@ -215,23 +215,9 @@ if (hash) {
 
 
 function changeTab(tab) {
-    const home = document.getElementById('home');
-    const gugubot = document.getElementById('gugubot');
-    const cq = document.getElementById('cq');
-    const mc = document.getElementById('mc');
-    const mcdr = document.getElementById('mcdr');
-    const plugins = document.getElementById('plugins');
-    const about = document.getElementById('about');
-    const fabric = document.getElementById('fabric');
-
-    home.classList.remove('select');
-    gugubot.classList.remove('select');
-    cq.classList.remove('select');
-    mc.classList.remove('select');
-    mcdr.classList.remove('select');
-    plugins.classList.remove('select');
-    about.classList.remove('select');
-    fabric.classList.remove('select');
+    document.querySelectorAll('.tab-container >div > div,.tab-fold > div').forEach(tab => {
+        tab.classList.remove('select');
+    });
 
     // 清除所有.expand的.select
     const expandElements = document.querySelectorAll('.expand');
@@ -308,7 +294,7 @@ function changeTabFromFold(foldId) {
         setTimeout(() => {
             foldButton.style.display = 'none';
             expandButton.style.height = '40px';
-            foldElement.style.border = 'none';
+            foldElement.style.border = '0 solid rgb(233, 241, 246)';
             foldElement.style.margin = '0';
         }, 500);
     } else {
