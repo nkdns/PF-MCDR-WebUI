@@ -110,7 +110,21 @@ function displayUserInfo(userInfo) {
 }
 
 // 页面加载时检查登录状态
-window.onload = function() {
+window.onload = function () {
+    // 获取guguwebui插件信息
+    fetch('/api/plugins?detail=true')
+        .then(response => response.json())
+        .then(data => {
+            // 取plugins中id为guguwebui的插件信息
+            const guguwebui = data.plugins.find(plugin => plugin.id === 'guguwebui');
+            if (guguwebui) {
+                const footer = document.querySelector('.footer');
+                if (footer) {
+                    footer.innerHTML = `WebUI版本: ${guguwebui.version}`;
+                }
+            }
+        })
+        .catch(error => console.error('获取插件信息失败:', error));
     // 页面及其所有资源已加载完毕
     checkLogin();
 };

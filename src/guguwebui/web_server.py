@@ -247,24 +247,20 @@ async def custom_404_handler(request: Request, exc: StarletteHTTPException):
 # ============================================================#
 
 @app.get("/api/checkLogin")
-async def check_login_status(
-    request: Request, token_valid: bool = Depends(verify_token)
-):
+async def check_login_status(request: Request):
     if request.session.get("logged_in"):
-        # If logged in, return success and user info
-        username = request.session.get(
-            "username", "tempuser"
-        )  # Replace with actual username retrieval
+        username = request.session.get("username", "tempuser")
         return JSONResponse({"status": "success", "username": username})
-    else:
-        return JSONResponse(
-            {"status": "error", "message": "User not logged in"}, status_code=401
-        )  # If not logged in, return an error response
+    return JSONResponse({"status": "error", "message": "User not logged in"})
 
 
 # Return gugu plugins' metadata
 @app.get("/api/gugubot_plugins")
-async def get_gugubot_plugins(token_valid: bool = Depends(verify_token)):
+async def get_gugubot_plugins(request: Request):
+    if not request.session.get("logged_in"):
+        return JSONResponse(
+            {"status": "error", "message": "User not logged in"}, status_code=401
+        )
     return JSONResponse(
         content={
             "gugubot_plugins": get_gugubot_plugins_info(app.state.server_interface)
@@ -274,28 +270,44 @@ async def get_gugubot_plugins(token_valid: bool = Depends(verify_token)):
 
 # Return plugins' metadata
 @app.get("/api/plugins")
-async def get_plugins(detail: bool = False, token_valid: bool = Depends(verify_token)):
+async def get_plugins(request: Request, detail: bool = False):
+    plugins = get_plugins_info(app.state.server_interface, detail)
+    if not request.session.get("logged_in"):
+        # 未登录时仅返回guguwebui插件信息
+        guguwebui_plugin = next((p for p in plugins if p["id"] == "guguwebui"), None)
+        if guguwebui_plugin:
+            return JSONResponse(
+                content={"plugins": [guguwebui_plugin]}
+            )
+        return JSONResponse(
+            {"status": "error", "message": "User not logged in"}, status_code=401
+        )
     return JSONResponse(
-        content={"plugins": get_plugins_info(app.state.server_interface, detail)}
+        content={"plugins": plugins}
     )
 
 
 # Install plugin
 @app.post("/api/install_plugin")
-async def install_plugin(
-    plugin_info:plugin_info, token_valid:bool = Depends(verify_token)
-):
+async def install_plugin(request: Request, plugin_info:plugin_info):
+    if not request.session.get("logged_in"):
+        return JSONResponse(
+            {"status": "error", "message": "User not logged in"}, status_code=401
+        )
     plugin_id = plugin_info.plugin_id
     server:PluginServerInterface = app.state.server_interface
 
     server.execute_command(f"!!MCDR plugin install -y {plugin_id}")
+    return JSONResponse({"status": "success"})
 
 
 # Loading/Unloading pluging
 @app.post("/api/toggle_plugin")
-async def toggle_plugin(
-    request_body:toggleconfig, token_valid:bool = Depends(verify_token)
-):
+async def toggle_plugin(request: Request, request_body:toggleconfig):
+    if not request.session.get("logged_in"):
+        return JSONResponse(
+            {"status": "error", "message": "User not logged in"}, status_code=401
+        )
     server:PluginServerInterface = app.state.server_interface
     plugin_id = request_body.plugin_id
     target_status = request_body.status
@@ -311,7 +323,9 @@ async def toggle_plugin(
         plugin_path = unloaded_plugin_metadata.get(plugin_id, {}).get("path")
         # plugin not found
         if not plugin_path:
-            return
+            return JSONResponse(
+                {"status": "error", "message": "Plugin not found"}, status_code=404
+            )
         # enable the plugin before load it
         if plugin_path in disabled_plugin:
             server.enable_plugin(plugin_path)
@@ -319,13 +333,16 @@ async def toggle_plugin(
     # unload
     elif target_status == False:
         server.unload_plugin(plugin_id)
+    return JSONResponse({"status": "success"})
 
 
 # Reload Plugin
 @app.post("/api/reload_plugin")
-async def reload_plugin(
-    plugin_info:plugin_info, token_valid:bool = Depends(verify_token)
-):
+async def reload_plugin(request: Request, plugin_info:plugin_info):
+    if not request.session.get("logged_in"):
+        return JSONResponse(
+            {"status": "error", "message": "User not logged in"}, status_code=401
+        )
     plugin_id = plugin_info.plugin_id
     server:PluginServerInterface = app.state.server_interface
 
@@ -334,14 +351,16 @@ async def reload_plugin(
     if server_response: # sucess
         return JSONResponse({"status": "success"})
 
-    return JSONResponse({"status": "error", "message": f"Reload {plugin_id} failed"})   
+    return JSONResponse({"status": "error", "message": f"Reload {plugin_id} failed"}, status_code=500)   
 
 
 # Update plugin
 @app.post("/api/update_plugin")
-async def update_plugin(
-    plugin_info:plugin_info, token_valid:bool = Depends(verify_token)
-):
+async def update_plugin(request: Request, plugin_info:plugin_info):
+    if not request.session.get("logged_in"):
+        return JSONResponse(
+            {"status": "error", "message": "User not logged in"}, status_code=401
+        )
     plugin_id = plugin_info.plugin_id
     server:PluginServerInterface = app.state.server_interface
 
@@ -354,15 +373,21 @@ async def update_plugin(
 
 # List all config files for a plugin
 @app.get("/api/list_config_files")
-async def list_config_files(
-    plugin_id:str, token_valid:bool = Depends(verify_token)
-):
+async def list_config_files(request: Request, plugin_id:str):
+    if not request.session.get("logged_in"):
+        return JSONResponse(
+            {"status": "error", "message": "User not logged in"}, status_code=401
+        )
     config_path_list:list[str] = find_plugin_config_paths(plugin_id)
     return JSONResponse({"files": config_path_list})
 
 
 @app.get("/api/get_web_config")
-async def get_web_config(token_valid: bool = Depends(verify_token)):
+async def get_web_config(request: Request):
+    if not request.session.get("logged_in"):
+        return JSONResponse(
+            {"status": "error", "message": "User not logged in"}, status_code=401
+        )
     server = app.state.server_interface
     config = server.load_config_simple("config.json", DEFALUT_CONFIG)
     return JSONResponse(
@@ -377,9 +402,11 @@ async def get_web_config(token_valid: bool = Depends(verify_token)):
 
 
 @app.post("/api/save_web_config")
-async def save_web_config(
-    config: saveconfig, token_valid: bool = Depends(verify_token)
-):
+async def save_web_config(request: Request, config: saveconfig):
+    if not request.session.get("logged_in"):
+        return JSONResponse(
+            {"status": "error", "message": "User not logged in"}, status_code=401
+        )
     web_config = app.state.server_interface.load_config_simple(
         "config.json", DEFALUT_CONFIG
     )
@@ -411,14 +438,16 @@ async def save_web_config(
         app.state.server_interface.save_config_simple(web_config)
         return JSONResponse(response)
     except Exception as e:
-        return JSONResponse({"status": "fail", "message": e})
+        return JSONResponse({"status": "fail", "message": str(e)}, status_code=500)
 
 
 # Load config data & Load config translation
 @app.get("/api/load_config")
-async def load_config(
-    path:str, translation:bool = False, token_valid:bool = Depends(verify_token)
-):
+async def load_config(request: Request, path:str, translation:bool = False):
+    if not request.session.get("logged_in"):
+        return JSONResponse(
+            {"status": "error", "message": "User not logged in"}, status_code=401
+        )
     path:Path = Path(path)
     server:PluginServerInterface = app.state.server_interface
     MCDR_language:str = server.get_mcdr_language()
@@ -431,7 +460,7 @@ async def load_config(
             path = path.with_suffix(f".json")
         
     if not path.exists(): # file not exists
-        return JSONResponse({})  
+        return JSONResponse({}, status_code=404)  
 
     with open(path, "r", encoding="UTF-8") as f:
         if path.suffix == ".json":
@@ -498,9 +527,11 @@ def consistent_type_update(original, updates):
 
 # /api/save_config {plugin_id, file_name, config_data}
 @app.post("/api/save_config")
-async def save_config(
-    config_data: config_data, token_valid: bool = Depends(verify_token)
-):
+async def save_config(request: Request, config_data: config_data):
+    if not request.session.get("logged_in"):
+        return JSONResponse(
+            {"status": "error", "message": "User not logged in"}, status_code=401
+        )
     config_path = Path(config_data.file_path)
     plugin_config = config_data.config_data
 
@@ -533,7 +564,9 @@ async def save_config(
 
 # load overall.js / overall.css
 @app.get("/api/load_file", response_class=PlainTextResponse)
-async def load_file(file: str, token_valid: bool = Depends(verify_token)):
+async def load_file(request: Request, file: str):
+    if not request.session.get("logged_in"):
+        raise HTTPException(status_code=401, detail="未登录")
     file_path = CSS_FILE if file == "css" else JS_FILE
     try:
         with open(file_path, "r", encoding="utf-8") as file:
@@ -544,7 +577,11 @@ async def load_file(file: str, token_valid: bool = Depends(verify_token)):
 
 # save overall.js / overall.css
 @app.post("/api/save_file")
-async def save_css(data: SaveContent, token_valid: bool = Depends(verify_token)):
+async def save_css(request: Request, data: SaveContent):
+    if not request.session.get("logged_in"):
+        return JSONResponse(
+            {"status": "error", "message": "User not logged in"}, status_code=401
+        )
     file_path = CSS_FILE if data.action == "css" else JS_FILE
     with open(file_path, "w", encoding="utf-8") as file:
         file.write(data.content)
@@ -553,7 +590,9 @@ async def save_css(data: SaveContent, token_valid: bool = Depends(verify_token))
 
 # load config file
 @app.get("/api/load_config_file", response_class=PlainTextResponse)
-async def load_config_file(path: str, token_valid: bool = Depends(verify_token)):
+async def load_config_file(request: Request, path: str):
+    if not request.session.get("logged_in"):
+        raise HTTPException(status_code=401, detail="未登录")
     try:
         with open(path, "r", encoding="utf-8") as file:
             return file.read()
@@ -562,7 +601,11 @@ async def load_config_file(path: str, token_valid: bool = Depends(verify_token))
 
 # save config file
 @app.post("/api/save_config_file")
-async def save_config_file(data: SaveContent, token_valid: bool = Depends(verify_token)):
+async def save_config_file(request: Request, data: SaveContent):
+    if not request.session.get("logged_in"):
+        return JSONResponse(
+            {"status": "error", "message": "User not logged in"}, status_code=401
+        )
     path = data.action
     with open(path, "w", encoding="utf-8") as file:
         file.write(data.content)
@@ -570,7 +613,11 @@ async def save_config_file(data: SaveContent, token_valid: bool = Depends(verify
 
 # read MC server status
 @app.get("/api/get_server_status")
-async def get_server_status(token_valid: bool = Depends(verify_token)):
+async def get_server_status(request: Request):
+    if not request.session.get("logged_in"):
+        return JSONResponse(
+            {"status": "error", "message": "User not logged in"}, status_code=401
+        )
     server:PluginServerInterface = app.state.server_interface
 
     server_status = "online" if server.is_server_running() or server.is_server_startup() else "offline"

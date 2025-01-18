@@ -268,6 +268,7 @@ def get_java_server_info():
         tcp_client.connect((temp_ip, port))
         tcp_client.sendall(b'\xfe\x01')
         data = tcp_client.recv(1024)
+        print(data)
         if data:
             if data[:2] == b'\xff\x00':
                 data_parts = data.split(b'\x00\x00\x00')

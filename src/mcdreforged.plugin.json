@@ -1,6 +1,6 @@
 {
 	"id": "guguwebui",
-	"version": "1.0.0",
+	"version": "1.1.0",
 	"name": "GUGU WebUI",
 	"description": {
 		"en_us": "Config manerager using webui interface.",
