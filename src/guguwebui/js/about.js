@@ -22,6 +22,16 @@ document.addEventListener("DOMContentLoaded", function () {
                 cq_qq_api_version.innerText = "版本: 未安装";
                 console.log("CQ-QQ-API 插件未找到。");
             }
+        });
+
+    // 获取guguwebui插件信息
+    fetch('/api/plugins?detail=true')
+        .then(response => response.json())
+        .then(data => {
+            // 取plugins中id为guguwebui的插件信息
+            const guguwebui = data.plugins.find(plugin => plugin.id === 'guguwebui');
+            const webVersion = document.getElementById('web-version');
+            webVersion.innerText = `版本: ${guguwebui.version}`;
         })
-       .catch(error => console.error("查询失败:", error));
+        .catch(error => console.error("获取插件信息失败:", error));
 });
