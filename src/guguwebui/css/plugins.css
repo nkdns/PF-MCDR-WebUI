@@ -98,14 +98,14 @@ body.dark {
     --color-45: #0000007f;
     --color-46: #181a1b;
     --color-47: #203d4f;
-    color: #ffffff;
+    color: #dbd8d4;
     background-color: #181A1B;
     height: 100%;
     color-scheme: dark !important;
 }
 
 body.dark * {
-    color: #ffffff;
+    color: #dbd8d4;
 }
 
 #plugins >div:has(>h2) {

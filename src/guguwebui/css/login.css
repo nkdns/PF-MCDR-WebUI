@@ -32,13 +32,13 @@ body.dark {
     --color-12: #212325;
     --color-13: #c5c0b8;
     --color-14: #212325;
-    color: #ffffff;
+    color: #dbd8d4;
     background-color: #181A1B;
 }
 
 
 body.dark * {
-    color: #ffffff;
+    color: #dbd8d4;
 }
 
 *{

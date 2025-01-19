@@ -20,14 +20,14 @@ body.dark {
     --color-6: #e8e6e3;
     --color-7: #4b9ef6;
     --color-8: #212325;
-    color: #ffffff;
+    color: #dbd8d4;
     background-color: #181A1B;
     color-scheme: dark !important;
 }
 
 
 body.dark * {
-    color: #ffffff;
+    color: #dbd8d4;
 }
 #about .title:first-of-type {
     margin-top: 0;

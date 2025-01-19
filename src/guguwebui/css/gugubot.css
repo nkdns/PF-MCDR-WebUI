@@ -58,13 +58,13 @@ body.dark {
     --color-25: #181a1b;
     --color-26: #203d4f;
     --color-27: #9db2c7;
-    color: #ffffff;
+    color: #dbd8d4;
     background-color: #181A1B;
     color-scheme: dark !important;
 }
 
 body.dark * {
-    color: #ffffff;
+    color: #dbd8d4;
 }
 :is(#gugubot-page, #cq) .title:first-of-type {
     margin-top: 0;

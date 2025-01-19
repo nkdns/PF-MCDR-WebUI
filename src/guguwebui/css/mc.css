@@ -34,7 +34,7 @@ body {
     --color-31: #a1afc9ff;
 }
 
-body.dark * {
+body.dark {
     --color-1: #9db2c7;
     --color-2: #181a1b;
     --color-3: #203d4f;
@@ -66,10 +66,16 @@ body.dark * {
     --color-29: #181a1b;
     --color-30: #203d4f;
     --color-31: #9db2c7;
-    color: #ffffff;
+    color: #dbd8d4;
     background-color: #181A1B;
     color-scheme: dark !important;
 }
+
+
+body.dark * {
+    color: #dbd8d4;
+}
+
 :is(#mc, #mcdr) .title:first-of-type {
     margin-top: 0;
 }
