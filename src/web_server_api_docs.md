@@ -8,19 +8,11 @@
 - 路径: `/`
 - 方法: GET
 - 描述: 重定向到登录页面
-- 调用示例:
-  ```bash
-  curl -X GET http://localhost:8000/
-  ```
 
 #### 1.2 获取登录页面
 - 路径: `/login`
 - 方法: GET  
 - 描述: 返回登录页面HTML
-- 调用示例:
-  ```bash
-  curl -X GET http://localhost:8000/login
-  ```
 
 #### 1.3 提交登录请求
 - 路径: `/login`
@@ -32,9 +24,20 @@
   - remember: 是否记住登录状态
 - 描述: 处理登录请求，返回登录结果
 - 调用示例:
-  ```bash
-  curl -X POST http://localhost:8000/login \
-  -d "account=admin&password=123456"
+  ```javascript
+  fetch('http://localhost:8000/login', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/x-www-form-urlencoded',
+    },
+    body: new URLSearchParams({
+      'account': 'admin',
+      'password': '123456'
+    })
+  })
+  .then(response => response.json())
+  .then(data => console.log(data))
+  .catch(error => console.error('Error:', error));
   ```
 
 #### 1.4 登出
@@ -42,8 +45,17 @@
 - 方法: GET
 - 描述: 清除登录状态，重定向到登录页面
 - 调用示例:
-  ```bash
-  curl -X GET http://localhost:8000/logout
+  ```javascript
+  fetch('http://localhost:8000/logout', {
+    method: 'GET',
+    credentials: 'include'
+  })
+  .then(response => {
+    if (response.redirected) {
+      window.location.href = response.url;
+    }
+  })
+  .catch(error => console.error('Error:', error));
   ```
 
 ### 2. 页面相关接口
@@ -52,28 +64,11 @@
 - 路径: `/index`
 - 方法: GET
 - 描述: 返回首页HTML
-- 调用示例:
-  ```bash
-  curl -X GET http://localhost:8000/index
-  ```
 
-#### 2.2 主页
-- 路径: `/home`
-- 方法: GET
-- 描述: 返回后台主页HTML
-- 调用示例:
-  ```bash
-  curl -X GET http://localhost:8000/home
-  ```
-
-#### 2.3 其他页面
+#### 2.2 其他页面
 - 路径: `/gugubot`, `/cq`, `/mc`, `/mcdr`, `/plugins`, `/fabric`, `/about`
 - 方法: GET
 - 描述: 返回对应功能的页面HTML
-- 调用示例:
-  ```bash
-  curl -X GET http://localhost:8000/about
-  ```
 
 ### 3. API接口
 
@@ -82,8 +77,11 @@
 - 方法: GET
 - 描述: 检查当前用户登录状态
 - 调用示例:
-  ```bash
-  curl -X GET http://localhost:8000/api/checkLogin
+  ```javascript
+  fetch('http://localhost:8000/api/checkLogin')
+    .then(response => response.json())
+    .then(data => console.log(data))
+    .catch(error => console.error('Error:', error));
   ```
 
 #### 3.2 获取插件信息
@@ -93,8 +91,11 @@
   - detail: 是否获取详细信息
 - 描述: 获取所有插件信息
 - 调用示例:
-  ```bash
-  curl -X GET "http://localhost:8000/api/plugins?detail=true"
+  ```javascript
+  fetch('http://localhost:8000/api/plugins?detail=true')
+    .then(response => response.json())
+    .then(data => console.log(data))
+    .catch(error => console.error('Error:', error));
   ```
 
 #### 3.3 安装插件
@@ -104,10 +105,19 @@
   - plugin_id: 插件ID
 - 描述: 安装指定插件
 - 调用示例:
-  ```bash
-  curl -X POST http://localhost:8000/api/install_plugin \
-  -H "Content-Type: application/json" \
-  -d '{"plugin_id": "example_plugin"}'
+  ```javascript
+  fetch('http://localhost:8000/api/install_plugin', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      plugin_id: 'example_plugin'
+    })
+  })
+  .then(response => response.json())
+  .then(data => console.log(data))
+  .catch(error => console.error('Error:', error));
   ```
 
 #### 3.4 加载/卸载插件
@@ -118,10 +128,20 @@
   - status: 目标状态（true/false）
 - 描述: 切换插件加载状态
 - 调用示例:
-  ```bash
-  curl -X POST http://localhost:8000/api/toggle_plugin \
-  -H "Content-Type: application/json" \
-  -d '{"plugin_id": "example_plugin", "status": true}'
+  ```javascript
+  fetch('http://localhost:8000/api/toggle_plugin', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      plugin_id: 'example_plugin',
+      status: true
+    })
+  })
+  .then(response => response.json())
+  .then(data => console.log(data))
+  .catch(error => console.error('Error:', error));
   ```
 
 #### 3.5 获取服务器状态
@@ -129,8 +149,11 @@
 - 方法: GET
 - 描述: 获取Minecraft服务器状态信息
 - 调用示例:
-  ```bash
-  curl -X GET http://localhost:8000/api/get_server_status
+  ```javascript
+  fetch('http://localhost:8000/api/get_server_status')
+    .then(response => response.json())
+    .then(data => console.log(data))
+    .catch(error => console.error('Error:', error));
   ```
 
 ### 4. 配置文件相关接口
@@ -142,8 +165,11 @@
   - plugin_id: 插件ID
 - 描述: 获取指定插件的配置文件列表
 - 调用示例:
-  ```bash
-  curl -X GET "http://localhost:8000/api/list_config_files?plugin_id=example_plugin"
+  ```javascript
+  fetch('http://localhost:8000/api/list_config_files?plugin_id=example_plugin')
+    .then(response => response.json())
+    .then(data => console.log(data))
+    .catch(error => console.error('Error:', error));
   ```
 
 #### 4.2 加载配置文件
@@ -154,8 +180,11 @@
   - translation: 是否需要翻译
 - 描述: 加载指定配置文件内容
 - 调用示例:
-  ```bash
-  curl -X GET "http://localhost:8000/api/load_config?path=config.json&translation=true"
+  ```javascript
+  fetch('http://localhost:8000/api/load_config?path=config.json&translation=true')
+    .then(response => response.json())
+    .then(data => console.log(data))
+    .catch(error => console.error('Error:', error));
   ```
 
 #### 4.3 保存配置文件
@@ -166,10 +195,20 @@
   - config_data: 配置数据
 - 描述: 保存配置文件
 - 调用示例:
-  ```bash
-  curl -X POST http://localhost:8000/api/save_config \
-  -H "Content-Type: application/json" \
-  -d '{"file_path": "config.json", "config_data": {"key": "value"}}'
+  ```javascript
+  fetch('http://localhost:8000/api/save_config', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      file_path: 'config.json',
+      config_data: { key: 'value' }
+    })
+  })
+  .then(response => response.json())
+  .then(data => console.log(data))
+  .catch(error => console.error('Error:', error));
   ```
 
 ### 5. 文件操作接口
@@ -181,8 +220,11 @@
   - file: 文件类型（css/js）
 - 描述: 加载overall.css或overall.js文件内容
 - 调用示例:
-  ```bash
-  curl -X GET "http://localhost:8000/api/load_file?file=css"
+  ```javascript
+  fetch('http://localhost:8000/api/load_file?file=css')
+    .then(response => response.text())
+    .then(data => console.log(data))
+    .catch(error => console.error('Error:', error));
   ```
 
 #### 5.2 保存文件
@@ -193,10 +235,20 @@
   - content: 文件内容
 - 描述: 保存overall.css或overall.js文件
 - 调用示例:
-  ```bash
-  curl -X POST http://localhost:8000/api/save_file \
-  -H "Content-Type: application/json" \
-  -d '{"action": "css", "content": "body {background: red;}"}'
+  ```javascript
+  fetch('http://localhost:8000/api/save_file', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      action: 'css',
+      content: 'body {background: red;}'
+    })
+  })
+  .then(response => response.json())
+  .then(data => console.log(data))
+  .catch(error => console.error('Error:', error));
   ```
 
 ### 6. Web配置接口
@@ -206,8 +258,11 @@
 - 方法: GET
 - 描述: 获取Web界面配置信息
 - 调用示例:
-  ```bash
-  curl -X GET http://localhost:8000/api/get_web_config
+  ```javascript
+  fetch('http://localhost:8000/api/get_web_config')
+    .then(response => response.json())
+    .then(data => console.log(data))
+    .catch(error => console.error('Error:', error));
   ```
 
 #### 6.2 保存Web配置
@@ -220,7 +275,18 @@
   - superaccount: 超级管理员账号
 - 描述: 保存Web界面配置
 - 调用示例:
-  ```bash
-  curl -X POST http://localhost:8000/api/save_web_config \
-  -H "Content-Type: application/json" \
-  -d '{"action": "config", "port": 8000, "host": "localhost"}'
+  ```javascript
+  fetch('http://localhost:8000/api/save_web_config', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      action: 'config',
+      port: 8000,
+      host: 'localhost'
+    })
+  })
+  .then(response => response.json())
+  .then(data => console.log(data))
+  .catch(error => console.error('Error:', error));
