@@ -109,8 +109,54 @@ function displayUserInfo(userInfo) {
     }
 }
 
+// 主题相关功能
+const THEME_KEY = 'guguwebui-theme';
+const THEMES = ['light', 'dark', 'auto'];
+
+// 初始化主题
+function initTheme() {
+  const savedTheme = localStorage.getItem(THEME_KEY) || 'auto';
+  const themeSelect = document.querySelector('.theme-select select');
+  themeSelect.value = savedTheme;
+  applyTheme(savedTheme);
+}
+
+// 应用主题
+function applyTheme(theme) {
+  const body = document.body;
+  body.classList.remove(...THEMES);
+  body.classList.add(theme);
+  localStorage.setItem(THEME_KEY, theme);
+  
+  // 通知iframe主题变化
+  const iframe = document.getElementById('content-iframe');
+  if (iframe && iframe.contentWindow) {
+    iframe.contentWindow.postMessage({ type: 'theme-change', theme }, '*');
+  }
+}
+
+// 监听主题切换
+function setupThemeSwitcher() {
+  const themeSelect = document.querySelector('.theme-select select');
+  themeSelect.addEventListener('change', (e) => {
+    const selectedTheme = e.target.value;
+    applyTheme(selectedTheme);
+  });
+}
+
+// 监听主题变化
+window.addEventListener('message', (event) => {
+  if (event.data.type === 'theme-change') {
+    document.body.classList.remove('light', 'dark', 'auto');
+    document.body.classList.add(event.data.theme);
+  }
+});
+
 // 页面加载时检查登录状态
 window.onload = function () {
+  // 初始化主题
+  initTheme();
+  setupThemeSwitcher();
     // 获取guguwebui插件信息
     fetch('/api/plugins?detail=true')
         .then(response => response.json())

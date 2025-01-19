@@ -1,5 +1,17 @@
 // 检查页面加载时是否有错误框
-window.onload = function() {
+window.onload = function () {
+    // 监听主题变化
+    window.addEventListener('message', (event) => {
+        if (event.data.type === 'theme-change') {
+            document.body.classList.remove('light', 'dark', 'auto');
+            document.body.classList.add(event.data.theme);
+        }
+    });
+
+    // 初始化主题
+    const savedTheme = localStorage.getItem('guguwebui-theme') || 'auto';
+    document.body.classList.add(savedTheme);
+
     const errorBox = document.getElementById("errorBox");
     if (errorBox) {
         // 显示错误框

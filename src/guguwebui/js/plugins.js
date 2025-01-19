@@ -1,3 +1,18 @@
+// 主题切换功能
+document.addEventListener('DOMContentLoaded', function() {
+    // 监听主题变化
+    window.addEventListener('message', (event) => {
+        if (event.data.type === 'theme-change') {
+            document.body.classList.remove('light', 'dark', 'auto');
+            document.body.classList.add(event.data.theme);
+        }
+    });
+
+    // 初始化主题
+    const savedTheme = localStorage.getItem('guguwebui-theme') || 'auto';
+    document.body.classList.add(savedTheme);
+});
+
 // 加载 gugubot / cq_qq_api 信息栏 GET /api/gugubot_plugins
 function set_gugu_plugin(plugin_id) {
     fetch('/api/gugubot_plugins') 
@@ -929,4 +944,3 @@ const loadLocalContent = () => {
         editor.setValue(savedContent, -1);
     }
 };
-

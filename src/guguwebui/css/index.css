@@ -22,6 +22,32 @@
     top: 5px;
 }
 
+#index .theme-select {
+    position: fixed;
+    left: 90px;
+    top: 5px;
+    height: 30px;
+    width: 100px;
+}
+
+#index .theme-select select {
+    height: 100%;
+    width: 100%;
+    box-sizing: border-box;
+    padding: 0 10px;
+    border-radius: 8px;
+    background-color: #fff;
+    color: #a1afc9;
+    border: 2px solid #e9f1f6;
+    cursor: pointer;
+    font-size: 14px;
+    transition: 0.2s all;
+}
+
+#index .theme-select select:hover {
+    transform: scale(0.95);
+}
+
 #index #full-screen:hover {
     transform: scale(0.95);
 }

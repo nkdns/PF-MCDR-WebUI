@@ -1,4 +1,16 @@
+// 监听主题变化
+window.addEventListener('message', (event) => {
+  if (event.data.type === 'theme-change') {
+    document.body.classList.remove('light', 'dark', 'auto');
+    document.body.classList.add(event.data.theme);
+  }
+});
+
 document.addEventListener("DOMContentLoaded", function() {
+  // 初始化主题
+  const savedTheme = localStorage.getItem('guguwebui-theme') || 'auto';
+  document.body.classList.add(savedTheme);
+
     // 获取插件状态
     load_gugu_plugins();
 
