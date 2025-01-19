@@ -121,7 +121,7 @@ function loadPlugins() {
             // 加载动画
             const items = document.querySelectorAll('#plugins #plugin-list .plugin');
             items.forEach((item, index) => {
-                const intraGroupDelay = (index % itemsPerPage) * 0.2; // 每组内的项按顺序增加 0.2s
+                const intraGroupDelay = (index % itemsPerPage) * 0.1; // 每组内的项按顺序增加 0.1s
                 item.style.animationDelay = `${intraGroupDelay}s`;
             });
             paginate('plugin-list', 'pagination');
@@ -327,7 +327,11 @@ function configPlugin(plugin_id) {
 
                 // 创建标题
                 const title = document.createElement('h4');
-                title.textContent = path + "配置";
+                title.textContent = path;
+
+                // 创建按钮容器
+                const buttonContainer = document.createElement('div');
+                buttonContainer.className = 'button-container';
 
                 // 创建加载配置按钮
                 const loadButton = document.createElement('button');
@@ -337,13 +341,16 @@ function configPlugin(plugin_id) {
 
                 const loadButton2 = document.createElement('button');
                 loadButton2.className = 'btn';
-                loadButton2.textContent = '加载配置(文本编辑器)';
+                loadButton2.textContent = '加载配置(编辑器)';
                 loadButton2.onclick = () => loadFromServer(path);
 
+                // 将两个按钮添加到按钮容器中
+                buttonContainer.appendChild(loadButton);
+                buttonContainer.appendChild(loadButton2);
+
                 configtitleDiv.appendChild(title);
-                configtitleDiv.appendChild(loadButton);
-                configtitleDiv.appendChild(loadButton2);
-                
+                configtitleDiv.appendChild(buttonContainer);
+
                 // 创建配置 div 容器
                 const configDiv = document.createElement('div');
                 configDiv.className = 'config';
@@ -820,7 +827,7 @@ function showAutoCloseAlert(message, backgroundColor) {
     alertBox.textContent = message;
     alertBox.style.position = 'fixed';
     alertBox.style.top = '60px';
-    alertBox.style.right = '20px';
+    alertBox.style.right = '50%';
     alertBox.style.backgroundColor = backgroundColor;
     alertBox.style.color = 'white';
     alertBox.style.padding = '15px';

@@ -184,23 +184,18 @@
 }
 
 .config-title {
-    display: grid;
-    grid-template-columns: 3fr 0.5fr 0.7fr;
+    display: flex;
+    justify-content: space-between;
     padding: 5px;
 }
 .config-title h4 {
     margin: 0;
 }
 .config-title .btn:nth-child(1) {
-    margin-left: 10px;  /* 确保按钮在行尾 */
-    min-width: 175px;
-    max-width: 200px;
+    margin-left: 10px;
 }
 .config-title .btn:nth-child(2) {
-    margin-left: 10px;  /* 确保按钮在行尾 */
-    width: 100px;
-    min-width: 100px;
-    max-width: 120px;
+    margin-left: 10px;
 }
 
 #plugins .config .config-item,
