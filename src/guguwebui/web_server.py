@@ -566,7 +566,7 @@ async def save_config(request: Request, config_data: config_data):
 @app.get("/api/load_file", response_class=PlainTextResponse)
 async def load_file(request: Request, file: str):
     if not request.session.get("logged_in"):
-        raise HTTPException(status_code=401, detail="未登录")
+        return JSONResponse({"status": "error", "message": "User not logged in"}, status_code=401)
     file_path = CSS_FILE if file == "css" else JS_FILE
     try:
         with open(file_path, "r", encoding="utf-8") as file:
@@ -592,7 +592,7 @@ async def save_css(request: Request, data: SaveContent):
 @app.get("/api/load_config_file", response_class=PlainTextResponse)
 async def load_config_file(request: Request, path: str):
     if not request.session.get("logged_in"):
-        raise HTTPException(status_code=401, detail="未登录")
+        return JSONResponse({"status": "error", "message": "User not logged in"}, status_code=401)
     try:
         with open(path, "r", encoding="utf-8") as file:
             return file.read()

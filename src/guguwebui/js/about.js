@@ -18,7 +18,7 @@ document.addEventListener("DOMContentLoaded", function () {
                 const cq_qq_api_version = document.getElementById('cq-qq-api-version');
                 cq_qq_api_version.innerText = `版本: ${cq_qq_apiPlugin.version}`;
             } else {
-                console.error("CQ-QQ-API 插件未找到。");
+                console.log("CQ-QQ-API 插件未找到。");
             }
         })
        .catch(error => console.error("查询失败:", error));
