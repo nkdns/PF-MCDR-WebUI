@@ -53,8 +53,13 @@ body.dark * {
     margin-bottom: 10px;
 }
 
+#home p .tip {
+    margin-left: 5px;
+    position: absolute;
+}
+
 #home .title .tip {
-    margin-left: 20px;
+    margin-left: 5px;
 }
 
 #home .tip {
