@@ -246,7 +246,7 @@ function showAutoCloseAlert(message, backgroundColor) {
     alertBox.textContent = message;
     alertBox.style.position = 'fixed';
     alertBox.style.top = '60px';
-    alertBox.style.right = '20px';
+    alertBox.style.right = '50%';
     alertBox.style.backgroundColor = backgroundColor;
     alertBox.style.color = 'white';
     alertBox.style.padding = '15px';
