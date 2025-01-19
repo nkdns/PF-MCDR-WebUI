@@ -9,6 +9,60 @@
     <link rel="stylesheet" href="css/index.css">
 </head>
 <body id="index">
+    <script>
+        // 获取用户的主题偏好
+        const THEME_KEY = 'guguwebui-theme';
+        const THEMES = ['light', 'dark', 'auto'];
+        const savedTheme = localStorage.getItem('guguwebui-theme') || 'auto';
+
+        // 函数：根据系统夜间模式设置调整主题
+        function updateThemeBasedOnPreference() {
+            if (savedTheme === 'auto') {
+                const prefersDarkMode = window.matchMedia('(prefers-color-scheme: dark)').matches;
+                // 只有在系统模式发生变化时才切换
+                if (prefersDarkMode) {
+                    document.body.classList.add('dark');
+                    document.body.classList.remove('light');
+                } else {
+                    document.body.classList.add('light');
+                    document.body.classList.remove('dark');
+                }
+                applyTheme('auto');
+            } else {
+                // 如果用户手动选择了主题，则不做自动切换
+                document.body.classList.add(savedTheme);
+                document.body.classList.remove(savedTheme === 'dark' ? 'light' : 'dark');
+            }
+        }
+
+
+        // 应用主题
+        function applyTheme(theme) {
+            const body = document.body;
+            localStorage.setItem(THEME_KEY, theme);
+        
+            if (theme === 'auto') {
+                // 检测系统主题模式
+                const isDarkMode = window.matchMedia('(prefers-color-scheme: dark)').matches;
+                theme = isDarkMode ? 'dark' : 'light';
+            }
+        
+            body.classList.remove(...THEMES);
+            body.classList.add(theme);
+        
+            // 通知iframe主题变化
+            const iframe = document.getElementById('content-iframe');
+            if (iframe && iframe.contentWindow) {
+                iframe.contentWindow.postMessage({ type: 'theme-change', theme }, '*');
+            }
+        }
+
+        // 初始加载时设置主题
+        updateThemeBasedOnPreference();
+
+        // 监听夜间模式设置变化
+        window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', updateThemeBasedOnPreference);
+    </script>
     <!-- 背景图 -->
     <div id="bg">
         <img id="bg-img" src="src/bg.png" alt="背景图">
@@ -66,8 +120,15 @@
     </div>
 
     <!-- 内容 -->
-    <div class="content">
-        <iframe src="" frameborder="0" id="content-iframe"></iframe>
+    <div id="iframe-container" class="content">
+        <!-- 加载动画 -->
+        <div id="loading-spinner">
+            <div class="spinner"></div>
+            <p>少女祈祷中...</p>
+        </div>
+    
+        <!-- iframe -->
+        <iframe id="content-iframe" style="display: none;"></iframe>
     </div>
 
     <p class="footer">WebUI版本: 获取中</p>

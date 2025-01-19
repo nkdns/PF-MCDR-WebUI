@@ -109,30 +109,13 @@ function displayUserInfo(userInfo) {
     }
 }
 
-// 主题相关功能
-const THEME_KEY = 'guguwebui-theme';
-const THEMES = ['light', 'dark', 'auto'];
-
 // 初始化主题
 function initTheme() {
   const savedTheme = localStorage.getItem(THEME_KEY) || 'auto';
   const themeSelect = document.querySelector('.theme-select select');
-  themeSelect.value = savedTheme;
-  applyTheme(savedTheme);
-}
-
-// 应用主题
-function applyTheme(theme) {
-  const body = document.body;
-  body.classList.remove(...THEMES);
-  body.classList.add(theme);
-  localStorage.setItem(THEME_KEY, theme);
-  
-  // 通知iframe主题变化
-  const iframe = document.getElementById('content-iframe');
-  if (iframe && iframe.contentWindow) {
-    iframe.contentWindow.postMessage({ type: 'theme-change', theme }, '*');
-  }
+    themeSelect.value = savedTheme;
+    // 保存
+    localStorage.setItem(THEME_KEY, savedTheme);
 }
 
 // 监听主题切换
@@ -285,6 +268,9 @@ function changeTab(tab) {
         });
     }
 
+    // 初始化主题
+    const savedTheme = localStorage.getItem('guguwebui-theme') || 'auto';
+
     document.getElementById(tab).classList.add('select');
 
     // 获取tab对应的data-text文本
@@ -293,28 +279,49 @@ function changeTab(tab) {
     // 设置页面标题
     document.querySelector('.nav-title').innerText = tabText;
 
-    //设置iframe的src
+    // 获取iframe和加载动画
+    const iframe = document.getElementById('content-iframe');
+    const loadingSpinner = document.getElementById('loading-spinner');
+    
+    // 隐藏iframe并显示加载动画
+    iframe.style.display = 'none';  
+    loadingSpinner.style.display = 'block';  // 显示加载动画
+
+    iframe.style.backgroundColor = 'transparent';
+
+    // 根据选中的tab设置iframe的src
     if (tab === 'home') {
-        document.getElementById('content-iframe').src = '/home';
+        iframe.src = '/home';
     } else if (tab === 'gugubot') {
-        document.getElementById('content-iframe').src = '/gugubot';
+        iframe.src = '/gugubot';
     } else if (tab === 'cq') {
-        document.getElementById('content-iframe').src = '/cq';
+        iframe.src = '/cq';
     } else if (tab === 'mc') {
-        document.getElementById('content-iframe').src = '/mc';
+        iframe.src = '/mc';
     } else if (tab === 'mcdr') {
-        document.getElementById('content-iframe').src = '/mcdr';
+        iframe.src = '/mcdr';
     } else if (tab === 'plugins') {
-        document.getElementById('content-iframe').src = '/plugins';
+        iframe.src = '/plugins';
     } else if (tab === 'about') {
-        document.getElementById('content-iframe').src = '/about';
+        iframe.src = '/about';
     } else if (tab === 'server-terminal') {
-        document.getElementById('content-iframe').src = '/server-terminal';
+        iframe.src = '/server-terminal';
     } else if (tab === 'fabric') {
-        document.getElementById('content-iframe').src = '/fabric';
+        iframe.src = '/fabric';
     }
-    window.location.href = "#" + tab; 
+
+    // 设置iframe加载完成后的显示，延迟0.5秒
+    iframe.onload = function() {
+        setTimeout(function() {
+            // 隐藏加载动画，显示iframe
+            loadingSpinner.style.display = 'none';  // 隐藏加载动画
+            iframe.style.display = 'block';  // 延迟0.5秒后显示iframe
+        }, 500);  // 延迟500毫秒
+    };
+
+    window.location.href = "#" + tab;
 }
+
 
 // 折叠函数
 function changeTabFromFold(foldId) {

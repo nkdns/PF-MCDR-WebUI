@@ -31,7 +31,18 @@
     </script>
 </head>
 <body id="plugins">
+    <script>
+        // 获取用户的主题偏好
+        const savedTheme = localStorage.getItem('guguwebui-theme') || 'auto';
 
+        // 判断是否为自动模式，并根据系统的夜间模式设置调整主题
+        if (savedTheme === 'auto') {
+            const prefersDarkMode = window.matchMedia('(prefers-color-scheme: dark)').matches;
+            document.body.classList.add(prefersDarkMode ? 'dark' : 'light');
+        } else {
+            document.body.classList.add(savedTheme);
+        }
+    </script>
     <div class="about-list">
         <h2>插件列表<span class="tip">可以在此处进行全部插件的通用化配置，注意，由于是通用化配置，所以不可能支持所有的配置！</span></h2>
         <div>
@@ -98,9 +109,9 @@
         const localStorageKey = (current_path) => `editor_content_${current_path}`;
 
         // 读取本地存储中的主题
-        const savedTheme = localStorage.getItem('editor_theme');
-        if (savedTheme) {
-            editor.setTheme("ace/theme/" + savedTheme);
+        const editor_theme = localStorage.getItem('editor_theme');
+        if (editor_theme) {
+            editor.setTheme("ace/theme/" + editor_theme);
         } else {
             editor.setTheme("ace/theme/monokai"); // 默认主题
         }

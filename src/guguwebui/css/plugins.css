@@ -1,3 +1,113 @@
+
+/* CSS Variables for Colors */
+body {
+    --color-1: #a1afc9ff;
+    --color-2: #ffffffff;
+    --color-3: #e9f1f6ff;
+    --color-4: #e9f1f6ff;
+    --color-5: #c2ccd0ff;
+    --color-6: #ffffffff;
+    --color-7: #ffffffff;
+    --color-8: #e9f1f6ff;
+    --color-9: #333333ff;
+    --color-10: #ffffffff;
+    --color-11: #ffffffff;
+    --color-12: #75878aff;
+    --color-13: #a1afc9ff;
+    --color-14: #6473e8ff;
+    --color-15: #75878aff;
+    --color-16: #75878aff;
+    --color-17: #ffffffff;
+    --color-18: #392f41ff;
+    --color-19: #e9f1f6ff;
+    --color-20: #a1afc9ff;
+    --color-21: #e9f1f6ff;
+    --color-22: #ffffffcc;
+    --color-23: #e9f1f6ff;
+    --color-24: #e9f1f6ff;
+    --color-25: #ffffff60;
+    --color-26: #ffffffcc;
+    --color-27: #e9f1f6ff;
+    --color-28: #ffffff60;
+    --color-29: #e9f1f6ff;
+    --color-30: #2b2b2bff;
+    --color-31: #ffffffff;
+    --color-32: #a1afc9ff;
+    --color-33: #e9f1f6ff;
+    --color-34: #e9f1f6ff;
+    --color-35: #e9f1f6ff;
+    --color-36: #ffffffff;
+    --color-37: #392f41ff;
+    --color-38: #e9f1f6ff;
+    --color-39: #e9f1f6ff;
+    --color-40: #ffffffff;
+    --color-41: #e9f1f6ff;
+    --color-42: #a1afc9ff;
+    --color-43: #ffffffff;
+    --color-44: #e9f1f6ff;
+    --color-45: #0000007f;
+    --color-46: #ffffffff;
+    --color-47: #e9f1f6ff;
+}
+
+body.dark {
+    --color-1: #9db2c7;
+    --color-2: #181a1b;
+    --color-3: #203d4f;
+    --color-4: #212325;
+    --color-5: #323d41;
+    --color-6: #e8e6e3;
+    --color-7: #181a1b;
+    --color-8: #203d4f;
+    --color-9: #262a2b;
+    --color-10: #e8e6e3;
+    --color-11: #e8e6e3;
+    --color-12: #988f81;
+    --color-13: #9db2c7;
+    --color-14: #669be8;
+    --color-15: #988f81;
+    --color-16: #988f81;
+    --color-17: #181a1b;
+    --color-18: #c5c0b8;
+    --color-19: #203d4f;
+    --color-20: #9db2c7;
+    --color-21: #212325;
+    --color-22: rgba(24, 26, 27, 0.8);
+    --color-23: #203d4f;
+    --color-24: #203d4f;
+    --color-25: rgba(24, 26, 27, 0.38);
+    --color-26: rgba(24, 26, 27, 0.8);
+    --color-27: #203d4f;
+    --color-28: rgba(24, 26, 27, 0.38);
+    --color-29: #212325;
+    --color-30: #2b2b2bff;
+    --color-31: #181a1b;
+    --color-32: #9db2c7;
+    --color-33: #203d4f;
+    --color-34: #212325;
+    --color-35: #212325;
+    --color-36: #181a1b;
+    --color-37: #c5c0b8;
+    --color-38: #203d4f;
+    --color-39: #212325;
+    --color-40: #181a1b;
+    --color-41: #203d4f;
+    --color-42: #9db2c7;
+    --color-43: #181a1b;
+    --color-44: #203d4f;
+    --color-45: #0000007f;
+    --color-46: #181a1b;
+    --color-47: #203d4f;
+    color: #ffffff;
+    background-color: #181A1B;
+    height: 100%;
+    color-scheme: dark !important;
+}
+
+body.dark * {
+    color: #ffffff;
+}
+
 #plugins >div:has(>h2) {
     display: flex;
     justify-content: space-between;
@@ -33,19 +143,19 @@
 }
 
 #plugins .tip {
-    color: #a1afc9;
+    color: var(--color-1);
     font-size: 12px;
     margin-left: 5px;
 }
 
 #plugins .about-list .about-item {
     margin: 10px 0;
-    background-color: #fff;
+    background-color: var(--color-2);
     max-width: 520px;
     height: 90px;
     border-radius: 15px;
     padding: 10px;
-    border: 2px solid #e9f1f6;
+    border: 2px solid var(--color-3);
     position: relative;
 }
 
@@ -60,7 +170,7 @@
 
 #plugins .about-list .about-item a {
     padding: 5px 10px;
-    background-color: #e9f1f6;
+    background-color: var(--color-4);
     border-radius: 10px;
     text-decoration: none;
     transition: all 0.3s ease-in-out;
@@ -68,18 +178,18 @@
 }
 
 #plugins .about-list .about-item a:hover {
-    background-color: #c2ccd0;
-    color: #fff;
+    background-color: var(--color-5);
+    color: var(--color-6);
 }
 
 #plugins #plugin-list {
     max-height: 1000px;
     overflow: auto;
     margin: 10px 0;
-    background-color: #fff;
+    background-color: var(--color-7);
     border-radius: 15px;
     padding: 10px;
-    border: 2px solid #e9f1f6;
+    border: 2px solid var(--color-8);
     position: relative;
 }
 
@@ -97,8 +207,8 @@
 #plugins #plugin-list .plugin .description {
     position: fixed; /* 使用 fixed 以避免父元素偏移的影响 */
     visibility: hidden;
-    background-color: #333;
-    color: #fff;
+    background-color: var(--color-9);
+    color: var(--color-10);
     text-align: left;
     border-radius: 4px;
     padding: 5px;
@@ -110,7 +220,7 @@
 }
 
 #plugins #plugin-list .plugin .description span {
-    color: #fff;
+    color: var(--color-11);
 }
 
 @keyframes slideIn {
@@ -129,26 +239,26 @@
 
 #plugins #plugin-list .plugin .plugin-author {
     font-size: 14px;
-    color: #75878a;
+    color: var(--color-12);
     margin-right: 20px;
 }
 
 #plugins #plugin-list .plugin a {
     font-size: 16px;
     text-decoration: none;
-    color: #a1afc9;
+    color: var(--color-13);
     margin-right: 10px;
 }
 
 #plugins #plugin-list .plugin .plugin-mcdr,
 #plugins #plugin-list .plugin .plugin-github {
-    color: #6473E8;
+    color: var(--color-14);
     text-decoration: underline;
 }
 
 #plugins #plugin-list .plugin .plugin-version {
     font-size: 14px;
-    color: #75878a;
+    color: var(--color-15);
     margin-left: 40px;
     width: 70px;
     display: inline-flex;
@@ -156,7 +266,7 @@
 
 #plugins #plugin-list .plugin .plugin-latest-version {
     font-size: 14px;
-    color: #75878a;
+    color: var(--color-16);
     margin-left: 10px;
 }
 
@@ -166,9 +276,9 @@
     box-sizing: border-box;
     padding: 3px 10px;
     border-radius: 8px;
-    background-color: #fff;
-    color: #392f41;
-    border: 2px solid #e9f1f6;
+    background-color: var(--color-17);
+    color: var(--color-18);
+    border: 2px solid var(--color-19);
     cursor: pointer;
     font-size: 14px;
     transition: 0.2s all;
@@ -179,8 +289,8 @@
 }
 
 #plugins .list-btn.run {
-    color: #a1afc9;
-    background-color: #e9f1f6;
+    color: var(--color-20);
+    background-color: var(--color-21);
 }
 
 .config-title {
@@ -213,9 +323,9 @@
     margin-right: 10px;
     margin-bottom: 10px;
     max-width: 150px;
-    background-color: #ffffffcc;
+    background-color: var(--color-22);
     padding: 5px;
-    border: 2px solid #e9f1f6;
+    border: 2px solid var(--color-23);
     border-radius: 15px;
     display: flex;
     flex-direction: column;
@@ -226,10 +336,10 @@
 }
 
 .Group {
-    border: 2px solid #e9f1f6;
+    border: 2px solid var(--color-24);
     border-radius: 15px;
     padding: 10px;
-    background-color: #ffffff60;
+    background-color: var(--color-25);
     margin-bottom: 5px;
     backdrop-filter: blur(3px);
 }
@@ -239,9 +349,9 @@
     margin-right: 10px;
     margin-bottom: 10px;
     max-width: 150px;
-    background-color: #ffffffcc;
+    background-color: var(--color-26);
     padding: 5px;
-    border: 2px solid #e9f1f6;
+    border: 2px solid var(--color-27);
     border-radius: 15px;
     display: flex;
     flex-direction: column;
@@ -271,7 +381,7 @@
 #plugins .config div > p {
     font-size: 15px;
     margin-bottom: 5px;
-    background: #ffffff60;
+    background: var(--color-28);
     padding: 0 5px 2px;
     border-radius: 5px;
     margin-top: 10px;
@@ -296,7 +406,7 @@
     padding: 5px 10px ;
     border-radius: 8px;
     border: none;
-    background-color: #e9f1f6;
+    background-color: var(--color-29);
     font-size: 16px;
     margin-right: 2px;
     margin-bottom: 2px;
@@ -311,15 +421,15 @@
 #plugins .config input[type="checkbox"]::after {
     position: absolute;
     content: "点击开启";
-    color: #2b2b2b;
+    color: var(--color-30);
     height: 30px;
     width: 80px;
     box-sizing: border-box;
     padding: 3px 10px;
     border-radius: 8px;
-    background-color: #fff;
-    color: #a1afc9;
-    border: 2px solid #e9f1f6;
+    background-color: var(--color-31);
+    color: var(--color-32);
+    border: 2px solid var(--color-33);
     cursor: pointer;
     font-size: 14px;
     transition: 0.2s all;
@@ -331,13 +441,13 @@
 
 #plugins .config input[type="checkbox"]:checked::after {
     content: "点击关闭";
-    background-color: #e9f1f6;
+    background-color: var(--color-34);
 }
 
 #plugins .config div button {
     width: 25px;
     border: 0;
-    background: #E9F1F6;
+    background: var(--color-35);
     cursor: pointer;
     margin: 5px;
     margin-left: -35px;
@@ -351,9 +461,9 @@
     box-sizing: border-box;
     padding: 3px 10px;
     border-radius: 8px;
-    background-color: #fff;
-    color: #392f41;
-    border: 2px solid #e9f1f6;
+    background-color: var(--color-36);
+    color: var(--color-37);
+    border: 2px solid var(--color-38);
     cursor: pointer;
     font-size: 14px;
     transition: 0.2s all;
@@ -365,17 +475,17 @@
 }
 
 #plugins .btn.enable {
-    background-color: #e9f1f6;
+    background-color: var(--color-39);
 }
 
 #plugins .no-hint {
     max-width: 520px;
-    background: #fff;
+    background: var(--color-40);
     padding: 10px;
     border-radius: 15px;
-    border: 2px solid #e9f1f6;
+    border: 2px solid var(--color-41);
     font-size: 14px;
-    color: #a1afc9;
+    color: var(--color-42);
 }
 
 #plugins .no-hint p{
@@ -395,8 +505,8 @@
     left: 0;
     width: calc(100% - 4px);
     height: calc(100% - 4px);
-    background: #fff;
-    border: 2px solid #e9f1f6;
+    background: var(--color-43);
+    border: 2px solid var(--color-44);
     z-index: 1000;
     border-radius: 15px;
 }
@@ -411,7 +521,7 @@
     left: 0;
     width: 100%;
     height: 100%;
-    /* background: rgba(0, 0, 0, 0.5); */
+    /* background: var(--color-45); */
     z-index: 999;
     border-radius: 15px;
 }
@@ -419,6 +529,6 @@
     display: flex;
     justify-content: space-between;
     padding: 10px;
-    background: #fff;
-    border-bottom: 2px solid #e9f1f6;
+    background: var(--color-46);
+    border-bottom: 2px solid var(--color-47);
 }

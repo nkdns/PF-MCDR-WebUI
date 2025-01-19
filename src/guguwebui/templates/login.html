@@ -9,7 +9,35 @@
     <script src="custom/overall.js"></script>
 </head>
 <body>
+    <script>
+        // 获取用户的主题偏好
+        const savedTheme = localStorage.getItem('guguwebui-theme') || 'auto';
 
+        // 函数：根据系统夜间模式设置调整主题
+        function updateThemeBasedOnPreference() {
+        if (savedTheme === 'auto') {
+            const prefersDarkMode = window.matchMedia('(prefers-color-scheme: dark)').matches;
+            // 只有在系统模式发生变化时才切换
+            if (prefersDarkMode) {
+            document.body.classList.add('dark');
+            document.body.classList.remove('light');
+            } else {
+            document.body.classList.add('light');
+            document.body.classList.remove('dark');
+            }
+        } else {
+            // 如果用户手动选择了主题，则不做自动切换
+            document.body.classList.add(savedTheme);
+            document.body.classList.remove(savedTheme === 'dark' ? 'light' : 'dark');
+        }
+        }
+
+        // 初始加载时设置主题
+        updateThemeBasedOnPreference();
+
+        // 监听夜间模式设置变化
+        window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', updateThemeBasedOnPreference);
+    </script>
 <div class="container">
     <h1>欢迎登录</h1>
 

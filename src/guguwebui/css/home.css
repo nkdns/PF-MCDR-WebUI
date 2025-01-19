@@ -1,3 +1,48 @@
+
+/* CSS Variables for Colors */
+body {
+    --color-1: #a1afc9ff;
+    --color-2: #00bc12ff;
+    --color-3: #e9e7efff;
+    --color-4: #ffffffff;
+    --color-5: #a1afc9ff;
+    --color-6: #e9f1f6ff;
+    --color-7: #ffffffff;
+    --color-8: #a1afc9ff;
+    --color-9: #e9f1f6ff;
+    --color-10: #e9f1f6ff;
+    --color-11: #ffffffff;
+    --color-12: #e9f1f6ff;
+    --color-13: #0000007f;
+    --color-14: #ffffffff;
+    --color-15: #e9f1f6ff;
+}
+
+body.dark {
+    --color-1: #9db2c7;
+    --color-2: #00960e;
+    --color-3: #232628;
+    --color-4: #e8e6e3;
+    --color-5: #9db2c7;
+    --color-6: #212325;
+    --color-7: #181a1b;
+    --color-8: #9db2c7;
+    --color-9: #203d4f;
+    --color-10: #212325;
+    --color-11: #181a1b;
+    --color-12: #203d4f;
+    --color-13: #0000007f;
+    --color-14: #181a1b;
+    --color-15: #203d4f;
+    color: #ffffff;
+    background-color: #181A1B;
+    color-scheme: dark !important;
+}
+
+body.dark * {
+    color: #ffffff;
+}
+
 #home .title:first-of-type {
     margin-top: 0;
 }
@@ -13,7 +58,7 @@
 }
 
 #home .tip {
-    color: #a1afc9;
+    color: var(--color-1);
     font-size: 12px;
 }
 
@@ -63,20 +108,20 @@
 }
 
 #home .status > div .run {
-    background-color: #00bc12;
+    background-color: var(--color-2);
 }
 
 #home .status > div .stop {
-    background-color: #e9e7ef;
+    background-color: var(--color-3);
 }
 
 #home .status > div .run span {
-    color: #fff;
+    color: var(--color-4);
     font-size: 14px;
 }
 
 #home .status > div .stop span {
-    color: #a1afc9;
+    color: var(--color-5);
     font-size: 14px;
 }
 
@@ -104,13 +149,12 @@
     height: 30px;
     display: block;
     min-width: 80px;
-    width: 80px;
     max-width: 180px;
     box-sizing: border-box;
     padding: 5px 10px ;
     border-radius: 8px;
     border: none;
-    background-color: #e9f1f6;
+    background-color: var(--color-6);
     font-size: 16px;
 }
 
@@ -120,9 +164,9 @@
     box-sizing: border-box;
     padding: 3px 10px;
     border-radius: 8px;
-    background-color: #fff;
-    color: #a1afc9;
-    border: 2px solid #e9f1f6;
+    background-color: var(--color-7);
+    color: var(--color-8);
+    border: 2px solid var(--color-9);
     cursor: pointer;
     font-size: 14px;
     transition: 0.2s all;
@@ -133,7 +177,7 @@
 }
 
 #home .web-config .web-config-item > div > .enable {
-    background-color: #e9f1f6;
+    background-color: var(--color-10);
 }
 
 #home #editor-popup {
@@ -143,8 +187,8 @@
     left: 0;
     width: calc(100% - 4px);
     height: calc(100% - 4px);
-    background: #fff;
-    border: 2px solid #e9f1f6;
+    background: var(--color-11);
+    border: 2px solid var(--color-12);
     z-index: 1000;
     border-radius: 15px;
 }
@@ -159,7 +203,7 @@
     left: 0;
     width: 100%;
     height: 100%;
-    /* background: rgba(0, 0, 0, 0.5); */
+    /* background: var(--color-13); */
     z-index: 999;
     border-radius: 15px;
 }
@@ -167,8 +211,8 @@
     display: flex;
     justify-content: space-between;
     padding: 10px;
-    background: #fff;
-    border-bottom: 2px solid #e9f1f6;
+    background: var(--color-14);
+    border-bottom: 2px solid var(--color-15);
 }
 
 /* 提示框的渐隐动画 */

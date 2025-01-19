@@ -30,6 +30,18 @@
     </script>
 </head>
 <body id="home">
+    <script>
+        // 获取用户的主题偏好
+        const savedTheme = localStorage.getItem('guguwebui-theme') || 'auto';
+
+        // 判断是否为自动模式，并根据系统的夜间模式设置调整主题
+        if (savedTheme === 'auto') {
+            const prefersDarkMode = window.matchMedia('(prefers-color-scheme: dark)').matches;
+            document.body.classList.add(prefersDarkMode ? 'dark' : 'light');
+        } else {
+            document.body.classList.add(savedTheme);
+        }
+    </script>
     <h2 class="title">状态<span class="tip">点击切换运行状态</span></h2>
     <div class="status">
         <!-- 插件列表 -->

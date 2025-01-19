@@ -7,9 +7,6 @@ window.addEventListener('message', (event) => {
 });
 
 document.addEventListener("DOMContentLoaded", function () {
-  // 初始化主题
-  const savedTheme = localStorage.getItem('guguwebui-theme') || 'auto';
-  document.body.classList.add(savedTheme);
     // 获取插件状态
     fetch('/api/gugubot_plugins') 
         .then(response => response.json())

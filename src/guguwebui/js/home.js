@@ -1,19 +1,14 @@
 // 监听主题变化
 window.addEventListener('message', (event) => {
-  if (event.data.type === 'theme-change') {
-    document.body.classList.remove('light', 'dark', 'auto');
-    document.body.classList.add(event.data.theme);
-  }
-});
+    if (event.data.type === 'theme-change') {
+      document.body.classList.remove('light', 'dark', 'auto');
+      document.body.classList.add(event.data.theme);
+    }
+  });
 
-document.addEventListener("DOMContentLoaded", function() {
-  // 初始化主题
-  const savedTheme = localStorage.getItem('guguwebui-theme') || 'auto';
-  document.body.classList.add(savedTheme);
-
+document.addEventListener("DOMContentLoaded", function () {
     // 获取插件状态
     load_gugu_plugins();
-
     // 获取其他插件
     load_other_plugins();
 });
@@ -258,7 +253,7 @@ function showAutoCloseAlert(message, backgroundColor) {
     alertBox.textContent = message;
     alertBox.style.position = 'fixed';
     alertBox.style.top = '60px';
-    alertBox.style.right = '50%';
+    alertBox.style.right = '20px';
     alertBox.style.backgroundColor = backgroundColor;
     alertBox.style.color = 'white';
     alertBox.style.padding = '15px';
@@ -282,9 +277,9 @@ let currentLang = 'css';
 const localStorageKey = (lang) => `editor_content_${lang}`;
 
 // 读取本地存储中的主题
-const savedTheme = localStorage.getItem('editor_theme');
-if (savedTheme) {
-    editor.setTheme("ace/theme/" + savedTheme);
+const editor_theme = localStorage.getItem('editor_theme');
+if (editor_theme) {
+    editor.setTheme("ace/theme/" + editor_theme);
 } else {
     editor.setTheme("ace/theme/monokai"); // 默认主题
 }

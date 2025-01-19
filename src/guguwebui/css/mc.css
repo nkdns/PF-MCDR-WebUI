@@ -1,3 +1,75 @@
+
+/* CSS Variables for Colors */
+body {
+    --color-1: #a1afc9ff;
+    --color-2: #ffffffff;
+    --color-3: #e9f1f6ff;
+    --color-4: #e9f1f6ff;
+    --color-5: #c2ccd0ff;
+    --color-6: #ffffffff;
+    --color-7: #a1afc9ff;
+    --color-8: #6473e8ff;
+    --color-9: #a1afc9ff;
+    --color-10: #4674c5ff;
+    --color-11: #e9f1f6ff;
+    --color-12: #ffffff60;
+    --color-13: #e9f1f6ff;
+    --color-14: #ffffff60;
+    --color-15: #ffffffcc;
+    --color-16: #e9f1f6ff;
+    --color-17: #ffffff60;
+    --color-18: #e9f1f6ff;
+    --color-19: #2b2b2bff;
+    --color-20: #ffffffff;
+    --color-21: #a1afc9ff;
+    --color-22: #e9f1f6ff;
+    --color-23: #e9f1f6ff;
+    --color-24: #e9f1f6ff;
+    --color-25: #ffffffff;
+    --color-26: #a1afc9ff;
+    --color-27: #e9f1f6ff;
+    --color-28: #e9f1f6ff;
+    --color-29: #ffffffff;
+    --color-30: #e9f1f6ff;
+    --color-31: #a1afc9ff;
+}
+
+body.dark * {
+    --color-1: #9db2c7;
+    --color-2: #181a1b;
+    --color-3: #203d4f;
+    --color-4: #212325;
+    --color-5: #323d41;
+    --color-6: #e8e6e3;
+    --color-7: #9db2c7;
+    --color-8: #669be8;
+    --color-9: #9db2c7;
+    --color-10: #5790ca;
+    --color-11: #203d4f;
+    --color-12: rgba(24, 26, 27, 0.38);
+    --color-13: #203d4f;
+    --color-14: rgba(24, 26, 27, 0.38);
+    --color-15: rgba(24, 26, 27, 0.8);
+    --color-16: #203d4f;
+    --color-17: rgba(24, 26, 27, 0.38);
+    --color-18: #212325;
+    --color-19: #2b2b2bff;
+    --color-20: #181a1b;
+    --color-21: #9db2c7;
+    --color-22: #203d4f;
+    --color-23: #212325;
+    --color-24: #212325;
+    --color-25: #181a1b;
+    --color-26: #9db2c7;
+    --color-27: #203d4f;
+    --color-28: #212325;
+    --color-29: #181a1b;
+    --color-30: #203d4f;
+    --color-31: #9db2c7;
+    color: #ffffff;
+    background-color: #181A1B;
+    color-scheme: dark !important;
+}
 :is(#mc, #mcdr) .title:first-of-type {
     margin-top: 0;
 }
@@ -13,19 +85,19 @@
 }
 
 :is(#mc, #mcdr) .tip {
-    color: #a1afc9;
+    color: var(--color-1);
     font-size: 12px;
     margin-left: 5px;
 }
 
 :is(#mc, #mcdr) .about-list .about-item {
     margin: 10px 0;
-    background-color: #fff;
+    background-color: var(--color-2);
     max-width: 520px;
     height: 90px;
     border-radius: 15px;
     padding: 10px;
-    border: 2px solid #e9f1f6;
+    border: 2px solid var(--color-3);
     position: relative;
 }
 
@@ -44,7 +116,7 @@
 
 :is(#mc, #mcdr) .about-list .about-item a {
     padding: 5px 10px;
-    background-color: #e9f1f6;
+    background-color: var(--color-4);
     border-radius: 10px;
     text-decoration: none;
     transition: all 0.3s ease-in-out;
@@ -52,8 +124,8 @@
 }
 
 :is(#mc, #mcdr) .about-list .about-item a:hover {
-    background-color: #c2ccd0;
-    color: #fff;
+    background-color: var(--color-5);
+    color: var(--color-6);
 }
 
 :is(#mc, #mcdr) .config .config-item .about-list .about-item {
@@ -65,13 +137,13 @@
 }
 
 :is(#mc, #mcdr) .config .config-item .about-list .about-item p {
-    color: #a1afc9;
+    color: var(--color-7);
     font-size: 12px;
     margin: 0;
 }
 
 :is(#mc, #mcdr) .config .config-item .about-list .about-item a {
-    color: #6473E8;
+    color: var(--color-8);
     text-decoration: underline;
     padding: 0;
     background: none;
@@ -79,14 +151,14 @@
 
 :is(#mc, #mcdr) .config .config-item .about-list .about-item ul li {
     list-style: inside;
-    color: rgb(161, 175, 201);
+    color: var(--color-9);
     font-size: 12px;
     margin: 0px;
     margin-left: 10px;
 }
 
 :is(#mc, #mcdr) .config .config-item .about-list .about-item .tip {
-    color: #4674c5;
+    color: var(--color-10);
     margin-right: 5px;
     font-size: 14px;
 }
@@ -98,10 +170,10 @@
     margin-top: 5px;
     /* 自动换行 */
     flex-wrap: wrap;
-    border: 2px solid #e9f1f6;
+    border: 2px solid var(--color-11);
     border-radius: 15px;
     padding: 10px;
-    background-color: #ffffff60;
+    background-color: var(--color-12);
     backdrop-filter: blur(3px);
     
 }
@@ -119,10 +191,10 @@
 }
 
 .Group {
-    border: 2px solid #e9f1f6;
+    border: 2px solid var(--color-13);
     border-radius: 15px;
     padding: 10px;
-    background-color: #ffffff60;
+    background-color: var(--color-14);
     margin-bottom: 5px;
     backdrop-filter: blur(3px);
 }
@@ -139,9 +211,9 @@
     margin-right: 10px;
     margin-bottom: 10px;
     max-width: 150px;
-    background-color: #ffffffcc;
+    background-color: var(--color-15);
     padding: 5px;
-    border: 2px solid #e9f1f6;
+    border: 2px solid var(--color-16);
     border-radius: 15px;
     display: flex;
     flex-direction: column;
@@ -163,7 +235,7 @@
 :is(#mc, #mcdr) .config div > p {
     font-size: 15px;
     margin-bottom: 5px;
-    background-color: #ffffff60;
+    background-color: var(--color-17);
     padding: 0 5px 2px;
     border-radius: 5px;
     margin-top: 10px;
@@ -188,7 +260,7 @@
     padding: 5px 10px ;
     border-radius: 8px;
     border: none;
-    background-color: #e9f1f6;
+    background-color: var(--color-18);
     font-size: 16px;
     margin-right: 2px;
     margin-bottom: 2px;
@@ -208,15 +280,15 @@
 :is(#mc, #mcdr) .config input[type="checkbox"]::after {
     position: absolute;
     content: "点击开启";
-    color: #2b2b2b;
+    color: var(--color-19);
     height: 30px;
     width: 80px;
     box-sizing: border-box;
     padding: 3px 10px;
     border-radius: 8px;
-    background-color: #fff;
-    color: #a1afc9;
-    border: 2px solid #e9f1f6;
+    background-color: var(--color-20);
+    color: var(--color-21);
+    border: 2px solid var(--color-22);
     cursor: pointer;
     font-size: 14px;
     transition: 0.2s all;
@@ -228,13 +300,13 @@
 
 :is(#mc, #mcdr) .config input[type="checkbox"]:checked::after {
     content: "点击关闭";
-    background-color: #e9f1f6;
+    background-color: var(--color-23);
 }
 
 :is(#mc, #mcdr) .config div button {
     width: 25px;
     border: 0;
-    background: #E9F1F6;
+    background: var(--color-24);
     cursor: pointer;
     margin: 5px;
     margin-left: -35px;
@@ -248,9 +320,9 @@
     box-sizing: border-box;
     padding: 3px 10px;
     border-radius: 8px;
-    background-color: #fff;
-    color: #a1afc9;
-    border: 2px solid #e9f1f6;
+    background-color: var(--color-25);
+    color: var(--color-26);
+    border: 2px solid var(--color-27);
     cursor: pointer;
     font-size: 14px;
     transition: 0.2s all;
@@ -261,17 +333,17 @@
 }
 
 :is(#mc, #mcdr) .btn.enable {
-    background-color: #e9f1f6;
+    background-color: var(--color-28);
 }
 
 :is(#mc, #mcdr) .no-hint {
     max-width: 520px;
-    background: #fff;
+    background: var(--color-29);
     padding: 10px;
     border-radius: 15px;
-    border: 2px solid #e9f1f6;
+    border: 2px solid var(--color-30);
     font-size: 14px;
-    color: #a1afc9;
+    color: var(--color-31);
 }
 
 :is(#mc, #mcdr) .no-hint p{

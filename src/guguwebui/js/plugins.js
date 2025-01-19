@@ -7,10 +7,6 @@ document.addEventListener('DOMContentLoaded', function() {
             document.body.classList.add(event.data.theme);
         }
     });
-
-    // 初始化主题
-    const savedTheme = localStorage.getItem('guguwebui-theme') || 'auto';
-    document.body.classList.add(savedTheme);
 });
 
 // 加载 gugubot / cq_qq_api 信息栏 GET /api/gugubot_plugins
