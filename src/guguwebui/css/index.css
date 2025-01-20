@@ -51,7 +51,7 @@ body.dark {
     --color-15: #F0F0F0;
     --color-16: #0A8FB5;
     --color-17: #003C4C;
-    --color-18: rgba(0, 0, 0, 0.1);
+    --color-18: rgba(255, 255, 255, 0.1);
     --color-19: #E0E0E0;
     --color-20: #004658;
     --color-21: #334059;
@@ -240,7 +240,7 @@ body.dark {
     position: fixed;
     left: 0;
     top: 170px;
-    width: 185px;
+    width: 190px;
     height: 505px;
     transition: all 0.3s ease;
 }
@@ -257,10 +257,12 @@ body.dark {
 
 #index .tabs .tab-container {
     background-color: var(--color-17);
-    box-shadow: var(--color-18) 2px 2px 4px;
+    border: 2px solid var(--color-2);
+    box-shadow: var(--color-18) 0px 0px 4px;
     border-radius: 15px;
     height: 500px;
-    width: 180px;
+    margin: 2px;
+    width: 184px;
     padding: 20px;
     padding-left: 30px;
     box-sizing: border-box;
