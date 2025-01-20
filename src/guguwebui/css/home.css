@@ -19,23 +19,23 @@ body {
 }
 
 body.dark {
-    --color-1: #9db2c7;
-    --color-2: #00960e;
-    --color-3: #232628;
-    --color-4: #e8e6e3;
-    --color-5: #9db2c7;
-    --color-6: #212325;
-    --color-7: #181a1b;
-    --color-8: #9db2c7;
-    --color-9: #203d4f;
-    --color-10: #212325;
-    --color-11: #181a1b;
-    --color-12: #203d4f;
+    --color-1: #A8A8A8;
+    --color-2: #00A80F;
+    --color-3: #2D2D2D;
+    --color-4: #F0F0F0;
+    --color-5: #A8A8A8;
+    --color-6: #2D2D2D;
+    --color-7: #1E1E1E;
+    --color-8: #A8A8A8;
+    --color-9: #2A3A4A;
+    --color-10: #2D2D2D;
+    --color-11: #1E1E1E;
+    --color-12: #2A3A4A;
     --color-13: #0000007f;
-    --color-14: #181a1b;
-    --color-15: #203d4f;
-    color: #dbd8d4;
-    background-color: #181A1B;
+    --color-14: #1E1E1E;
+    --color-15: #2A3A4A;
+    color: #E0E0E0;
+    background-color: #1E1E1E;
     color-scheme: dark !important;
 }
 
