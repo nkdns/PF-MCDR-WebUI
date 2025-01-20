@@ -462,17 +462,26 @@ async def load_config(request: Request, path:str, translation:bool = False):
     if not path.exists(): # file not exists
         return JSONResponse({}, status_code=404)  
 
-    with open(path, "r", encoding="UTF-8") as f:
+    try:
+        with open(path, "r", encoding="UTF-8") as f:
+            if path.suffix == ".json":
+                config = json.load(f)
+            elif path.suffix in [".yml", ".yaml"]:
+                config = yaml.load(f)
+            elif path.suffix == ".properties":
+                config = javaproperties.load(f)
+                # convert string "true" "false" to True False
+                config = {k:v if v not in ["true", "false"] else 
+                          True if v == "true" else False 
+                          for k,v in config.items()}
+    except json.JSONDecodeError:
         if path.suffix == ".json":
-            config = json.load(f)
-        elif path.suffix in [".yml", ".yaml"]:
-            config = yaml.load(f)
-        elif path.suffix == ".properties":
-            config = javaproperties.load(f)
-            # convert string "true" "false" to True False
-            config = {k:v if v not in ["true", "false"] else 
-                      True if v == "true" else False 
-                      for k,v in config.items()}
+            config = {}
+    except UnicodeDecodeError:
+        # Handle encoding errors
+        with open(path, "r", encoding="UTF-8", errors="replace") as f:
+            if path.suffix == ".json":
+                config = json.load(f)
 
     if translation:
         # Get corresponding language
