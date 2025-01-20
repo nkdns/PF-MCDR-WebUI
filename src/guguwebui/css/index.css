@@ -153,14 +153,18 @@ body.dark {
 
 #index .nav {
     margin: 30px;
+    width: calc(100% - 60px);
     margin-top: 40px;
     margin-bottom: 0px;
     display: flex;
     justify-content: space-between;
+    position: absolute;
+    top: 0;
+    transition: all 0.3s ease;
 }
 
 #index .nav-full {
-    display: none;
+    top: -200px;
 }
 
 #index .nav .nav-left h2 {
