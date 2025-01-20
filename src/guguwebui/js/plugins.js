@@ -872,14 +872,15 @@ function adjustWidth(input) {
 }
 // 获取所有的文本输入框并添加事件监听器
 document.querySelectorAll('input[type="text"]').forEach(input => {
+    // 输入事件
     input.addEventListener('input', function () {
         adjustWidth(input);
     });
+    // 聚焦事件
+    input.addEventListener('focus', function () {
+        adjustWidth(input);
+    });
 });
-
-
-
-
 
 // 打开弹窗
 const openPopup = (path) => {

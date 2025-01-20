@@ -196,14 +196,14 @@ async def read_home(request: Request, token_valid: bool = Depends(verify_token))
     if not request.session.get("logged_in"):
         return RedirectResponse(url="/login")
     return templates.TemplateResponse(
-        "home.html", {"request": request, "message": "欢迎进入后台主页！"}
+        "home.html", {"request": request, "message": "欢迎进入后台主页！", "index_path": "/index"}
     )
 
 
 async def render_template_if_logged_in(request: Request, template_name: str):
     if not request.session.get("logged_in"):
         return RedirectResponse(url="/login")
-    return templates.TemplateResponse(template_name, {"request": request})
+    return templates.TemplateResponse(template_name, {"request": request, "index_path": "/index"})
 
 
 @app.get("/gugubot", response_class=HTMLResponse)

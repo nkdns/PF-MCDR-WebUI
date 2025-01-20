@@ -19,7 +19,7 @@
         function checkIfEmbedded() {
             if (window.top == window.self) {
                 // 跳转到首页
-                window.location.href = '/index';
+                window.location.href = "{{ index_path }}";
             }
         }
 
