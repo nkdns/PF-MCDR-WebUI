@@ -83,7 +83,7 @@ function loadPlugins() {
             pluginDiv.id = `${id}`;
 
             // 决定是否显示 一键更新按钮
-            const updateButtonStyle = version === version_latest ? 'visibility: hidden;' : 'visibility: visible;';
+            const updateButtonStyle = id === 'guguwebui' || version === version_latest ? 'visibility: hidden;' : 'visibility: visible;';
             // 决定是否显示 状态切换和重载按钮
             const pluginStatusStyle = id === 'guguwebui' ? 'visibility: hidden;' : 'visibility: visible;';
             // 决定是否显示 GitHub链接

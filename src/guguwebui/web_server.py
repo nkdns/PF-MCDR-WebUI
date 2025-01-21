@@ -14,6 +14,8 @@ from ruamel.yaml.comments import CommentedSeq
 from starlette.exceptions import HTTPException as StarletteHTTPException
 from starlette.middleware.sessions import SessionMiddleware
 
+from .utils.log_watcher import LogWatcher
+
 from .utils.constant import *
 from .utils.server_util import *
 from .utils.table import yaml
@@ -370,9 +372,21 @@ async def update_plugin(request: Request, plugin_info:plugin_info):
     await asyncio.sleep(2)
     command = f"!!MCDR confirm"
     server.execute_command(command)
+    
+    # 开始监听并匹配日志
+    log_watcher = LogWatcher()
+    result = log_watcher.watch_log([
+        "已安装的插件已满足所述需求，无需安装任何插件",
+        "插件安装完成"
+    ], timeout=10, backtrack=5, match_all=False)
 
-    await asyncio.sleep(5) # wait of updating process
-    return JSONResponse({"status": "success"})
+    # 根据匹配结果进行响应
+    if result.get("已安装的插件已满足所述需求，无需安装任何插件", True):
+        return JSONResponse({"status": "error", "message": "已安装的插件不满足要求，无法更新"})
+    elif result.get("插件安装完成", True):
+        return JSONResponse({"status": "success"})
+    else:
+        return JSONResponse({"status": "error", "message": "更新失败"})
 
 
 # List all config files for a plugin
