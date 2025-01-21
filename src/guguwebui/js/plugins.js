@@ -79,7 +79,6 @@ function listPluginsTip() {
 function loadPlugins() {
     const pluginList = document.getElementById('plugin-list');
     pluginList.innerHTML = ''; // 清空现有的插件列表
-    // 同时请求两个 API
     fetch('/api/plugins?detail=true')
     .then(response => response.json())
     .then(data => {
@@ -397,13 +396,29 @@ function loadconfigPlugin(file_path, containerId = undefined) {
         .then(jsonData => {
 
             clean_config();
-            
-            buildHtmlFromJson(jsonData, file_path, containerId);
+            // 将jsonData转为纯文本再检查行数
+            const jsonText = JSON.stringify(jsonData, null, 2);
+            const lines = jsonText.split('\n');
+            // 判断行数是否大于100行
+            if (lines.length > 100) {
+                showMessage({ type: '警告', content: '加载内容过长（超过100行），继续加载可能导致网页卡顿或崩溃！推荐使用编辑器进行加载。\n是否继续加载？', title: '内容过长' })
+                    .then((result) => {
+                        if (result.value) {
+                            buildHtmlFromJson(jsonData, file_path, containerId);
+                        } else {
+                            showMessage({ type: '提示', content: '已取消加载', autoCloseTime: 5000 });
+                            return;
+                        }
+                    });
+                
+            } else {
+                buildHtmlFromJson(jsonData, file_path, containerId);
 
-            if (file_path === 'server/server.properties') { 
-                // 设置服务器 MOTD
-                const statusServerMotd = document.getElementById('Status-server-motd');
-                statusServerMotd.textContent = jsonData['motd'];
+                if (file_path === 'server/server.properties') {
+                    // 设置服务器 MOTD
+                    const statusServerMotd = document.getElementById('Status-server-motd');
+                    statusServerMotd.textContent = jsonData['motd'];
+                }
             }
         })
         .catch(error => console.error('Error fetching data:', error));
@@ -561,13 +576,6 @@ function addInput(containerId) {
         // 如果没有 input-container，直接添加
         container.appendChild(inputDiv);
     }
-
-    document.querySelectorAll('input[type="text"]').forEach(input => {
-        input.addEventListener('input', function () {
-            adjustWidth(input);
-        });
-    });
-
 }
 // addplusButton 辅助函数
 function addPlusButtonToContainer(containerSelector, containerId = undefined) {
@@ -663,10 +671,6 @@ function loadConfig(file_path, containerId = "config") {
                         input.checked = value;
                     }
                 });
-            });
-            
-            document.querySelectorAll('input[type="text"]').forEach(input => {
-                adjustWidth(input);
             });
         })
         .catch(error => console.error('Error fetching data:', error));
@@ -856,6 +860,14 @@ document.querySelectorAll('input[type="text"]').forEach(input => {
         adjustWidth(input);
     });
 });
+
+// 循环，1秒执行一次
+setInterval(() => {
+    // 循环所有文本输入框并调整宽度
+    document.querySelectorAll('input[type="text"]').forEach(input => {
+        adjustWidth(input);
+    }); 
+}, 1000);
 
 // 打开弹窗
 const openPopup = (path) => {

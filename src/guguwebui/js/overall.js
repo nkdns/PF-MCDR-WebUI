@@ -87,6 +87,7 @@ function showMessage({ type, content, autoCloseTime, title = '', icon = '' }) {
       position: fixed;
       top: 10%;
       left: 50%;
+      max-width: 400px;
       transform: translate(-50%, -60%) scale(0.8);
       background-color: white;
       border: 1px solid ${color};
@@ -131,11 +132,11 @@ function showMessage({ type, content, autoCloseTime, title = '', icon = '' }) {
     }
 
     const popupContent = document.createElement("p");
-    popupContent.textContent = content;
+    popupContent.innerHTML = content;
     popupContent.style.cssText = `
       margin: 0;
       font-size: 16px;
-      text-align: center;
+      white-space: pre-wrap;
       color: #333;
     `;
     popup.appendChild(popupContent);
@@ -158,7 +159,7 @@ function showMessage({ type, content, autoCloseTime, title = '', icon = '' }) {
       setTimeout(() => closePopup(null), autoCloseTime);
     } else {
       const closeButton = document.createElement("button");
-      closeButton.textContent = "关闭";
+      closeButton.textContent = "取消 / 关闭";
       closeButton.style.cssText = `
         padding: 8px 15px;
         margin-right: 10px;
@@ -172,7 +173,7 @@ function showMessage({ type, content, autoCloseTime, title = '', icon = '' }) {
       buttonContainer.appendChild(closeButton);
 
       const confirmButton = document.createElement("button");
-      confirmButton.textContent = "确定";
+      confirmButton.textContent = "确定 / 继续";
       confirmButton.style.cssText = `
         padding: 8px 15px;
         background-color: ${color};
