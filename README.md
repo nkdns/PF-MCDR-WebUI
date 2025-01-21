@@ -83,6 +83,9 @@ A:我只会中文，你要是愿意可以参与。
 Q:为什么有私货（有未使用的插件，如gugubot等）。<br>
 A:因为这就是为它所开发。
 
+Q:如何获取实时最新版
+A:自己打包`src`中的文件到`zip`，修改后缀为`.mcdr`，或者前往 [actions](https://github.com/LoosePrince/PF-MCDR-WebUI/actions/workflows/package-src.yml) 下载
+
 ## 示例图
 
 > 截图来源本地测试
