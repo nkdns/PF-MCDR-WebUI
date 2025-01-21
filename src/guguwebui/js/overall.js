@@ -209,3 +209,27 @@ window.addEventListener("message", (event) => {
     });
   }
 });
+
+
+// 无需传递
+
+// 计算 JSON 对象的项数
+function countJsonItems(obj) {
+  let count = 0;
+  if (Array.isArray(obj)) {
+      // 如果是数组，递归计算数组中每个元素的项数
+      for (const item of obj) {
+          count += countJsonItems(item);
+      }
+  } else if (typeof obj === 'object' && obj !== null) {
+      // 如果是对象，计算键的数量，并递归计算每个值的项数
+      count += Object.keys(obj).length;
+      for (const key in obj) {
+          count += countJsonItems(obj[key]);
+      }
+  } else {
+      // 其他类型（如字符串、数字等）算作 1 项
+      count += 1;
+  }
+  return count;
+}

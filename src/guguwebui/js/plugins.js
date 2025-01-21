@@ -399,12 +399,15 @@ function loadconfigPlugin(file_path, containerId = undefined) {
             // 将jsonData转为纯文本再检查行数
             const jsonText = JSON.stringify(jsonData, null, 2);
             const lines = jsonText.split('\n');
-            // 判断行数是否大于100行
-            if (lines.length > 100) {
-                showMessage({ type: '警告', content: '加载内容过长（超过100行），继续加载可能导致网页卡顿或崩溃！推荐使用编辑器进行加载。\n是否继续加载？', title: '内容过长' })
+            const totalItems = countJsonItems(jsonData);
+            // console.log(`加载 ${file_path} 成功，共 ${lines.length} 行，${totalItems} 个配置项`);
+            // 判断行数和配置项数量是否过多
+            if (lines.length > 200 && totalItems > 400) {
+                showMessage({ type: '警告', content: '加载内容过长（超过200行和超过400个配置项），继续加载可能导致网页卡顿或崩溃！推荐使用编辑器进行加载。\n是否继续加载？', title: '内容过长' })
                     .then((result) => {
-                        if (result.value) {
+                        if (result) {
                             buildHtmlFromJson(jsonData, file_path, containerId);
+                            showMessage({ type: '完成', content: '加载完成', autoCloseTime: 5000 });
                         } else {
                             showMessage({ type: '提示', content: '已取消加载', autoCloseTime: 5000 });
                             return;
