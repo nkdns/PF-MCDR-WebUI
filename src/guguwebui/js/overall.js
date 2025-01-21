@@ -233,3 +233,11 @@ function countJsonItems(obj) {
   }
   return count;
 }
+
+// 监听主题变化
+window.addEventListener('message', (event) => {
+  if (event.data.type === 'theme-change') {
+    document.body.classList.remove('light', 'dark', 'auto');
+    document.body.classList.add(event.data.theme);
+  }
+});

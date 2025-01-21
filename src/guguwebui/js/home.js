@@ -1,11 +1,3 @@
-// 监听主题变化
-window.addEventListener('message', (event) => {
-    if (event.data.type === 'theme-change') {
-      document.body.classList.remove('light', 'dark', 'auto');
-      document.body.classList.add(event.data.theme);
-    }
-  });
-
 document.addEventListener("DOMContentLoaded", function () {
     // 获取插件状态
     load_gugu_plugins();

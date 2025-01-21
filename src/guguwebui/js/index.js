@@ -127,14 +127,6 @@ function setupThemeSwitcher() {
   });
 }
 
-// 监听主题变化
-window.addEventListener('message', (event) => {
-  if (event.data.type === 'theme-change') {
-    document.body.classList.remove('light', 'dark', 'auto');
-    document.body.classList.add(event.data.theme);
-  }
-});
-
 // 页面加载时检查登录状态
 window.onload = function () {
   // 初始化主题
