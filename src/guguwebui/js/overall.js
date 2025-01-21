@@ -62,19 +62,23 @@ function showMessage({ type, content, autoCloseTime, title = '', icon = '' }) {
   }
 
   return new Promise((resolve) => {
-    // 创建遮罩层
-    const overlay = document.createElement("div");
-    overlay.className = "custom-overlay";
-    overlay.style.cssText = `
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      background-color: rgba(0, 0, 0, 0.5);
-      z-index: 9998;
-    `;
-    document.body.appendChild(overlay);
+    let overlay;
+
+    // 创建遮罩层（仅非自动关闭）
+    if (!autoCloseTime) {
+      overlay = document.createElement("div");
+      overlay.className = "custom-overlay";
+      overlay.style.cssText = `
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0, 0, 0, 0.5);
+        z-index: 9998;
+      `;
+      document.body.appendChild(overlay);
+    }
 
     // 创建弹窗容器
     const popup = document.createElement("div");
@@ -142,10 +146,10 @@ function showMessage({ type, content, autoCloseTime, title = '', icon = '' }) {
     function closePopup(result) {
       popup.style.opacity = "0";
       popup.style.transform = "translate(-50%, -60%) scale(0.8)";
-      overlay.style.opacity = "0";
+      if (overlay) overlay.style.opacity = "0";
       setTimeout(() => {
         popup.remove();
-        overlay.remove();
+        if (overlay) overlay.remove();
         resolve(result);
       }, 300);
     }
@@ -188,6 +192,7 @@ function showMessage({ type, content, autoCloseTime, title = '', icon = '' }) {
     setTimeout(() => {
       popup.style.opacity = "1";
       popup.style.transform = "translate(-50%, -10%) scale(1)";
+      if (overlay) overlay.style.opacity = "1";
     }, 10);
   });
 }
