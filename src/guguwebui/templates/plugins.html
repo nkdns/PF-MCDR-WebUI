@@ -6,7 +6,7 @@
     <title>s所有插件</title>
     <link rel="stylesheet" href="custom/overall.css">
     <script src="custom/overall.js"></script>
-    
+    <script src="js/overall.js"></script>
     <link rel="stylesheet" href="css/plugins.css">
     <script>
         function checkIfEmbedded() {
@@ -66,7 +66,7 @@
     <div id="editor-popup">
         <div id="popup-controls">
             <button class="btn" id="cancel">返回</button>
-            <select class="btn" style="width: auto;" id="theme-select">
+            <select class="btn" style="width: auto;" id="editor-theme-select">
                 <option value="monokai">Monokai</option>
                 <option value="chrome">Chrome</option>
                 <option value="clouds">Clouds</option>
@@ -124,7 +124,7 @@
         });
 
         // 主题选择事件
-        document.getElementById("theme-select").addEventListener("change", function() {
+        document.getElementById("editor-theme-select").addEventListener("change", function() {
             const selectedTheme = this.value;
             editor.setTheme("ace/theme/" + selectedTheme);
             localStorage.setItem('editor_theme', selectedTheme); // 缓存主题到本地

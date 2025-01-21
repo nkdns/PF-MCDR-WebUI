@@ -227,7 +227,7 @@ function saveWebConfig(action) {
         if (data.status === 'success') {
             const btn = document.getElementById(action);
             if (action === 'config') {
-                showAutoCloseAlert("保存成功", "#00BC12");
+                showMessage({type: '完成',content: '保存成功',autoCloseTime: 5000,});
             }
             if (action !== 'config') { 
                 if (data.message) {
@@ -245,28 +245,6 @@ function saveWebConfig(action) {
     .catch(error => {
         console.error('Error:', error);
     });
-}
-
-function showAutoCloseAlert(message, backgroundColor) {
-    // 创建一个 div 元素用于显示消息
-    const alertBox = document.createElement('div');
-    alertBox.textContent = message;
-    alertBox.style.position = 'fixed';
-    alertBox.style.top = '60px';
-    alertBox.style.right = '50%';
-    alertBox.style.backgroundColor = backgroundColor;
-    alertBox.style.color = 'white';
-    alertBox.style.padding = '15px';
-    alertBox.style.borderRadius = '5px';
-    alertBox.style.zIndex = '1000';
-    alertBox.style.animation = "fadeOut 5s ease-out forwards";
-    
-    document.body.appendChild(alertBox);
-
-    // 自动关闭提示框
-    setTimeout(() => {
-        alertBox.remove();
-    }, 5000); // 5秒后自动关闭
 }
 
 // 编辑器
@@ -292,7 +270,7 @@ editor.setOptions({
 });
 
 // 主题选择事件
-document.getElementById("theme-select").addEventListener("change", function() {
+document.getElementById("editor-theme-select").addEventListener("change", function() {
     const selectedTheme = this.value;
     editor.setTheme("ace/theme/" + selectedTheme);
     localStorage.setItem('editor_theme', selectedTheme); // 缓存主题到本地
@@ -348,7 +326,7 @@ const saveToServer = async () => {
             body: JSON.stringify({ action, content })
         });
         localStorage.removeItem(localStorageKey(currentLang));
-        showAutoCloseAlert("保存成功", "#00BC12");
+        showMessage({type: '完成',content: '保存成功',autoCloseTime: 5000,});
     } catch (error) {
         alert("保存失败：" + error);
     }

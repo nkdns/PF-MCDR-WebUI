@@ -204,9 +204,9 @@ function reloadPlugin(plugin_id) {
     .then(response => response.json())
     .then(data => {
         if (data.status === 'error') {
-            showAutoCloseAlert(data.message, "red");
+            showMessage({type: '错误',content: data.message,autoCloseTime: 5000,});
         } else if (data.status ==='success') {
-            showAutoCloseAlert('插件重载成功！', "#00BC12");
+            showMessage({type: '完成',content: '保存成功',autoCloseTime: 5000,});
         }
     })
     .catch(error => console.error('Error reloading plugin:', error));
@@ -227,9 +227,9 @@ function updatePlugin(plugin_id) {
     .then(response => response.json())
     .then(data => {
         if (data.status === 'error') {
-            showAutoCloseAlert(data.message, "red");
+            showMessage({type: '错误',content: data.message,autoCloseTime: 5000,});
         } else if (data.status ==='success') {
-            showAutoCloseAlert('插件更新成功！可以尝试刷新页面',"#00BC12");
+            showMessage({type: '完成',content: '插件更新成功！可以尝试刷新页面',title: '更新成功',autoCloseTime: 5000,});
         }
     })
     .catch(error => console.error('Error updating plugin:', error));
@@ -510,7 +510,7 @@ async function saveConfig(file_path) {
         });
         const result = await response.json();
         console.log('保存配置成功:', result);
-        showAutoCloseAlert('保存配置成功！', "#00BC12");
+        showMessage({type: '完成',content: '保存成功',autoCloseTime: 5000,});
 
         if (window.self !== window.top && window.location.pathname === "/plugins") {
             // 获取父元素
@@ -525,7 +525,7 @@ async function saveConfig(file_path) {
         
     } catch (error) {
         console.error('保存配置时出错:', error);
-        showAutoCloseAlert('保存配置失败！请查看终端输出日志。', "red");
+        showMessage({type: '错误',content: '保存失败！请查看终端输出日志。',title: '保存失败',autoCloseTime: 5000,});
     }
 }
 
@@ -830,31 +830,6 @@ function buildHtmlFromJson(jsonData, file_path, containerId = undefined) {
     }
 }
 
-
-// 保存提示
-function showAutoCloseAlert(message, backgroundColor) {
-    // 创建一个 div 元素用于显示消息
-    const alertBox = document.createElement('div');
-    alertBox.textContent = message;
-    alertBox.style.position = 'fixed';
-    alertBox.style.top = '60px';
-    alertBox.style.right = '50%';
-    alertBox.style.backgroundColor = backgroundColor;
-    alertBox.style.color = 'white';
-    alertBox.style.padding = '15px';
-    alertBox.style.borderRadius = '5px';
-    alertBox.style.zIndex = '1000';
-    alertBox.style.animation = "fadeOut 5s ease-out forwards";
-    
-    document.body.appendChild(alertBox);
-
-    // 自动关闭提示框
-    setTimeout(() => {
-        alertBox.remove();
-    }, 5000); // 5秒后自动关闭
-}
-
-
 // 为每个文本输入框添加动态宽度调整
 function adjustWidth(input) {
     const tempSpan = document.createElement("span");
@@ -929,7 +904,7 @@ const saveToServer = async () => {
             body: JSON.stringify({ action, content })
         });
         localStorage.removeItem(localStorageKey(current_path));
-        showAutoCloseAlert("保存成功", "#00BC12");
+        showMessage({type: '完成',content: '保存成功',autoCloseTime: 5000,});
     } catch (error) {
         alert("保存失败：" + error);
     }
