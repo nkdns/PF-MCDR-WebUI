@@ -1,0 +1,27 @@
+name: Package src on Change
+
+on:
+  push:
+    paths:
+      - src/**
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v3
+
+    - name: Package src directory
+      run: |
+        cd src
+        zip -r ../guguweb_beta.mcdr .
+        cd ..
+        echo "Packaged src contents into guguweb_beta.mcdr"
+
+    - name: Upload artifact
+      uses: actions/upload-artifact@v3
+      with:
+        name: guguweb_beta.mcdr
+        path: guguweb_beta.mcdr
