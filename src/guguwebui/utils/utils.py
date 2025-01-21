@@ -9,6 +9,12 @@ import zipfile
 import datetime
 import secrets
 
+import requests
+import re
+import time
+from threading import Lock
+from concurrent.futures import ThreadPoolExecutor, as_completed
+
 from mcdreforged.api.types import PluginServerInterface
 from mcdreforged.plugin.meta.metadata import Metadata
 from pathlib import Path
@@ -138,11 +144,62 @@ def get_gugubot_plugins_info(server_interface:PluginServerInterface):
     return respond
 
 
+# 全局缓存与锁
+plugin_version_cache = {}
+cache_timestamp = 0
+cache_lock = Lock()
+
+def fetch_version(plugin_name):
+    """
+    根据插件名称请求版本号。
+    如果请求失败，返回 None。
+    """
+    url = f"https://mcdreforged.com/zh-CN/plugin/{plugin_name}?_rsc=1rz10"
+    try:
+        response = requests.get(url)
+        response.raise_for_status()
+        # 使用正则解析版本号
+        match = re.search(rf'/plugin/{plugin_name}/release/([\d\.]+)', response.text)
+        return match.group(1) if match else None
+    except requests.RequestException:
+        return None
+
+def get_plugin_versions(plugin_dict):
+    """
+    传入一个 JSON 格式的字典，返回插件版本号的 JSON 格式字典。
+    """
+    results = {}
+    start_time = time.time()
+
+    with ThreadPoolExecutor(max_workers=10) as executor:
+        future_to_plugin = {executor.submit(fetch_version, name): name for name in plugin_dict.values()}
+        for future in as_completed(future_to_plugin):
+            plugin_name = future_to_plugin[future]
+            try:
+                version = future.result()
+                results[plugin_name] = version
+            except Exception as e:
+                results[plugin_name] = None
+
+    total_time = time.time() - start_time
+    # print(f"总耗时: {total_time:.2f} 秒")
+    return results
+
 # get plugins' metadata 
-def get_plugins_info(server_interface:PluginServerInterface, detail=False):
+def get_plugins_info(server_interface, detail=False):
+    global plugin_version_cache, cache_timestamp
+
     ignore_plugin = ["mcdreforged", "python"]
     main_page_ignore = ['gugubot', "cq_qq_api", "player_ip_logger", "online_player_api", "guguwebui"]
     loaded_metadata, unloaded_metadata, unloaded_plugins, disabled_plugins = load_plugin_info(server_interface)
+
+    # 缓存2小时的插件最新版本号
+    with cache_lock:
+        current_time = time.time()
+        if current_time - cache_timestamp > 2 * 3600:  # 缓存时间为2小时
+            plugin_dict = {str(meta.id): name for name, meta in loaded_metadata.items()}
+            plugin_version_cache = get_plugin_versions(plugin_dict)
+            cache_timestamp = current_time
 
     respond = []
 
@@ -152,19 +209,22 @@ def get_plugins_info(server_interface:PluginServerInterface, detail=False):
 
     for plugin_name, plugin_metadata in merged_metadata.items():
         if plugin_name in ignore_plugin:
-            continue # ignore mcdr & python
+            continue  # ignore mcdr & python
 
-        if not isinstance(plugin_metadata, Metadata): # convert dict to metadata
+        if not isinstance(plugin_metadata, Metadata):  # convert dict to metadata
             plugin_metadata = Metadata(plugin_metadata)
 
-        if not detail and plugin_name not in main_page_ignore: # Main-page plugin info
+        # 获取最新版本号
+        latest_version = plugin_version_cache.get(plugin_name, None)
+
+        if not detail and plugin_name not in main_page_ignore:  # Main-page plugin info
             respond.append({
                 "id": plugin_name, 
                 "name": str(plugin_metadata.name) if plugin_metadata else plugin_name,
                 "status": "loaded" if plugin_name in loaded_metadata else "disabled" if plugin_name in disabled_plugins else "unloaded",
                 "path": plugin_name if plugin_name in unloaded_plugins + disabled_plugins else ""
             })
-        elif detail: # plugin-list info
+        elif detail:  # plugin-list info
             description = plugin_metadata.description
             description = (description.get(server_interface.get_mcdr_language()) or description.get("en_us")) \
                 if isinstance(description, dict) else description
@@ -175,7 +235,7 @@ def get_plugins_info(server_interface:PluginServerInterface, detail=False):
                 "author": ", ".join(plugin_metadata.author),
                 "github": str(plugin_metadata.link),
                 "version": str(plugin_metadata.version),
-                "version_latest": str(plugin_metadata.version),
+                "version_latest": str(latest_version) if latest_version else str(plugin_metadata.version),
                 "status": "loaded" if str(plugin_metadata.id) in loaded_metadata else "disabled" if str(plugin_metadata.id) in disabled_plugins else "unloaded",
                 "path": plugin_name if plugin_name in unloaded_plugins + disabled_plugins else "",
                 "config_file": bool(find_plugin_config_paths(str(plugin_metadata.id)))

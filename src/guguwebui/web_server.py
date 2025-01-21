@@ -364,10 +364,14 @@ async def update_plugin(request: Request, plugin_info:plugin_info):
     plugin_id = plugin_info.plugin_id
     server:PluginServerInterface = app.state.server_interface
 
-    command = f"!!MCDR plugin install --upgrade {plugin_id}"
+    command = f"!!MCDR plugin install -U {plugin_id}"
     server.execute_command(command) # No function return
+    
+    await asyncio.sleep(2)
+    command = f"!!MCDR confirm"
+    server.execute_command(command)
 
-    await asyncio.wait(5) # wait of updating process
+    await asyncio.sleep(5) # wait of updating process
     return JSONResponse({"status": "success"})
 
 

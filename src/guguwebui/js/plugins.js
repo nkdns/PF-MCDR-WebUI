@@ -201,26 +201,34 @@ function reloadPlugin(plugin_id) {
 }
 // 更新插件 调用 POST /api/update_plugin {plugin_id}
 function updatePlugin(plugin_id) {
-    const requestBody = JSON.stringify({
-        plugin_id: plugin_id
-    });
-
-    fetch('/api/update_plugin', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json'
-        },
-        body: requestBody
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.status === 'error') {
-            showMessage({type: '错误',content: data.message,autoCloseTime: 5000,});
-        } else if (data.status ==='success') {
-            showMessage({type: '完成',content: '插件更新成功！可以尝试刷新页面',title: '更新成功',autoCloseTime: 5000,});
-        }
-    })
-    .catch(error => console.error('Error updating plugin:', error));
+    showMessage({ type: '提示', content: '是否更新插件?', title: '更新插件' })
+        .then(result => {
+            if (!result) {
+                return;
+            } else { 
+                showMessage({ type: '提示', content: '已提交更新请求，请稍等片刻...', autoCloseTime: 5000,});
+                const requestBody = JSON.stringify({
+                    plugin_id: plugin_id
+                });
+            
+                fetch('/api/update_plugin', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: requestBody
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === 'error') {
+                        showMessage({type: '错误',content: data.message,autoCloseTime: 5000,});
+                    } else if (data.status ==='success') {
+                        showMessage({type: '完成',content: '插件更新请求完成，请尝试刷新页面查看\n如果更新失败，可能是该插件无法更新或者网络异常。',title: '更新结束',autoCloseTime: 5000,});
+                    }
+                })
+                .catch(error => console.error('Error updating plugin:', error));
+            }
+        });
 }
 // 启用/禁用插件 调用 POST /api/toggle_plugin {plugin_id, status}
 function toggleStatus(plugin_id) {

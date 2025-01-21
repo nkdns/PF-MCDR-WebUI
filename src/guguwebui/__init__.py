@@ -31,6 +31,7 @@ def on_load(server: PluginServerInterface, old):
 
     server.logger.info(f"[GUGUWebUI] 网页地址: http://{host}:{port}")
     web_server_interface.start()
+    get_plugins_info(app.state.server_interface, 'true')
 
 
 def on_unload(server: PluginServerInterface):
