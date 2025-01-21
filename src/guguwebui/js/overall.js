@@ -89,7 +89,7 @@ function showMessage({ type, content, autoCloseTime, title = '', icon = '' }) {
       left: 50%;
       max-width: 400px;
       transform: translate(-50%, -60%) scale(0.8);
-      background-color: white;
+      background-color: var(--color-2);
       border: 1px solid ${color};
       border-radius: 8px;
       box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
@@ -137,7 +137,7 @@ function showMessage({ type, content, autoCloseTime, title = '', icon = '' }) {
       margin: 0;
       font-size: 16px;
       white-space: pre-wrap;
-      color: #333;
+      color: var(--color-1);
     `;
     popup.appendChild(popupContent);
 
