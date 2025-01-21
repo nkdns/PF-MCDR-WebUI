@@ -509,11 +509,17 @@ body.dark * {
     border: 2px solid var(--color-44);
     z-index: 1000;
     border-radius: 15px;
+    overflow: hidden;
 }
 #plugins #editor { 
     height: 100%; 
     width: 100%; 
 }
+
+#plugins #editor .ace_content {
+    overflow: hidden;
+}
+
 #plugins #overlay {
     display: none;
     position: fixed;

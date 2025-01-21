@@ -197,11 +197,17 @@ body.dark * {
     border: 2px solid var(--color-12);
     z-index: 1000;
     border-radius: 15px;
+    overflow: hidden;
 }
 #home #editor { 
     height: 100%; 
     width: 100%; 
 }
+
+#home #editor .ace_content {
+    overflow: hidden;
+}
+
 #home #overlay {
     display: none;
     position: fixed;
