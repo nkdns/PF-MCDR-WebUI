@@ -10,18 +10,31 @@ function isInIframe() {
   }
 }
 
-// 消息弹窗
+
+// 显示消息弹窗
+
+// type: 提示/警告/错误/完成
+// content: 消息内容
+// autoCloseTime: 自动关闭时间，单位：毫秒，如果为0则不自动关闭
+// title: 弹窗标题
+// icon: 弹窗图标
+
+// 返回值：调用示例
+// showMessage({ type: "提示", content: "是否继续操作？", title: "确认操作" })
+//   .then((result) => {
+//     console.log("用户选择：", result); // true 或 false
+//   });
+
 function showMessage({ type, content, autoCloseTime, title = '', icon = '' }) {
   if (!type || !content) {
     throw new Error("消息类型和消息内容是必填项");
   }
 
-  // 定义颜色映射
   const typeColors = {
-    提示: "#007BFF", // 蓝色
-    警告: "#FFC107", // 黄色
-    错误: "#DC3545", // 红色
-    完成: "#28A745"  // 绿色
+    提示: "#007BFF",
+    警告: "#FFC107",
+    错误: "#DC3545",
+    完成: "#28A745"
   };
 
   const color = typeColors[type];
@@ -29,137 +42,164 @@ function showMessage({ type, content, autoCloseTime, title = '', icon = '' }) {
     throw new Error("不支持的消息类型");
   }
 
-  // 如果在嵌套页面中，递交给父页面执行
   if (window !== window.parent) {
-    window.parent.postMessage({ action: 'showMessage', params: { type, content, autoCloseTime, title, icon } }, "*");
-    return;
+    return new Promise((resolve) => {
+      const messageId = `msg_${Date.now()}`;
+      window.parent.postMessage(
+        { action: 'showMessage', params: { type, content, autoCloseTime, title, icon, messageId } },
+        "*"
+      );
+
+      function handleMessage(event) {
+        const { action, result, messageId: returnedId } = event.data;
+        if (action === 'showMessageResult' && returnedId === messageId) {
+          window.removeEventListener("message", handleMessage);
+          resolve(result);
+        }
+      }
+      window.addEventListener("message", handleMessage);
+    });
   }
 
-  // 创建弹窗容器
-  const popup = document.createElement("div");
-  popup.className = "custom-popup";
-  popup.style.cssText = `
-    position: fixed;
-    top: 10%;
-    left: 50%;
-    transform: translate(-50%, -60%) scale(0.8);
-    background-color: white;
-    border: 1px solid ${color};
-    border-radius: 8px;
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-    padding: 20px;
-    z-index: 9999;
-    opacity: 0;
-    transition: opacity 0.3s ease, transform 0.3s ease;
-  `;
+  return new Promise((resolve) => {
+    // 创建遮罩层
+    const overlay = document.createElement("div");
+    overlay.className = "custom-overlay";
+    overlay.style.cssText = `
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(0, 0, 0, 0.5);
+      z-index: 9998;
+    `;
+    document.body.appendChild(overlay);
 
-  // 创建标题容器
-  if (title) {
-    const titleContainer = document.createElement("div");
-    titleContainer.style.cssText = `
-      display: flex;
-      align-items: center;
-      margin-bottom: 10px;
+    // 创建弹窗容器
+    const popup = document.createElement("div");
+    popup.className = "custom-popup";
+    popup.style.cssText = `
+      position: fixed;
+      top: 10%;
+      left: 50%;
+      transform: translate(-50%, -60%) scale(0.8);
+      background-color: white;
+      border: 1px solid ${color};
+      border-radius: 8px;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+      padding: 20px;
+      z-index: 9999;
+      opacity: 0;
+      transition: opacity 0.3s ease, transform 0.3s ease;
     `;
 
-    // 创建图标
-    if (icon) {
-      const popupIcon = document.createElement("img");
-      popupIcon.src = icon;
-      popupIcon.alt = "icon";
-      popupIcon.style.cssText = `
-        width: 24px;
-        height: 24px;
-        margin-right: 10px;
+    if (title) {
+      const titleContainer = document.createElement("div");
+      titleContainer.style.cssText = `
+        display: flex;
+        align-items: center;
+        margin-bottom: 10px;
       `;
-      titleContainer.appendChild(popupIcon);
+
+      if (icon) {
+        const popupIcon = document.createElement("img");
+        popupIcon.src = icon;
+        popupIcon.alt = "icon";
+        popupIcon.style.cssText = `
+          width: 24px;
+          height: 24px;
+          margin-right: 10px;
+        `;
+        titleContainer.appendChild(popupIcon);
+      }
+
+      const popupTitle = document.createElement("h3");
+      popupTitle.textContent = title;
+      popupTitle.style.cssText = `
+        margin: 0;
+        color: ${color};
+        font-size: 18px;
+      `;
+      titleContainer.appendChild(popupTitle);
+
+      popup.appendChild(titleContainer);
     }
 
-    // 创建标题文本
-    const popupTitle = document.createElement("h3");
-    popupTitle.textContent = title;
-    popupTitle.style.cssText = `
+    const popupContent = document.createElement("p");
+    popupContent.textContent = content;
+    popupContent.style.cssText = `
       margin: 0;
-      color: ${color};
-      font-size: 18px;
+      font-size: 16px;
+      text-align: center;
+      color: #333;
     `;
-    titleContainer.appendChild(popupTitle);
+    popup.appendChild(popupContent);
 
-    popup.appendChild(titleContainer);
-  }
+    const buttonContainer = document.createElement("div");
+    buttonContainer.style.cssText = "margin-top: 15px; text-align: center;";
 
-  // 创建内容
-  const popupContent = document.createElement("p");
-  popupContent.textContent = content;
-  popupContent.style.cssText = `
-    margin: 0;
-    font-size: 16px;
-    text-align: center;
-    color: #333;
-  `;
-  popup.appendChild(popupContent);
+    function closePopup(result) {
+      popup.style.opacity = "0";
+      popup.style.transform = "translate(-50%, -60%) scale(0.8)";
+      overlay.style.opacity = "0";
+      setTimeout(() => {
+        popup.remove();
+        overlay.remove();
+        resolve(result);
+      }, 300);
+    }
 
-  // 创建按钮容器
-  const buttonContainer = document.createElement("div");
-  buttonContainer.style.cssText = "margin-top: 15px; text-align: center;";
+    if (autoCloseTime) {
+      setTimeout(() => closePopup(null), autoCloseTime);
+    } else {
+      const closeButton = document.createElement("button");
+      closeButton.textContent = "关闭";
+      closeButton.style.cssText = `
+        padding: 8px 15px;
+        margin-right: 10px;
+        background-color: #6c757d;
+        color: white;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+      `;
+      closeButton.addEventListener("click", () => closePopup(false));
+      buttonContainer.appendChild(closeButton);
 
-  // 关闭函数
-  function closePopup() {
-    popup.style.opacity = "0";
-    popup.style.transform = "translate(-50%, -60%) scale(0.8)";
-    setTimeout(() => popup.remove(), 300);
-  }
+      const confirmButton = document.createElement("button");
+      confirmButton.textContent = "确定";
+      confirmButton.style.cssText = `
+        padding: 8px 15px;
+        background-color: ${color};
+        color: white;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+      `;
+      confirmButton.addEventListener("click", () => closePopup(true));
+      buttonContainer.appendChild(confirmButton);
 
-  // 自动关闭逻辑
-  if (autoCloseTime) {
-    setTimeout(closePopup, autoCloseTime);
-  } else {
-    // 创建关闭按钮
-    const closeButton = document.createElement("button");
-    closeButton.textContent = "关闭";
-    closeButton.style.cssText = `
-      padding: 8px 15px;
-      margin-right: 10px;
-      background-color: #6c757d;
-      color: white;
-      border: none;
-      border-radius: 4px;
-      cursor: pointer;
-    `;
-    closeButton.addEventListener("click", closePopup);
-    buttonContainer.appendChild(closeButton);
+      popup.appendChild(buttonContainer);
+    }
 
-    // 创建确定按钮
-    const confirmButton = document.createElement("button");
-    confirmButton.textContent = "确定";
-    confirmButton.style.cssText = `
-      padding: 8px 15px;
-      background-color: ${color};
-      color: white;
-      border: none;
-      border-radius: 4px;
-      cursor: pointer;
-    `;
-    confirmButton.addEventListener("click", closePopup);
-    buttonContainer.appendChild(confirmButton);
+    document.body.appendChild(popup);
 
-    popup.appendChild(buttonContainer);
-  }
-
-  // 加入页面
-  document.body.appendChild(popup);
-
-  // 打开动画
-  setTimeout(() => {
-    popup.style.opacity = "1";
-    popup.style.transform = "translate(-50%, -10%) scale(1)";
-  }, 10);
+    setTimeout(() => {
+      popup.style.opacity = "1";
+      popup.style.transform = "translate(-50%, -10%) scale(1)";
+    }, 10);
+  });
 }
 
-// 父页面监听子页面请求并执行
 window.addEventListener("message", (event) => {
   const { action, params } = event.data;
-  if (action && typeof window[action] === "function") {
-    window[action](params);
+  if (action === 'showMessage') {
+    showMessage(params).then((result) => {
+      event.source.postMessage(
+        { action: 'showMessageResult', result, messageId: params.messageId },
+        "*"
+      );
+    });
   }
 });
