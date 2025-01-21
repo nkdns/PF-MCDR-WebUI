@@ -871,12 +871,28 @@ setInterval(() => {
 
 // 打开弹窗
 const openPopup = (path) => {
-    editor.session.setMode("ace/mode/" + path);
+    // 获取文件扩展名
+    const extension = path.split('.').pop().toLowerCase();
+    // 扩展名映射
+    const modeMap = {
+        js: "javascript",
+        css: "css",
+        json: "json",
+        txt: "text",
+        yml: "yaml"
+    };
+
+    // 获取对应的编辑模式，默认为纯文本
+    const mode = modeMap[extension] || "text";
+    editor.session.setMode("ace/mode/" + mode);
     current_path = path;
+
+    // 加载内容和显示弹窗
     loadLocalContent();
     overlay.style.display = "block";
     editorPopup.style.display = "block";
 };
+
 // 关闭弹窗
 const closePopup = () => {
     overlay.style.display = "none";
