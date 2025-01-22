@@ -1,9 +1,9 @@
-argon2-cffi
 fastapi
 javaproperties
 mcdreforged>=2.3.0
 passlib
 pydantic
+Requests
 ruamel.yaml
-starlette[full]
+starlette
 uvicorn

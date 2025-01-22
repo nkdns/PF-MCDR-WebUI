@@ -12,7 +12,7 @@ import secrets
 import requests
 import re
 import time
-from threading import Lock
+from threading import Thread, Lock
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
 from mcdreforged.api.types import PluginServerInterface
@@ -156,7 +156,7 @@ def fetch_version(plugin_name):
     """
     url = f"https://mcdreforged.com/zh-CN/plugin/{plugin_name}?_rsc=1rz10"
     try:
-        response = requests.get(url)
+        response = requests.get(url, timeout=3)  # 设置超时时间为3秒
         response.raise_for_status()
         # 使用正则解析版本号
         match = re.search(rf'/plugin/{plugin_name}/release/([\d\.]+)', response.text)
@@ -182,8 +182,20 @@ def get_plugin_versions(plugin_dict):
                 results[plugin_name] = None
 
     total_time = time.time() - start_time
-    # print(f"总耗时: {total_time:.2f} 秒")
+    print(f"总耗时: {total_time:.2f} 秒")
     return results
+
+def get_plugins_info_thread(plugin_dict):
+    """
+    独立线程执行插件版本信息获取逻辑。
+    """
+    global plugin_version_cache, cache_timestamp
+
+    with cache_lock:
+        current_time = time.time()
+        if current_time - cache_timestamp > 2 * 3600:  # 缓存时间为2小时
+            plugin_version_cache = get_plugin_versions(plugin_dict)
+            cache_timestamp = current_time
 
 # get plugins' metadata 
 def get_plugins_info(server_interface, detail=False):
@@ -193,38 +205,44 @@ def get_plugins_info(server_interface, detail=False):
     main_page_ignore = ['gugubot', "cq_qq_api", "player_ip_logger", "online_player_api", "guguwebui"]
     loaded_metadata, unloaded_metadata, unloaded_plugins, disabled_plugins = load_plugin_info(server_interface)
 
-    # 缓存2小时的插件最新版本号
-    with cache_lock:
-        current_time = time.time()
-        if current_time - cache_timestamp > 2 * 3600:  # 缓存时间为2小时
-            plugin_dict = {str(meta.id): name for name, meta in loaded_metadata.items()}
-            plugin_version_cache = get_plugin_versions(plugin_dict)
-            cache_timestamp = current_time
+    # 在独立线程中更新插件版本缓存
+    def update_plugin_versions():
+        global plugin_version_cache, cache_timestamp
+        with cache_lock:
+            current_time = time.time()
+            if current_time - cache_timestamp > 2 * 3600:  # 缓存时间为2小时
+                plugin_dict = {str(meta.id): name for name, meta in loaded_metadata.items()}
+                plugin_version_cache = get_plugin_versions(plugin_dict)
+                cache_timestamp = current_time
+
+    # 启动线程来更新版本缓存
+    thread = Thread(target=update_plugin_versions)
+    thread.start()
 
     respond = []
 
-    # use current loaded plugin cover unloaded metadata
+    # 合并已加载和未加载的插件元数据
     merged_metadata = copy.deepcopy(unloaded_metadata)
     merged_metadata.update(loaded_metadata)
 
     for plugin_name, plugin_metadata in merged_metadata.items():
         if plugin_name in ignore_plugin:
-            continue  # ignore mcdr & python
+            continue  # 忽略 mcdr 和 python
 
-        if not isinstance(plugin_metadata, Metadata):  # convert dict to metadata
+        if not isinstance(plugin_metadata, Metadata):  # 将 dict 转换为 Metadata 对象
             plugin_metadata = Metadata(plugin_metadata)
 
-        # 获取最新版本号
+        # 从缓存中获取最新版本号
         latest_version = plugin_version_cache.get(plugin_name, None)
 
-        if not detail and plugin_name not in main_page_ignore:  # Main-page plugin info
+        if not detail and plugin_name not in main_page_ignore:  # 主页面插件信息
             respond.append({
                 "id": plugin_name, 
                 "name": str(plugin_metadata.name) if plugin_metadata else plugin_name,
                 "status": "loaded" if plugin_name in loaded_metadata else "disabled" if plugin_name in disabled_plugins else "unloaded",
                 "path": plugin_name if plugin_name in unloaded_plugins + disabled_plugins else ""
             })
-        elif detail:  # plugin-list info
+        elif detail:  # 插件列表详细信息
             description = plugin_metadata.description
             description = (description.get(server_interface.get_mcdr_language()) or description.get("en_us")) \
                 if isinstance(description, dict) else description
