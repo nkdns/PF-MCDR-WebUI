@@ -201,7 +201,7 @@ function reloadPlugin(plugin_id) {
 }
 // 更新插件 调用 POST /api/update_plugin {plugin_id}
 function updatePlugin(plugin_id) {
-    showMessage({ type: '提示', content: '是否更新插件?', title: '更新插件' })
+    showMessage({ type: '提示', content: '是否更新 ' + plugin_id + ' 插件?', title: '更新插件' })
         .then(result => {
             if (!result) {
                 return;
@@ -221,9 +221,9 @@ function updatePlugin(plugin_id) {
                 .then(response => response.json())
                 .then(data => {
                     if (data.status === 'error') {
-                        showMessage({type: '错误',content: data.message,autoCloseTime: 5000,});
+                        showMessage({type: '错误',content: plugin_id + ' 插件更新失败：' + data.message + '\n通常可能是以下原因：\n1. 该插件无法更新，如插件为单文件模式，更新有冲突...\n2. 网络连接异常，请检查网络连接。',title: '更新失败',});
                     } else if (data.status ==='success') {
-                        showMessage({type: '完成',content: '插件更新请求完成，请尝试刷新页面查看\n如果更新失败，可能是该插件无法更新或者网络异常。',title: '更新结束',autoCloseTime: 5000,});
+                        showMessage({type: '完成',content: plugin_id + ' 插件更新请求完成，请尝试刷新页面查看\n如果更新失败，可能是该插件无法更新或者网络异常。',autoCloseTime: 5000,});
                     }
                 })
                 .catch(error => console.error('Error updating plugin:', error));

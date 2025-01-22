@@ -371,7 +371,9 @@ async def update_plugin(request: Request, plugin_info:plugin_info):
     # 设置需要监控的模式
     patterns = [
         "已安装的插件已满足所述需求，无需安装任何插件",
-        "插件安装完成"
+        "插件安装完成",
+        "Nothing needs to be installed",
+        "Installation done"
     ]
 
     # 开始监控
@@ -387,9 +389,9 @@ async def update_plugin(request: Request, plugin_info:plugin_info):
     result = log_watcher.get_result(timeout=10, match_all=False)
 
     # 根据匹配结果进行响应
-    if result.get("已安装的插件已满足所述需求，无需安装任何插件", True):
+    if (result.get("已安装的插件已满足所述需求，无需安装任何插件", True) or result.get("Nothing needs to be installed", True)):
         return JSONResponse({"status": "error", "message": "已安装的插件不满足要求，无法更新"})
-    elif result.get("插件安装完成", True):
+    elif (result.get("插件安装完成", True) or result.get("Installation done", True)):
         return JSONResponse({"status": "success"})
     else:
         return JSONResponse({"status": "error", "message": "更新失败"})
