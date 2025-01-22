@@ -574,6 +574,8 @@ async def save_config(request: Request, config_data: config_data):
             {"status": "error", "message": "User not logged in"}, status_code=401
         )
     config_path = Path(config_data.file_path)
+    if config_path == Path("config\\guguwebui\\config.json"):
+        return JSONResponse({"status": "error", "message": "无法在此处修改guguwebui配置文件"})
     plugin_config = config_data.config_data
 
     if not config_path.exists():
@@ -648,6 +650,8 @@ async def save_config_file(request: Request, data: SaveContent):
             {"status": "error", "message": "User not logged in"}, status_code=401
         )
     path = data.action
+    if path == "config\\guguwebui\\config.json":
+        return JSONResponse({"status": "error", "message": "无法在此处修改guguwebui配置文件"})
     with open(path, "w", encoding="utf-8") as file:
         file.write(data.content)
     return {"status": "success", "message": f"{data.action} saved successfully"}

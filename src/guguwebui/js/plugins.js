@@ -547,9 +547,13 @@ async function saveConfig(file_path) {
             body: requestBody
         });
         const result = await response.json();
-        console.log('保存配置成功:', result);
-        showMessage({type: '完成',content: '保存成功',autoCloseTime: 5000,});
-
+        if (result.status === 'error') {
+            console.error('保存配置失败:', result.message);
+            showMessage({ type: '错误', content: '保存配置失败，请查看终端输出日志', title: '保存失败', autoCloseTime: 5000, });
+        } else {
+            console.log('保存配置成功:', result);
+            showMessage({ type: '完成', content: '保存成功', autoCloseTime: 5000, });
+        }
         if (window.self !== window.top && window.location.pathname === "/plugins") {
             // 获取父元素
             const parent = configDiv.parentElement.parentElement;
@@ -956,13 +960,19 @@ const saveToServer = async () => {
     const content = editor.getValue();
     const action = current_path;
     try {
-        await fetch(`/api/save_config_file`, { //save_css or save_js
+        const response = await fetch(`/api/save_config_file`, { // save_css or save_js
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ action, content })
         });
-        localStorage.removeItem(localStorageKey(current_path));
-        showMessage({type: '完成',content: '保存成功',autoCloseTime: 5000,});
+        const responseData = await response.json()
+        if (responseData.status === 'error') {
+            console.log(responseData.message);
+            showMessage({ type: '错误', content: `保存失败: ${responseData.message || '未知错误'}`, autoCloseTime: 5000 });
+        } else {
+            localStorage.removeItem(localStorageKey(current_path));
+            showMessage({ type: '完成', content: '保存成功', autoCloseTime: 5000 });
+        }
     } catch (error) {
         alert("保存失败：" + error);
     }
