@@ -127,31 +127,46 @@ function loadPlugins() {
             listPluginsTip();
         });
     })
-    .catch(error => console.error('Error fetching plugins:', error));
+        .catch(error => {
+            console.error('Error fetching plugins:', error)
+            showMessage({type: '错误',content: '加载插件列表失败，请稍后重试或终端查看报错信息', autoCloseTime: 5000,});
+        });
 }
 
 
 // 安装插件 调用 POST /api/install_plugin {plugin_id}
 function installPlugin(plugin_id) {
-    // 准备请求体
-    const requestBody = JSON.stringify({
-        plugin_id: plugin_id,
-    });
-    // 发送请求
-    fetch('/api/install_plugin', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json'
-        },
-        body: requestBody
-    })
-       .then(response => response.json())
-       .then(data => {
-            console.log("安装插件成功");
-            // 刷新页面
-            location.reload();
-        })
-       .catch(error => console.error("安装插件失败:", error));
+    showMessage({ type: '提示', content: '是否安装 ' + plugin_id + ' 插件?', title: '安装插件' })
+        .then(result => {
+            if (!result) {
+                return;
+            } else {
+                showMessage({ type: '提示', content: '已提交安装请求，请稍等片刻...', autoCloseTime: 5000, });
+                // 准备请求体
+                const requestBody = JSON.stringify({
+                    plugin_id: plugin_id,
+                });
+                // 发送请求
+                fetch('/api/install_plugin', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: requestBody
+                })
+                    .then(response => response.json())
+                    .then(data => {
+                        console.log("安装插件成功");
+                        showMessage({type: '完成',content: '安装成功，请尝试刷新页面查看',autoCloseTime: 5000,});
+                        // 刷新页面
+                        location.reload();
+                    })
+                    .catch(error => {
+                        console.error("安装插件失败:", error)
+                        showMessage({type: '错误',content: '安装插件失败，请稍后重试或终端查看报错信息', autoCloseTime: 5000,});
+                    });
+            }
+        });
 }
 // 启动插件 调用 POST /api/toggle_plugin {plugin_id, status=true}
 function runPlugin(plugin_id) {
@@ -171,6 +186,7 @@ function runPlugin(plugin_id) {
        .then(response => response.json())
        .then(data => {
             console.log("运行插件成功");
+            showMessage({type: '完成',content: '运行成功，请尝试刷新页面查看',autoCloseTime: 5000,});
             // 刷新页面
             location.reload();
         })
@@ -194,7 +210,7 @@ function reloadPlugin(plugin_id) {
         if (data.status === 'error') {
             showMessage({type: '错误',content: data.message,autoCloseTime: 5000,});
         } else if (data.status ==='success') {
-            showMessage({type: '完成',content: '保存成功',autoCloseTime: 5000,});
+            showMessage({type: '完成',content: '插件重载成功，请尝试刷新页面查看',autoCloseTime: 5000,});
         }
     })
     .catch(error => console.error('Error reloading plugin:', error));
@@ -226,7 +242,10 @@ function updatePlugin(plugin_id) {
                         showMessage({type: '完成',content: plugin_id + ' 插件更新请求完成，请尝试刷新页面查看\n如果更新失败，可能是该插件无法更新或者网络异常。',autoCloseTime: 5000,});
                     }
                 })
-                .catch(error => console.error('Error updating plugin:', error));
+                    .catch(error => {
+                        console.error('Error updating plugin:', error)
+                        showMessage({type: '错误',content: '更新插件失败，请稍后重试或终端查看报错信息', autoCloseTime: 5000,});
+                    });
             }
         });
 }
@@ -384,6 +403,7 @@ function configPlugin(plugin_id) {
         })
         .catch(error => {
             console.error("获取配置文件列表失败:", error);
+            showMessage({type: '错误',content: '获取配置文件列表失败，请稍后重试或终端查看报错信息', autoCloseTime: 5000,});
         });
 }
 // * 调用 GET /api/load_config {path}
@@ -421,7 +441,10 @@ function loadconfigPlugin(file_path, containerId = undefined) {
                 }
             }
         })
-        .catch(error => console.error('Error fetching data:', error));
+        .catch(error => {
+            console.error('Error fetching data:', error)
+            showMessage({type: '错误',content: '加载配置文件失败，请稍后重试或终端查看报错信息', autoCloseTime: 5000,});
+        });
 }
 
 
@@ -673,7 +696,10 @@ function loadConfig(file_path, containerId = "config") {
                 });
             });
         })
-        .catch(error => console.error('Error fetching data:', error));
+        .catch(error => {
+            console.error('Error fetching data:', error)
+            showMessage({type: '错误',content: '加载配置文件失败，请稍后重试或终端查看报错信息', autoCloseTime: 5000,});
+        });
 }
 // buildHtmlFromJson 辅助函数 调用 GET /api/load_config?path=${file_path}&translation=true
 async function loadNoteConfig(file_path) {
@@ -719,6 +745,7 @@ async function loadNoteConfig(file_path) {
         }
     } catch (error) {
         console.error('Error fetching config:', error);
+        showMessage({type: '错误',content: '加载配置文件失败，请稍后重试或终端查看报错信息', autoCloseTime: 5000,});
     }
 }
 
@@ -907,11 +934,14 @@ const loadFromServer = async (path) => {
         const localContent = localStorage.getItem(localStorageKey(path));
         
         if (localContent && localContent !== serverContent) {
-            if (confirm("本地内容与服务器内容不同，是否使用本地内容？")) {
-                editor.setValue(localContent, -1);
-            } else {
-                editor.setValue(serverContent, -1);
-            }
+            showMessage({ type: '警告', content: '本地内容与服务器内容不同，是否使用本地内容？', title: '本地内容与服务器内容不同', })
+                .then((result) => {
+                    if (result) {
+                        editor.setValue(localContent, -1);
+                    } else {
+                        editor.setValue(serverContent, -1);
+                    }
+                });
         } else {
             editor.setValue(serverContent, -1);
         }

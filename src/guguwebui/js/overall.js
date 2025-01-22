@@ -31,10 +31,10 @@ function showMessage({ type, content, autoCloseTime, title = '', icon = '' }) {
   }
 
   const typeColors = {
-    提示: "#007BFF",
-    警告: "#FFC107",
-    错误: "#DC3545",
-    完成: "#28A745"
+    '提示': "#007BFF",
+    '警告': "#FFC107",
+    '错误': "#DC3545",
+    '完成': "#28A745"
   };
 
   const color = typeColors[type];

@@ -182,7 +182,7 @@ def get_plugin_versions(plugin_dict):
                 results[plugin_name] = None
 
     total_time = time.time() - start_time
-    print(f"总耗时: {total_time:.2f} 秒")
+    # print(f"总耗时: {total_time:.2f} 秒")
     return results
 
 def get_plugins_info_thread(plugin_dict):

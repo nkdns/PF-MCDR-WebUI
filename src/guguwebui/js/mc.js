@@ -10,5 +10,8 @@ function getServerStatus() {
             const serverPlayers = document.getElementById('Status-players-online');
             serverPlayers.textContent = jsonData['players'];
         })
-        .catch(error => console.error('Error fetching data:', error));
+        .catch(error => {
+            console.error('Error fetching data:', error)
+            showMessage({type: '错误',content: '无法获取服务器状态，请检查终端输出日志。', autoCloseTime: 5000,});
+        });
 }

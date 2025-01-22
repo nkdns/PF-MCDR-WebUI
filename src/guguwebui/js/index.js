@@ -9,17 +9,14 @@ function checkLogin() {
         })
         .then(data => {
             if (data.status === 'success') {
-                // 获取用户信息
                 getUserInfo(data.username);
             } else {
-                console.error('Error:', data.message); // 输出具体错误信息
-                // 跳转到登录页
+                console.error('Error:', data.message);
                 window.location.href = '/login';
             }
         })
         .catch(error => {
-            console.error('Error:', error.message); // 输出网络错误信息
-            // 跳转到登录页
+            console.error('Error:', error.message);
             window.location.href = '/login';
         });
 }
@@ -85,6 +82,7 @@ function getUserInfo(username) {
 function displayUserInfo(userInfo) {
     if (userInfo.nickname !== "tempuser") {
         document.getElementById('nickname').innerText = userInfo.nickname;
+        showMessage({type: '完成', content: '欢迎您，' + userInfo.nickname, autoCloseTime: 2000,}); // 显示欢迎信息
     }
     const avatar = document.getElementById('avatar');
     avatar.src = userInfo.avatar;
@@ -103,9 +101,9 @@ function displayUserInfo(userInfo) {
     } else if (hour >= 18 && hour < 21) { 
         document.querySelector('.nav-time').innerText = '晚上好，放松一下，享受美好的时光~';
     } else if (hour >= 21 && hour < 24) {
-        document.querySelector('.nav-time').innerText = '深夜好，愿你有个甜美的梦~';
+        document.querySelector('.nav-time').innerText = '夜晚安静，适合思考~';
     } else {
-        document.querySelector('.nav-time').innerText = '凌晨好，夜晚安静，适合思考~';
+        document.querySelector('.nav-time').innerText = '深夜好，愿你有个甜美的梦';
     }
 }
 

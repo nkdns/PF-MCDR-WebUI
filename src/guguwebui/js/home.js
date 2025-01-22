@@ -5,6 +5,20 @@ document.addEventListener("DOMContentLoaded", function () {
     load_other_plugins();
 });
 
+// 状态中文映射
+const statusTranslation = {
+    'loaded': '已加载',
+    'disabled': '已禁用',
+    'unloaded': '未加载'
+};
+
+// 按状态排序
+const statusOrder = {
+    'loaded': 1,
+    'disabled': 2,
+    'unloaded': 3
+};
+
 function load_gugu_plugins() {
     fetch('/api/gugubot_plugins')
         .then(response => response.json())
@@ -24,20 +38,6 @@ function load_gugu_plugins() {
                 return a.id - b.id;
             });
 
-            // 状态中文映射
-            const statusTranslation = {
-                'loaded': '已加载',
-                'disabled': '已禁用',
-                'unloaded': '未加载'
-            };
-
-            // 按状态排序
-            const statusOrder = {
-                'loaded': 1,
-                'disabled': 2,
-                'unloaded': 3
-            };
-
             const sortedPlugins = sortedGugubotPlugins.sort((a, b) => {
                 return (statusOrder[a.status] || 999) - (statusOrder[b.status] || 999);
             });
@@ -52,7 +52,10 @@ function load_gugu_plugins() {
                 statusList.appendChild(div);
             });
         })
-        .catch(error => console.error('Error fetching gugubot plugins:', error));
+        .catch(error => {
+            console.error('Error fetching gugubot plugins:', error)
+            showMessage({type: '错误',content: '获取插件状态失败',autoCloseTime: 5000,});
+        });
 }
 
 function load_other_plugins() {
@@ -65,20 +68,6 @@ function load_other_plugins() {
             const sortedPlugins = data.plugins.sort((a, b) => {
                 return a.id - b.id;
             });
-
-            // 状态中文映射
-            const statusTranslation = {
-                'loaded': '已加载',
-                'disabled': '已禁用',
-                'unloaded': '未加载'
-            };
-
-            // 按状态排序
-            const statusOrder = {
-                'loaded': 1,
-                'disabled': 2,
-                'unloaded': 3
-            };
 
             const finalPluginsList = sortedPlugins.sort((a, b) => {
                 return (statusOrder[a.status] || 999) - (statusOrder[b.status] || 999);
@@ -94,7 +83,10 @@ function load_other_plugins() {
                 pluginsDiv.appendChild(div);
             });
         })
-        .catch(error => console.error('Error fetching plugins:', error));
+        .catch(error => {
+            console.error('Error fetching plugins:', error)
+            showMessage({type: '错误', content: '获取插件列表失败', autoCloseTime: 5000,});
+        });
 }
 
 function toggleStatus(pluginId) {
@@ -187,7 +179,10 @@ document.addEventListener("DOMContentLoaded", function() {
                 enableTempLoginPasswordBtn.textContent = '点击启用';
             }
         })
-        .catch(error => console.error('Error fetching config:', error));
+        .catch(error => {
+            console.error('Error fetching config:', error)
+            showMessage({type: '错误',content: '获取配置失败',autoCloseTime: 5000,});
+        });
 });
 
 function saveWebConfig(action) {
@@ -232,10 +227,12 @@ function saveWebConfig(action) {
             }
         } else {
             console.error('操作失败: ' + data.message);
+            showMessage({type: '错误',content: '操作失败：' + data.message,autoCloseTime: 5000,});
         }
     })
     .catch(error => {
         console.error('Error:', error);
+        showMessage({type: '错误', content: '操作失败', autoCloseTime: 5000,});
     });
 }
 
@@ -292,11 +289,14 @@ const loadFromServer = async (lang) => {
         const localContent = localStorage.getItem(localStorageKey(lang));
         
         if (localContent && localContent !== serverContent) {
-            if (confirm("本地内容与服务器内容不同，是否使用本地内容？")) {
-                editor.setValue(localContent, -1);
-            } else {
-                editor.setValue(serverContent, -1);
-            }
+            showMessage({ type: '警告', content: '本地内容与服务器内容不同，是否使用本地内容？', title: '本地内容与服务器内容不同', })
+                .then((result) => {
+                    if (result) {
+                        editor.setValue(localContent, -1);
+                    } else {
+                        editor.setValue(serverContent, -1);
+                    }
+                });
         } else {
             editor.setValue(serverContent, -1);
         }
