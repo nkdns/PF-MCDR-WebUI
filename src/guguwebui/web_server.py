@@ -366,19 +366,25 @@ async def update_plugin(request: Request, plugin_info:plugin_info):
     plugin_id = plugin_info.plugin_id
     server:PluginServerInterface = app.state.server_interface
 
-    command = f"!!MCDR plugin install -U {plugin_id}"
-    server.execute_command(command) # No function return
-    
-    await asyncio.sleep(2)
-    command = f"!!MCDR confirm"
-    server.execute_command(command)
-    
     # 开始监听并匹配日志
     log_watcher = LogWatcher()
-    result = log_watcher.watch_log([
+    # 设置需要监控的模式
+    patterns = [
         "已安装的插件已满足所述需求，无需安装任何插件",
         "插件安装完成"
-    ], timeout=10, backtrack=5, match_all=False)
+    ]
+
+    # 开始监控
+    log_watcher.start_watch(patterns)
+
+    # 模拟服务器指令
+    await asyncio.sleep(2)
+    server.execute_command(f"!!MCDR plugin install -U {plugin_id}")
+    await asyncio.sleep(2)
+    server.execute_command("!!MCDR confirm")
+
+    # 获取匹配结果
+    result = log_watcher.get_result(timeout=10, match_all=False)
 
     # 根据匹配结果进行响应
     if result.get("已安装的插件已满足所述需求，无需安装任何插件", True):
