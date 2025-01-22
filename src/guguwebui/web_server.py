@@ -297,6 +297,8 @@ async def install_plugin(request: Request, plugin_info:plugin_info):
             {"status": "error", "message": "User not logged in"}, status_code=401
         )
     plugin_id = plugin_info.plugin_id
+    if plugin_id == "guguwebui":
+        return JSONResponse({"status": "error", "message": "无法处理自身"})
     server:PluginServerInterface = app.state.server_interface
 
     server.execute_command(f"!!MCDR plugin install -y {plugin_id}")
@@ -346,6 +348,8 @@ async def reload_plugin(request: Request, plugin_info:plugin_info):
             {"status": "error", "message": "User not logged in"}, status_code=401
         )
     plugin_id = plugin_info.plugin_id
+    if plugin_id == "guguwebui":
+        return JSONResponse({"status": "error", "message": "无法处理自身"})
     server:PluginServerInterface = app.state.server_interface
 
     server_response = server.reload_plugin(plugin_id)
@@ -364,6 +368,8 @@ async def update_plugin(request: Request, plugin_info:plugin_info):
             {"status": "error", "message": "User not logged in"}, status_code=401
         )
     plugin_id = plugin_info.plugin_id
+    if plugin_id == "guguwebui":
+        return JSONResponse({"status": "error", "message": "无法处理自身"})
     server:PluginServerInterface = app.state.server_interface
 
     # 开始监听并匹配日志
