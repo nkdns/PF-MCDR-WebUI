@@ -154,12 +154,16 @@ function logout() {
     localStorage.removeItem('userInfoTime');
     // 清除cookie
     document.cookie = 'token=; expires=Thu, 01 Jan 1970 00:00:00 GMT';
-    // 发送退出登录请求，不接收响应
+    // 发送退出登录请求，响应后跳转到登录
     fetch('/logout')
-    .then(
-        window.location.href = "/login"
-    );
-
+        .then(response => {
+        console.log('Logout response:', response);
+        if (response.ok) {
+            window.location.href = '/login';
+        } else {
+            console.error('退出登录失败:', response.statusText);
+        }
+    })
 }
 
 const owner = 'LoosePrince'; // 替换为你的 GitHub 用户名
