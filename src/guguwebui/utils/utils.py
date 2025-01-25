@@ -143,81 +143,28 @@ def get_gugubot_plugins_info(server_interface:PluginServerInterface):
     
     return respond
 
-
-# 全局缓存与锁
-plugin_version_cache = {}
-cache_timestamp = 0
-cache_lock = Lock()
-
-def fetch_version(plugin_name):
-    """
-    根据插件名称请求版本号。
-    如果请求失败，返回 None。
-    """
-    url = f"https://mcdreforged.com/zh-CN/plugin/{plugin_name}?_rsc=1rz10"
-    try:
-        response = requests.get(url, timeout=3)  # 设置超时时间为3秒
-        response.raise_for_status()
-        # 使用正则解析版本号
-        match = re.search(rf'/plugin/{plugin_name}/release/([\d\.]+)', response.text)
-        return match.group(1) if match else None
-    except requests.RequestException:
-        return None
-
-def get_plugin_versions(plugin_dict):
-    """
-    传入一个 JSON 格式的字典，返回插件版本号的 JSON 格式字典。
-    """
-    results = {}
-    start_time = time.time()
-
-    with ThreadPoolExecutor(max_workers=10) as executor:
-        future_to_plugin = {executor.submit(fetch_version, name): name for name in plugin_dict.values()}
-        for future in as_completed(future_to_plugin):
-            plugin_name = future_to_plugin[future]
-            try:
-                version = future.result()
-                results[plugin_name] = version
-            except Exception as e:
-                results[plugin_name] = None
-
-    total_time = time.time() - start_time
-    # print(f"总耗时: {total_time:.2f} 秒")
-    return results
-
-def get_plugins_info_thread(plugin_dict):
-    """
-    独立线程执行插件版本信息获取逻辑。
-    """
-    global plugin_version_cache, cache_timestamp
-
-    with cache_lock:
-        current_time = time.time()
-        if current_time - cache_timestamp > 2 * 3600:  # 缓存时间为2小时
-            plugin_version_cache = get_plugin_versions(plugin_dict)
-            cache_timestamp = current_time
-
 # get plugins' metadata 
 def get_plugins_info(server_interface, detail=False):
-    global plugin_version_cache, cache_timestamp
-
     ignore_plugin = ["mcdreforged", "python"]
     main_page_ignore = ['gugubot', "cq_qq_api", "player_ip_logger", "online_player_api", "guguwebui"]
     loaded_metadata, unloaded_metadata, unloaded_plugins, disabled_plugins = load_plugin_info(server_interface)
 
-    # 在独立线程中更新插件版本缓存
-    def update_plugin_versions():
-        global plugin_version_cache, cache_timestamp
-        with cache_lock:
-            current_time = time.time()
-            if current_time - cache_timestamp > 2 * 3600:  # 缓存时间为2小时
-                plugin_dict = {str(meta.id): name for name, meta in loaded_metadata.items()}
-                plugin_version_cache = get_plugin_versions(plugin_dict)
-                cache_timestamp = current_time
+    # 获取插件版本数据
+    def fetch_plugin_versions():
+        url = "https://looseprince.github.io/Plugin-Catalogue/plugins.json"
+        try:
+            response = requests.get(url)
+            if response.status_code == 200:
+                plugins_data = response.json()
+                return {plugin["id"]: plugin["latest_version"] for plugin in plugins_data}
+            else:
+                return {}
+        except requests.RequestException as e:
+            print(f"Error fetching plugin versions: {e}")
+            return {}
 
-    # 启动线程来更新版本缓存
-    thread = Thread(target=update_plugin_versions)
-    thread.start()
+    # 获取插件版本
+    plugin_versions = fetch_plugin_versions()
 
     respond = []
 
@@ -232,8 +179,8 @@ def get_plugins_info(server_interface, detail=False):
         if not isinstance(plugin_metadata, Metadata):  # 将 dict 转换为 Metadata 对象
             plugin_metadata = Metadata(plugin_metadata)
 
-        # 从缓存中获取最新版本号
-        latest_version = plugin_version_cache.get(plugin_name, None)
+        # 从API获取的最新版本号
+        latest_version = plugin_versions.get(plugin_name, None)
 
         if not detail and plugin_name not in main_page_ignore:  # 主页面插件信息
             respond.append({
@@ -390,6 +337,7 @@ def amount_static_files(server):
     __copyFile(server, 'guguwebui/js/login.js', './guguwebui_static/js/login.js')
     __copyFile(server, 'guguwebui/js/mc.js', './guguwebui_static/js/mc.js')
     __copyFile(server, 'guguwebui/js/plugins.js', './guguwebui_static/js/plugins.js')
+    __copyFile(server, 'guguwebui/js/online-plugins.js', './guguwebui_static/js/online-plugins.js')
     __copyFile(server, 'guguwebui/js/overall.js', './guguwebui_static/js/overall.js')
     __copyFile(server, 'guguwebui/src/bg.png', './guguwebui_static/src/bg.png')
     __copyFile(server, 'guguwebui/src/checkbox_select.png', './guguwebui_static/src/checkbox_select.png')
@@ -405,6 +353,7 @@ def amount_static_files(server):
     __copyFile(server, 'guguwebui/templates/mc.html', './guguwebui_static/templates/mc.html')
     __copyFile(server, 'guguwebui/templates/mcdr.html', './guguwebui_static/templates/mcdr.html')
     __copyFile(server, 'guguwebui/templates/plugins.html', './guguwebui_static/templates/plugins.html')
+    __copyFile(server, 'guguwebui/templates/online-plugins.html', './guguwebui_static/templates/online-plugins.html')
 
 # Command to generate __copyFile list above
 # import os

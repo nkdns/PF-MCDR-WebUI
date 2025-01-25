@@ -296,6 +296,8 @@ function changeTab(tab) {
         iframe.src = '/mcdr';
     } else if (tab === 'plugins') {
         iframe.src = '/plugins';
+    } else if (tab === 'online-plugins') {
+        iframe.src = '/online-plugins';
     } else if (tab === 'about') {
         iframe.src = '/about';
     } else if (tab === 'server-terminal') {

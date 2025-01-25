@@ -114,6 +114,16 @@ body.dark * {
     align-items: center;
 }
 
+#plugins >div>h2:has(>input) {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+#plugins >div>h2>input {
+    margin-left: 10px;
+}
+
 #plugins >div:has(>h2) >div {
     display: flex;
     align-items: center;
@@ -146,6 +156,12 @@ body.dark * {
     color: var(--color-1);
     font-size: 12px;
     margin-left: 5px;
+    max-width: 450px;
+}
+
+#plugins bold {
+    font-weight: bold;
+    padding: 2px;
 }
 
 #plugins .about-list .about-item {
@@ -233,7 +249,7 @@ body.dark * {
 #plugins #plugin-list .plugin .plugin-name {
     font-size: 16px;
     margin-right: 20px;
-    width: 150px;
+    width: 180px;
     display: inline-flex;
 }
 
@@ -268,6 +284,13 @@ body.dark * {
     font-size: 14px;
     color: var(--color-16);
     margin-left: 10px;
+}
+
+#plugins #plugin-list .plugin .plugin-description {
+    font-size: 16px;
+    margin-right: 20px;
+    max-width: 300px;
+    display: inline-table
 }
 
 #plugins .list-btn {
@@ -540,4 +563,38 @@ body.dark * {
     border-bottom: 2px solid var(--color-47);
     height: 50px;
     overflow: hidden;
+}
+
+
+#plugins #mcdr-popup {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: calc(100% - 4px);
+    height: calc(100% - 4px);
+    background: var(--color-43);
+    border: 2px solid var(--color-44);
+    z-index: 100;
+    border-radius: 15px;
+    overflow: hidden;
+}
+
+#plugins #mcdr-controls {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0 10px;
+    background: var(--color-46);
+    border-bottom: 2px solid var(--color-47);
+    height: 50px;
+    overflow: hidden;
+}
+
+#plugins #mcdr-frame {
+    height: calc(100% - 52px);
+    width: 100%;
+    border: none;
+    margin: 0;
+    padding: 0;
 }

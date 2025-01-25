@@ -233,6 +233,10 @@ async def plugins(request: Request, token_valid: bool = Depends(verify_token)):
     return await render_template_if_logged_in(request, "plugins.html")
 
 
+@app.get("/online-plugins", response_class=HTMLResponse)
+async def plugins(request: Request, token_valid: bool = Depends(verify_token)):
+    return await render_template_if_logged_in(request, "online-plugins.html")
+
 @app.get("/fabric", response_class=HTMLResponse)
 async def fabric(request: Request, token_valid: bool = Depends(verify_token)):
     return await render_template_if_logged_in(request, "fabric.html")
@@ -288,6 +292,20 @@ async def get_plugins(request: Request, detail: bool = False):
         content={"plugins": plugins}
     )
 
+# 请求 https://looseprince.github.io/Plugin-Catalogue/plugins.json 返回json，免登录
+@app.get("/api/online-plugins")
+async def get_online_plugins(request: Request):
+    url = "https://looseprince.github.io/Plugin-Catalogue/plugins.json"
+    try:
+        response = requests.get(url)
+        if response.status_code == 200:
+            plugins_data = response.json()
+            return plugins_data
+        else:
+            return {}
+    except requests.RequestException as e:
+        return {}
+
 
 # Install plugin
 @app.post("/api/install_plugin")
@@ -301,8 +319,36 @@ async def install_plugin(request: Request, plugin_info:plugin_info):
         return JSONResponse({"status": "error", "message": "无法处理自身"})
     server:PluginServerInterface = app.state.server_interface
 
+    # server.execute_command(f"!!MCDR plugin install -y {plugin_id}")
+    # return JSONResponse({"status": "success"})
+    # 开始监听并匹配日志
+    log_watcher = LogWatcher()
+    # 设置需要监控的模式
+    patterns = [
+        "已安装的插件已满足所述需求，无需安装任何插件",
+        "插件安装完成",
+        "Nothing needs to be installed",
+        "Installation done"
+    ]
+
+    # 开始监控
+    log_watcher.start_watch(patterns)
+
+    # 模拟服务器指令
+    await asyncio.sleep(2)
     server.execute_command(f"!!MCDR plugin install -y {plugin_id}")
-    return JSONResponse({"status": "success"})
+
+    # 获取匹配结果
+    result = log_watcher.get_result(timeout=10, match_all=False)
+    print(result)
+
+    # 根据匹配结果进行响应
+    if (result.get("已安装的插件已满足所述需求，无需安装任何插件", True) or result.get("Nothing needs to be installed", True)):
+        return JSONResponse({"status": "success", "message": "已安装的插件已满足所述需求，无需安装任何插件"})
+    elif (result.get("插件安装完成", True) or result.get("Installation done", True)):
+        return JSONResponse({"status": "success"})
+    else:
+        return JSONResponse({"status": "error", "message": "安装失败"})
 
 
 # Loading/Unloading pluging
