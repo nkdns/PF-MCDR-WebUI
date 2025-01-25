@@ -340,7 +340,6 @@ async def install_plugin(request: Request, plugin_info:plugin_info):
 
     # 获取匹配结果
     result = log_watcher.get_result(timeout=10, match_all=False)
-    print(result)
 
     # 根据匹配结果进行响应
     if (result.get("已安装的插件已满足所述需求，无需安装任何插件", True) or result.get("Nothing needs to be installed", True)):
