@@ -33,11 +33,16 @@ class LogWatcher:
         Args:
             patterns (list): 需要匹配的多个日志内容模式。
         """
+        self._cleanup()  # 清理资源
         with self._lock:
             self._patterns = patterns
             self._result = {pattern: False for pattern in patterns}
             self._watching = True
-            self._last_read_line = 0  # 重置日志读取位置
+            
+            # 读取文件的最后一行，确保从最新内容开始监控
+            with open(self.log_file_path, "r", encoding="utf-8") as log_file:
+                lines = log_file.readlines()
+                self._last_read_line = len(lines)
 
     def get_result(self, timeout=10, match_all=True) -> dict:
         """
@@ -59,7 +64,6 @@ class LogWatcher:
 
             with self._lock:
                 if not self._watching:
-                    print("观察者停止，退出循环。")
                     break
                 
                 if match_all:
@@ -75,3 +79,9 @@ class LogWatcher:
 
         self._watching = False
         return self._result
+
+    def _cleanup(self):
+        """清理资源，释放状态。"""
+        self._patterns = []
+        self._result = {}
+        self._last_read_line = 0
