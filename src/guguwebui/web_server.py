@@ -297,7 +297,7 @@ async def get_plugins(request: Request, detail: bool = False):
 async def get_online_plugins(request: Request):
     url = "https://looseprince.github.io/Plugin-Catalogue/plugins.json"
     try:
-        response = requests.get(url)
+        response = requests.get(url, timeout=5)  # 增加超时时间设置
         if response.status_code == 200:
             plugins_data = response.json()
             return plugins_data

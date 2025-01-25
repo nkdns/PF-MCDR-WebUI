@@ -153,7 +153,7 @@ def get_plugins_info(server_interface, detail=False):
     def fetch_plugin_versions():
         url = "https://looseprince.github.io/Plugin-Catalogue/plugins.json"
         try:
-            response = requests.get(url)
+            response = requests.get(url, timeout=5)
             if response.status_code == 200:
                 plugins_data = response.json()
                 return {plugin["id"]: plugin["latest_version"] for plugin in plugins_data}
