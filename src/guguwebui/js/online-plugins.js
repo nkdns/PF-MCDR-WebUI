@@ -164,17 +164,20 @@ function showPlugin(id) {
     // 加载插件详情页面
     mcdrFrame.src = `https://mcdreforged.com/zh-CN/plugin/${id}`;
 
+    // 安装插件的事件处理函数
+    const installHandler = () => {
+        installPlugin(id);
+    };
+
+    // 安装插件
+    installButton.addEventListener('click', installHandler);
+
     // 关闭画布
     cancelButton.addEventListener('click', () => {
         mcdrPopup.style.display = 'none';
         mcdrFrame.src = '';
         // 清理安装插件按钮的点击事件
-        installButton.removeEventListener('click');
-    });
-
-    // 安装插件
-    installButton.addEventListener('click', () => {
-        installPlugin(id);
+        installButton.removeEventListener('click', installHandler);
     });
 }
 
