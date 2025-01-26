@@ -159,7 +159,7 @@ function loadPlugins() {
                         <span class="plugin-author">作者：${authorNames}</span>
                         <span class="plugin-update-time">${getRelativeTime(plugin.last_update_time)}更新</span>
                     </div>
-                    <span class="plugin-name">${name || id}</span>
+                    <span class="plugin-name"><a href="${repository_url}" target="_blank">${name || id}</a></span>
                     <span class="plugin-version">${latest_version || version}</span>
                     <span class="plugin-description">${(description.zh_cn || description.en_us).replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank">$1</a>')}</span>
                 </div>
