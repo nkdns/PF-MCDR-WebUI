@@ -218,6 +218,17 @@ body.dark * {
     opacity: 0;
     transform: translateX(20px);
     animation: slideIn 0.5s forwards;
+    border-radius: 10px;
+    transition: all 0.2s ease-in-out;
+}
+
+#plugins #plugin-list .plugin:hover {
+    background-color: var(--color-3);
+}
+
+#plugins #plugin-list .plugin>div {
+    display: flex;
+    align-items: center;
 }
 
 #plugins #plugin-list .plugin .description {
