@@ -1,4 +1,36 @@
 // author & description 显示函数
+// 计算相对时间
+function getRelativeTime(dateStr) {
+    if (!dateStr) return '未知时间';
+    
+    const date = new Date(dateStr);
+    const now = new Date();
+    const diff = now - date;
+    
+    const minute = 60 * 1000;
+    const hour = minute * 60;
+    const day = hour * 24;
+    const week = day * 7;
+    const month = day * 30;
+    const year = day * 365;
+    
+    if (diff < minute) {
+        return '刚刚';
+    } else if (diff < hour) {
+        return `${Math.floor(diff / minute)}分钟前`;
+    } else if (diff < day) {
+        return `${Math.floor(diff / hour)}小时前`;
+    } else if (diff < week) {
+        return `${Math.floor(diff / day)}天前`;
+    } else if (diff < month) {
+        return `${Math.floor(diff / week)}周前`;
+    } else if (diff < year) {
+        return `${Math.floor(diff / month)}个月前`;
+    } else {
+        return `${Math.floor(diff / year)}年前`;
+    }
+}
+
 function listPluginsTip() {
     document.querySelectorAll('.plugin>div:first-child').forEach(container => {
         const tooltip = container.querySelector('.description');
@@ -97,6 +129,16 @@ function loadPlugins() {
     fetch('/api/online-plugins')
     .then(response => response.json())
     .then(data => {
+        // 按last_update_time逆序排序，null/none的排在最后
+        data.sort((a, b) => {
+            const timeA = a.last_update_time ? new Date(a.last_update_time) : null;
+            const timeB = b.last_update_time ? new Date(b.last_update_time) : null;
+            
+            if (timeA === null && timeB === null) return 0;
+            if (timeA === null) return 1;
+            if (timeB === null) return -1;
+            return timeB - timeA;
+        });
         // 遍历插件数组，创建插件列表
         data.forEach(plugin => {
             const { id, name, description, authors, repository_url, version, latest_version } = plugin;
@@ -112,9 +154,10 @@ function loadPlugins() {
             const updateButtonStyle = version === latest_version ? 'visibility: hidden;' : 'visibility: visible;';
 
             pluginDiv.innerHTML = `
-                <div>
+                <div last_update_time="${plugin.last_update_time}">
                     <div class="description">
                         <span class="plugin-author">作者：${authorNames}</span>
+                        <span class="plugin-update-time">${getRelativeTime(plugin.last_update_time)}</span>
                         <span class="plugin-description">说明：${description.zh_cn || description.en_us}</span>
                     </div>
                     <span class="plugin-name">${name || id}</span>
@@ -215,4 +258,4 @@ function installPlugin(plugin_id) {
                         });
             }
         });
-}
+    }

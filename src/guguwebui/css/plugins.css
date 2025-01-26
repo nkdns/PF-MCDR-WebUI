@@ -256,6 +256,17 @@ body.dark * {
 #plugins #plugin-list .plugin .plugin-author {
     font-size: 14px;
     color: var(--color-12);
+    margin-right: 10px;
+}
+
+#plugins #plugin-list .plugin .plugin-update-time {
+    font-size: 14px;
+    color: var(--color-12);
+    margin-right: 10px;
+}
+
+#plugins #plugin-list .plugin .plugin-description {
+    font-size: 14px;
     margin-right: 20px;
 }
 
