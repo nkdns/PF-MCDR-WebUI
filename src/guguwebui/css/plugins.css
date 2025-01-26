@@ -48,6 +48,7 @@ body {
     --color-45: #0000007f;
     --color-46: #ffffffff;
     --color-47: #e9f1f6ff;
+    --color-48: rgb(245, 248, 249);
 }
 
 body.dark {
@@ -98,6 +99,7 @@ body.dark {
     --color-45: #0000007f;
     --color-46: #1E1E1E;
     --color-47: #2D2D2D;
+    --color-48: rgb(27 37 40);
     color: #E0E0E0;
     background-color: #1E1E1E;
     height: 100%;
@@ -223,7 +225,7 @@ body.dark * {
 }
 
 #plugins #plugin-list .plugin:hover {
-    background-color: var(--color-3);
+    background-color: var(--color-48);
 }
 
 #plugins #plugin-list .plugin>div {
@@ -320,6 +322,7 @@ body.dark * {
     width: 80px;
     box-sizing: border-box;
     padding: 3px 10px;
+    margin-right: 5px;
     border-radius: 8px;
     background-color: var(--color-17);
     color: var(--color-18);
