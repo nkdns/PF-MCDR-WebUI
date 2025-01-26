@@ -264,6 +264,8 @@ body.dark * {
     margin-right: 20px;
     width: 180px;
     display: inline-flex;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
 }
 
 #plugins #plugin-list .plugin .plugin-author {
