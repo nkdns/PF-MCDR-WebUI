@@ -1,4 +1,4 @@
-
+import yaml
 from pathlib import Path
 
 from passlib.context import CryptContext
@@ -16,7 +16,13 @@ PATH_DB_PATH = Path("./config") / "guguwebui" / "config_path.json"
 CSS_FILE = Path(STATIC_PATH) / "custom" / "overall.css"
 JS_FILE = Path(STATIC_PATH) / "custom" / "overall.js"
 
-SERVER_PROPERTIES_PATH = "server/server.properties"
+# SERVER_PATH 读config.yml的 working_directory值
+CONFIG_FILE_PATH = Path("./config.yml")
+with open(CONFIG_FILE_PATH, 'r', encoding='utf-8') as config_file:
+    config = yaml.safe_load(config_file)
+SERVER_PATH = Path(config.get('working_directory', 'server'))
+
+SERVER_PROPERTIES_PATH =  SERVER_PATH / "server.properties"
 
 pwd_context = CryptContext(schemes=["argon2"], deprecated="auto")
 
