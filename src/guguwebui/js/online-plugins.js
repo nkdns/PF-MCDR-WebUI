@@ -157,12 +157,11 @@ function loadPlugins() {
                 <div last_update_time="${plugin.last_update_time}">
                     <div class="description">
                         <span class="plugin-author">作者：${authorNames}</span>
-                        <span class="plugin-update-time">${getRelativeTime(plugin.last_update_time)}</span>
-                        <span class="plugin-description">说明：${description.zh_cn || description.en_us}</span>
+                        <span class="plugin-update-time">${getRelativeTime(plugin.last_update_time)}更新</span>
                     </div>
                     <span class="plugin-name">${name || id}</span>
                     <span class="plugin-version">${latest_version || version}</span>
-                    <span class="plugin-description">${description.zh_cn || description.en_us}</span>
+                    <span class="plugin-description">${(description.zh_cn || description.en_us).replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank">$1</a>')}</span>
                 </div>
                 <div>
                     <button class="plugin-install list-btn" style="${installButtonStyle}" onclick="installPlugin('${id}')">一键安装</button>
