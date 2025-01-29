@@ -618,37 +618,54 @@ async def save_config(request: Request, config_data: config_data):
         return JSONResponse(
             {"status": "error", "message": "User not logged in"}, status_code=401
         )
+    
     config_path = Path(config_data.file_path)
     if config_path == Path("config\\guguwebui\\config.json"):
         return JSONResponse({"status": "error", "message": "无法在此处修改guguwebui配置文件"})
+
     plugin_config = config_data.config_data
 
     if not config_path.exists():
         return JSONResponse({"status": "fail", "message": "plugin config not found"})
 
-    # load original config data
-    with open(config_path, "r", encoding="UTF-8") as f:
-        if config_path.suffix == ".json":
-            data = json.load(f)
-        elif config_path.suffix in [".yml", ".yaml"]:
-            data = yaml.load(f)
-        elif config_path.suffix == ".properties":
-            data = javaproperties.load(f)
-            # convert back the True False to "true" "false"
-            plugin_config = {k:v if not isinstance(v, bool) else 
-                             "true" if v else "false" 
-                             for k,v in plugin_config.items()}
+    try:
+        # load original config data
+        with open(config_path, "r", encoding="UTF-8") as f:
+            if config_path.suffix == ".json":
+                data = json.load(f)
+            elif config_path.suffix in [".yml", ".yaml"]:
+                data = yaml.load(f)
+            elif config_path.suffix == ".properties":
+                data = javaproperties.load(f)
+                # convert back the True False to "true" "false"
+                plugin_config = {k: v if not isinstance(v, bool) else 
+                                 "true" if v else "false" 
+                                 for k, v in plugin_config.items()}
+    except Exception as e:
+        print(f"Error loading config file: {e}")
+        return JSONResponse({"status": "error", "message": str(e)}, status_code=500)
 
     # ensure type will not change
-    consistent_type_update(data, plugin_config)
+    try:
+        consistent_type_update(data, plugin_config)
+    except Exception as e:
+        print(f"Error updating config data: {e}")
+        return JSONResponse({"status": "error", "message": str(e)}, status_code=500)
 
-    with open(config_path, "w", encoding="UTF-8") as f:
-        if config_path.suffix == ".json":
-            json.dump(data, f, ensure_ascii=False, indent=4)
-        elif config_path.suffix in [".yml", ".yaml"]:
-            yaml.dump(data, f)
-        elif config_path.suffix == ".properties":
-            javaproperties.dump(data, f)
+    try:
+        # save config data
+        with open(config_path, "w", encoding="UTF-8") as f:
+            if config_path.suffix == ".json":
+                json.dump(data, f, ensure_ascii=False, indent=4)
+            elif config_path.suffix in [".yml", ".yaml"]:
+                yaml.dump(data, f)
+            elif config_path.suffix == ".properties":
+                javaproperties.dump(data, f)
+        return JSONResponse({"status": "success", "message": "配置文件保存成功"})
+    except Exception as e:
+        print(f"Error saving config file: {e}")
+        return JSONResponse({"status": "error", "message": str(e)}, status_code=500)
+
 
 # load overall.js / overall.css
 @app.get("/api/load_file", response_class=PlainTextResponse)
