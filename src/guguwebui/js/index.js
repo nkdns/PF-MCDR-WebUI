@@ -301,7 +301,7 @@ function changeTab(tab) {
     } else if (tab === 'about') {
         iframe.src = '/about';
     } else if (tab === 'server-terminal') {
-        iframe.src = '/server-terminal';
+        iframe.src = '/terminal';
     } else if (tab === 'fabric') {
         iframe.src = '/fabric';
     }

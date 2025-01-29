@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>终端</title>
+    <link rel="stylesheet" href="custom/overall.css">
+    <script src="custom/overall.js"></script>
+    <script src="js/overall.js"></script>
+    <link rel="stylesheet" href="css/terminal.css">
+    <style>
+        * {
+            padding: 0;
+            margin: 0;
+            color: #2b2b2b;
+            font-weight: 500;
+        }
+    </style>
+    <script>
+        function checkIfEmbedded() {
+            if (window.top == window.self) {
+                // 跳转到首页
+                window.location.href = "{{ index_path }}";
+            }
+        }
+
+        // 当页面失去焦点时检测
+        window.onblur = checkIfEmbedded;
+        // 页面加载时检测
+        window.onload = checkIfEmbedded;
+        // 页面尺寸发生变化时
+        window.onresize = checkIfEmbedded;
+        // 页面滚动时
+        window.onscroll = checkIfEmbedded;
+        // 页面内容发生变化时
+        window.onhashchange = checkIfEmbedded;
+        // 页面内容被点击时
+        window.onclick = checkIfEmbedded;
+    </script>
+</head>
+<body id="terminal">
+    <script>
+        // 获取用户的主题偏好
+        const savedTheme = localStorage.getItem('guguwebui-theme') || 'auto';
+
+        // 判断是否为自动模式，并根据系统的夜间模式设置调整主题
+        if (savedTheme === 'auto') {
+            const prefersDarkMode = window.matchMedia('(prefers-color-scheme: dark)').matches;
+            document.body.classList.add(prefersDarkMode ? 'dark' : 'light');
+        } else {
+            document.body.classList.add(savedTheme);
+        }
+    </script>
+    
+    <script src="js/terminal.js"></script>
+</body>
+</html>
