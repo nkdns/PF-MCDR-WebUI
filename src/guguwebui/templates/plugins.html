@@ -61,11 +61,19 @@
 
     <pre id="JSON"></pre>
 
+    <div id="config-popup">
+        <div class="popup-controls">
+            <button class="btn cancel">返回</button>       
+            <button class="btn" id="save-config">保存配置</button>
+        </div>
+        <div id="popup-content" class="config"></div>
+    </div>
+
     <!-- 代码编辑器 -->
     <div id="overlay"></div>
     <div id="editor-popup">
-        <div id="popup-controls">
-            <button class="btn" id="cancel">返回</button>
+        <div class="popup-controls">
+            <button class="btn cancel">返回</button>
             <select class="btn" style="width: auto;" id="editor-theme-select">
                 <option value="monokai">Monokai</option>
                 <option value="chrome">Chrome</option>
@@ -132,9 +140,11 @@
 
         // 事件监听
         document.getElementById("save-file").addEventListener("click", () => saveToServer());
-        document.getElementById("cancel").addEventListener("click", () => {
-            localStorage.removeItem(localStorageKey(current_path));
-            closePopup();
+        document.querySelectorAll(".cancel").forEach(function(element) {
+            element.addEventListener("click", function() {
+                localStorage.removeItem(localStorageKey(current_path));
+                closePopup();
+            });
         });
 
         // 输入时实时保存到本地存储

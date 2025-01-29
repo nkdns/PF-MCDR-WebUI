@@ -386,16 +386,23 @@ function configPlugin(plugin_id) {
                 contentDiv.id = path; // 替换特殊字符确保有效 ID
                 configDiv.appendChild(contentDiv);
 
-                // 创建保存配置按钮
-                const saveButton = document.createElement('button');
-                saveButton.className = 'btn';
-                saveButton.textContent = '保存配置';
-                saveButton.style.display = "none";
-                saveButton.onclick = () => saveConfig(path);
+                const popupContent = document.getElementById("popup-content");
+                if (!popupContent) {
+                    // 创建保存配置按钮
+                    const saveButton = document.createElement('button');
+                    saveButton.className = 'btn';
+                    saveButton.textContent = '保存配置';
+                    saveButton.style.display = "none";
+                    saveButton.onclick = () => saveConfig(path);
+                    container.appendChild(saveButton);
+                } else {
+                    const saveButton = document.getElementById("save-config");
+                    saveButton.style.display = "none";
+                    saveButton.onclick = () => saveConfig(path);
+                }
 
                 container.appendChild(configtitleDiv);
                 container.appendChild(configDiv);
-                container.appendChild(saveButton);
 
                 // 将 container 添加到 configContainer
                 configContainer.appendChild(container);
@@ -493,7 +500,13 @@ async function saveConfig(file_path) {
         // 加载配置模板
         const template = await loadConfigTemplate(file_path);
         
-        const configDiv = document.getElementById(file_path);
+        let configDiv;
+        const popupContent = document.getElementById("popup-content");
+        if (!popupContent) {
+            configDiv = document.getElementById(file_path);
+        } else {
+            configDiv = document.getElementById("popup-content");
+        }
         const configData = {};
 
         // 填充非分组项目
@@ -530,8 +543,13 @@ async function saveConfig(file_path) {
         });
 
         const finalJson = fillTemplate(template, configData);
-        // 填充到div id=JSON
+        
         const jsonDiv = document.getElementById('JSON');
+        const configPopup = document.getElementById("config-popup");
+        if (configPopup) { 
+            configPopup.appendChild(jsonDiv);
+            popupContent.style.display = "none";
+        }
         jsonDiv.textContent = JSON.stringify(finalJson, null, 2);
 
         // post 请求保存配置
@@ -754,8 +772,17 @@ async function loadNoteConfig(file_path) {
 }
 
 function buildHtmlFromJson(jsonData, file_path, containerId = undefined) {
-    const container = document.getElementById(file_path);
-    
+    let container;
+    const popupContent = document.getElementById("popup-content");
+    if (popupContent) {
+        container = popupContent;
+        container.style.display = "block";
+        document.getElementById("config-popup").style.display = "block";
+        container.innerHTML = ''; // 清空容器
+    } else {
+        container = document.getElementById(file_path);
+    }
+
     if (window.self !== window.top && window.location.pathname === "/plugins") {
         // 获取父元素
         const parent = container.parentElement.parentElement;
@@ -928,6 +955,10 @@ const openPopup = (path) => {
 const closePopup = () => {
     overlay.style.display = "none";
     editorPopup.style.display = "none";
+    const configPopup = document.getElementById("config-popup");
+    if (configPopup) { 
+        configPopup.style.display = "none";
+    }
 };
 // 从服务器加载代码
 const loadFromServer = async (path) => {
