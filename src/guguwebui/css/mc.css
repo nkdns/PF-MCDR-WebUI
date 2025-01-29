@@ -140,6 +140,7 @@ body.dark * {
     max-width: 100%;
     margin: 0;
     margin-bottom: 10px;
+    overflow: auto;
 }
 
 :is(#mc, #mcdr) .config .config-item .about-list .about-item p {

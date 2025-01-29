@@ -315,6 +315,7 @@ body.dark {
     transition: all 0.3s ease;
     box-sizing: border-box;
     border: 0 solid var(--color-26);
+    overflow: hidden;
 }
 
 #index .tabs .tab-container .tab-fold:hover {
