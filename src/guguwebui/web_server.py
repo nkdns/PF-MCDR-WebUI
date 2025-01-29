@@ -2,6 +2,8 @@ import datetime
 import javaproperties
 import secrets
 
+from pathlib import Path
+
 from fastapi import Depends, FastAPI, Form, Request, status, HTTPException
 from fastapi.responses import (
     HTMLResponse,
@@ -528,6 +530,33 @@ async def load_config(request: Request, path:str, translation:bool = False):
     path:Path = Path(path)
     server:PluginServerInterface = app.state.server_interface
     MCDR_language:str = server.get_mcdr_language()
+
+    # 提取 config/chat_with_deepseek 目录
+    config_dir = path.parent
+    main_json_path = config_dir / "main.json"
+
+    # 读取 main.json
+    main_config = {}
+    if main_json_path.exists():
+        try:
+            with open(main_json_path, "r", encoding="UTF-8") as f:
+                main_config = json.load(f)
+        except Exception:
+            pass  # 解析失败则保持 main_config 为空字典
+
+    # 获取 config.json 的值（可能指向 HTML 文件）
+    config_value = main_config.get(path.name)  # 这里 path.name 应该是 "config.json"
+    if config_value:
+        html_path = config_dir / config_value  # 构造 HTML 文件路径
+        if html_path.exists() and html_path.suffix == ".html":
+            try:
+                with open(html_path, "r", encoding="UTF-8") as f:
+                    return JSONResponse({"status": "success", "type": "html", "content": f.read()})
+            except Exception:
+                return JSONResponse(
+                    {"status": "error", "message": "Failed to read HTML file"},
+                    status_code=500,
+                )
 
     # Translation for xxx.json -> xxx_lang.json
     if translation:

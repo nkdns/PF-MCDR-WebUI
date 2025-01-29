@@ -420,6 +420,21 @@ function loadconfigPlugin(file_path, containerId = undefined) {
         .then(jsonData => {
 
             clean_config();
+            if (jsonData.type === 'html') {
+                const configPopup = document.getElementById("config-popup");
+                const popupContent = document.getElementById("popup-content");
+                // 创建一个iframe
+                const iframe = document.createElement('iframe');
+                iframe.srcdoc = jsonData.content;
+                iframe.style.width = "calc(100% - 5px)";
+                iframe.style.height = "calc(100% - 20px)";
+                iframe.style.border = "none";
+                iframe.style.position = "absolute";
+                popupContent.appendChild(iframe);
+                configPopup.style.display = "block";
+                popupContent.style.display = "block";
+                return;
+            }
             // 将jsonData转为纯文本再检查行数
             const jsonText = JSON.stringify(jsonData, null, 2);
             const lines = jsonText.split('\n');
