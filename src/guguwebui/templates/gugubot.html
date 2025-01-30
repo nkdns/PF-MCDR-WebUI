@@ -38,7 +38,7 @@
         window.onclick = checkIfEmbedded;
     </script>
 </head>
-<body id="gugubot-page">
+<body id="gugubot-page" style="overflow-y: scroll;">
     <script>
         // 获取用户的主题偏好
         const savedTheme = localStorage.getItem('guguwebui-theme') || 'auto';
@@ -91,8 +91,8 @@
                         const popupContent = document.getElementById("./config/GUGUbot/config.yml");
                         const iframe = document.createElement('iframe');
                         iframe.srcdoc = jsonData.content;
-                        iframe.style.width = "calc(100% - 5px)";
-                        iframe.style.height = "calc(100% - 20px)";
+                        iframe.style.width = "100%";
+                        iframe.style.height = "100%";
                         iframe.style.border = "none";
                         iframe.style.position = "absolute";
                         popupContent.appendChild(iframe);
