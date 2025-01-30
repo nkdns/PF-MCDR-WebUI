@@ -239,5 +239,10 @@ window.addEventListener('message', (event) => {
   if (event.data.type === 'theme-change') {
     document.body.classList.remove('light', 'dark', 'auto');
     document.body.classList.add(event.data.theme);
+    // 通知iframe主题变化
+    const iframe = document.querySelector('iframe');
+    if (iframe && iframe.contentWindow) {
+      iframe.contentWindow.postMessage({ type: 'theme-change', theme: event.data.theme }, '*');
+    }
   }
 });
