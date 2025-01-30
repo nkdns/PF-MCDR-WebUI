@@ -567,7 +567,7 @@ async def load_config(request: Request, path:str, translation:bool = False, type
             path = path.with_suffix(f".json")
         
     if not path.exists(): # file not exists
-        return JSONResponse({}, status_code=404)  
+        return JSONResponse({}, status_code=200)  
 
     try:
         with open(path, "r", encoding="UTF-8") as f:

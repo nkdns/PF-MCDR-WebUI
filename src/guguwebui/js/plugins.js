@@ -414,7 +414,7 @@ function configPlugin(plugin_id) {
         });
 }
 // * 调用 GET /api/load_config {path}
-function loadconfigPlugin(file_path, type = 'auto', containerId = undefined) { 
+function loadconfigPlugin(file_path, type = 'auto', Note = true,containerId = undefined) { 
     fetch(`/api/load_config?path=${encodeURIComponent(file_path)}&type=${type}`)
         .then(response => response.json())
         .then(jsonData => {
@@ -445,7 +445,7 @@ function loadconfigPlugin(file_path, type = 'auto', containerId = undefined) {
                 showMessage({ type: '警告', content: '加载内容过长（超过200行和超过400个配置项），继续加载可能导致网页卡顿或崩溃！推荐使用编辑器进行加载。\n是否继续加载？', title: '内容过长' })
                     .then((result) => {
                         if (result) {
-                            buildHtmlFromJson(jsonData, file_path, type, containerId);
+                            buildHtmlFromJson(jsonData, file_path, type, Note, containerId);
                             showMessage({ type: '完成', content: '加载完成', autoCloseTime: 5000 });
                         } else {
                             showMessage({ type: '提示', content: '已取消加载', autoCloseTime: 5000 });
@@ -454,7 +454,7 @@ function loadconfigPlugin(file_path, type = 'auto', containerId = undefined) {
                     });
                 
             } else {
-                buildHtmlFromJson(jsonData, file_path, type, containerId);
+                buildHtmlFromJson(jsonData, file_path, type, Note,containerId);
 
                 if (file_path === 'server/server.properties') {
                     // 设置服务器 MOTD
@@ -786,7 +786,7 @@ async function loadNoteConfig(file_path, type = 'auto', containerId = "config") 
     }
 }
 
-function buildHtmlFromJson(jsonData, file_path, type = 'auto',containerId = undefined) {
+function buildHtmlFromJson(jsonData, file_path, type = 'auto', Note = true, containerId = undefined) {
     let container;
     const popupContent = document.getElementById("popup-content");
     if (popupContent) {
@@ -810,7 +810,9 @@ function buildHtmlFromJson(jsonData, file_path, type = 'auto',containerId = unde
         if (containerId !== undefined){
             addplusButton(containerId);
             loadConfig(file_path, type, containerId);
-            loadNoteConfig(file_path, type, containerId)
+            if (Note) {
+                loadNoteConfig(file_path, type, containerId)
+            }
             return;
         }
     } 
@@ -898,7 +900,9 @@ function buildHtmlFromJson(jsonData, file_path, type = 'auto',containerId = unde
     traverse(jsonData, container); // 开始遍历 JSON 数据
     addplusButton();
     loadConfig(file_path, type);
-    loadNoteConfig(file_path, type);
+    if (Note) {
+        loadNoteConfig(file_path, type);
+    }
 
     // 将class="config-item"提到最前面
     const configItems = document.querySelectorAll('.config-item');
