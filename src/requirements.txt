@@ -7,3 +7,5 @@ Requests
 ruamel.yaml
 starlette
 uvicorn
+itsdangerous
+jinja2
