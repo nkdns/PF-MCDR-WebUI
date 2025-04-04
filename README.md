@@ -25,7 +25,7 @@
   - `json文件` 需要创建同级文件 `需要加标题的配置文件名_lang.josn` 例如 `abc_lang.json` 则会为 `abc.json` 创建中文标题，使用 `[标题,副标题]` 创建标题和副标题，参考示例: [config_lang.json](https://github.com/LoosePrince/PF-MCDR-WebUI/blob/main/config_lang.json)
   - `html格式`, 使用 `main.json` 在其中使用键对值的方式指定每个配置文件对应的 `html文件` ，届时加载时会加载 `html文件内容` ，请不要使用相对路径的文件，如 `/1.css` 、`/2.js` 。
 - [x] **服务器终端:** 提供服务器命令执行界面，支持RCON实时反馈和命令历史记录。
-- [x] **AI辅助:** 集成DeepSeek AI接口，支持日志分析和问题解答。
+- [x] **AI辅助:** 集成DeepSeek AI接口，支持日志分析和问题解答，减少您的反复横跳。
 - [x] **主题切换:** 支持`浅色主题`、`深色主题`、`自动`，默认为自动，需要登录后修改显示模式。
 <!-- - [x] **自定义:** 支持 `全局css和js配置文件` ，在首页提供在线编辑。 -->
 
@@ -33,7 +33,7 @@
 > **关于数据:** 重载插件 *本插件* **会** 自动更新 `guguwebui_static` 文件夹中的内容，如果您修改过内部的文件请自行保存，以防您的数据丢失。
 
 > [!IMPORTANT]
-> **关于V1.3.0版本:** 更新请删除 `guguwebui_static` 文件夹中的内容，保留 `db.json` 即可。
+> **关于V1.3.0版本:** 本项目于v1.3.0版本重构前端，更新请删除 `guguwebui_static` 文件夹中的内容，保留 `db.json` 即可。
 
 
 ## 依赖配置
@@ -96,15 +96,17 @@ A:WebUI不打算使用任何插件前置，如果有好的方案我们会考虑�
 
 > 截图来源本地测试
 
-![image](https://github.com/user-attachments/assets/be2f8fcb-2628-453d-907c-4b914770863e)
-![image](https://github.com/user-attachments/assets/e51795f7-27bb-4424-bcff-34484859f769)
-![image](https://github.com/user-attachments/assets/28597e15-eafc-4d0f-91c4-0d955308f2e1)
-![image](https://github.com/user-attachments/assets/2a8bd5be-2721-4100-8f57-5a6ccc00d335)
-![image](https://github.com/user-attachments/assets/f1559971-5bec-4f5c-a609-3032f8eb46ef)
-![image](https://github.com/user-attachments/assets/8de1acf2-7ac0-4f12-8337-f6fe0b1125f7)
-![image](https://github.com/user-attachments/assets/5454bb25-da71-4d46-83ef-edcb32345dba)
-![image](https://github.com/user-attachments/assets/14e5c7a0-42e3-4dca-b756-b64b0443a6a0)
-![image](https://github.com/user-attachments/assets/b8fad732-1949-4945-93a1-d956da1f3982)
+![image](https://github.com/user-attachments/assets/bc13de19-4820-4a36-863a-d582a5562669)
+![image](https://github.com/user-attachments/assets/07c5a028-aca8-44a4-bb9b-7905a34e4202)
+![image](https://github.com/user-attachments/assets/cb611ca7-76a3-4bf7-a8b6-3442fff1289f)
+![image](https://github.com/user-attachments/assets/65a57053-2c69-4055-9307-e4287efc21ae)
+![image](https://github.com/user-attachments/assets/2d56a5b6-b032-4c69-8f78-fd9badec4bc3)
+![image](https://github.com/user-attachments/assets/b7279f3e-cfd6-4b76-9e8d-cb2537a832fd)
+![image](https://github.com/user-attachments/assets/64abc5d6-0a46-493c-a44c-0df529a28c60)
+![image](https://github.com/user-attachments/assets/f881dece-af2e-40d4-bae6-dd9fe79339d1)
+![image](https://github.com/user-attachments/assets/e6f0d65d-4aa4-4c75-a55a-77b7ceff3f56)
+![image](https://github.com/user-attachments/assets/a73ec836-b3e1-4a0d-9502-bbbbe42e4006)
+
 
 
 ## 开发进度
@@ -162,3 +164,4 @@ A:WebUI不打算使用任何插件前置，如果有好的方案我们会考虑�
 |---|---|
 | 反馈者 | 感谢你们的反馈 |
 | [ChatGPT](https://chatgpt.com) | ChatGPT协助编写 |
+| [Cursor](https://cursor.com/) | Cursor协助编写 |
