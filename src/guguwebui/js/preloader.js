@@ -11,7 +11,6 @@ const pagesToPreload = [
     '/plugins',
     '/online-plugins',
     '/cq',
-    '/fabric',
     '/settings',
     '/about'
 ];
