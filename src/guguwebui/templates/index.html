@@ -1,140 +1,677 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="zh-CN" class="h-full" x-data="{ darkMode: localStorage.getItem('darkMode') === 'true', sidebarOpen: window.innerWidth >= 1024 }" :class="{ 'dark': darkMode }">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>首页</title>
-    <link rel="stylesheet" href="custom/overall.css">
-    <script src="custom/overall.js"></script>
-    <script src="js/overall.js"></script>
-    <link rel="stylesheet" href="css/index.css">
-</head>
-<body id="index">
-    <script>
-        // 获取用户的主题偏好
-        const THEME_KEY = 'guguwebui-theme';
-        const THEMES = ['light', 'dark', 'auto'];
-        const savedTheme = localStorage.getItem('guguwebui-theme') || 'auto';
-
-        // 函数：根据系统夜间模式设置调整主题
-        function updateThemeBasedOnPreference() {
-            if (savedTheme === 'auto') {
-                const prefersDarkMode = window.matchMedia('(prefers-color-scheme: dark)').matches;
-                // 只有在系统模式发生变化时才切换
-                if (prefersDarkMode) {
-                    document.body.classList.add('dark');
-                    document.body.classList.remove('light');
-                } else {
-                    document.body.classList.add('light');
-                    document.body.classList.remove('dark');
-                }
-                applyTheme('auto');
-            } else {
-                // 如果用户手动选择了主题，则不做自动切换
-                document.body.classList.add(savedTheme);
-                document.body.classList.remove(savedTheme === 'dark' ? 'light' : 'dark');
-            }
-        }
-
-
-        // 应用主题
-        function applyTheme(theme) {
-            const body = document.body;
-            localStorage.setItem(THEME_KEY, theme);
-        
-            if (theme === 'auto') {
-                // 检测系统主题模式
-                const isDarkMode = window.matchMedia('(prefers-color-scheme: dark)').matches;
-                theme = isDarkMode ? 'dark' : 'light';
-            }
-        
-            body.classList.remove(...THEMES);
-            body.classList.add(theme);
-        
-            // 通知iframe主题变化
-            const iframe = document.getElementById('content-iframe');
-            if (iframe && iframe.contentWindow) {
-                iframe.contentWindow.postMessage({ type: 'theme-change', theme }, '*');
-            }
-        }
-
-        // 初始加载时设置主题
-        updateThemeBasedOnPreference();
-
-        // 监听夜间模式设置变化
-        window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', updateThemeBasedOnPreference);
-    </script>
-    <!-- 背景图 -->
-    <div id="bg">
-        <img id="bg-img" src="src/bg.png" alt="背景图">
-        <a id="bg-title" href="https://api.paugram.com/wallpaper" target="_blank"></a>
-    </div>
-    <div id="full-screen" onclick="fullScreen()">切换全屏</div>
-    <div class="theme-select">
-        <select>
-            <option value="light">浅色主题</option>
-            <option value="dark">深色主题</option>
-            <option value="auto">自动</option>
-        </select>
-    </div>
-    <div class="nav">
-        <div class="nav-left">
-            <h2 class="nav-title">首页</h2>
-            <p class="nav-notice">
-                <span class="nav-notice-title">标题：</span>
-                <span class="nav-notice-text">内容</span>
-            </p>
-        </div>
-        <div class="nav-right">
-            <div class="nav-name">
-                <h2 id="nickname">管理员 (临时登录)</h2>
-                <p class="nav-time">猫猫头正在凝视着你，好好干活吧！</p>
-            </div>
-            <div id="user-info">
-                <img id="avatar" src="src/default_avatar.jpg" alt="用户头像">
-                <div id="logout" onclick="logout()">退出登录</div>
-            </div>
-        </div>
-    </div>
-
-    <!-- 选项卡 -->
-    <div class="tabs">
-        <div class="tab-container">
-            <div class="top">
-                <div id="home" onclick="changeTab('home')" class="tab select" data-text="首页">首页</div>
-                <div class="tab-fold" id="fold1">
-                    <div class="expand" onclick="changeTabFromFold('fold1')" class="tab" style="display: block; height: 40px;">GUGUbot相关</div>
-                    <div class="fold" onclick="changeTabFromFold('fold1')" class="tab" style="display: none; height: 0px;">GUGUbot相关</div>
-                    <div id="gugubot" onclick="changeTab('gugubot')" class="tab" data-text="GUGUbot配置" style="display: none; height: 0px;">GUGUbot</div>
-                    <div id="cq" onclick="changeTab('cq')" class="tab" data-text="CQ-QQ-API配置" style="display: none; height: 0px;">cq-qq-api</div>
-                </div>
-                <div id="mc" onclick="changeTab('mc')" class="tab" data-text="MC服务器配置">MC服务器</div>
-                <div id="mcdr" onclick="changeTab('mcdr')" class="tab" data-text="MCDR配置">MCDR配置</div>
-                <div id="plugins" onclick="changeTab('plugins')" class="tab" data-text="本地插件">本地插件</div>
-                <div id="online-plugins" onclick="changeTab('online-plugins')" class="tab" data-text="在线插件">在线插件</div>
-                <div id="mc" onclick="changeTab('server-terminal')" class="tab unsatisfactory" data-text="服务器终端">服务器终端</div>
-                <div id="fabric" onclick="changeTab('fabric')" class="tab unsatisfactory" data-text="Fabric配置">Fabric (部分)</div>
-            </div>
-            <div class="bottom">
-                <div id="about" onclick="changeTab('about')" class="tab" data-text="关于&贡献">关于</div>
-            </div>
-        </div>
-    </div>
-
-    <!-- 内容 -->
-    <div id="iframe-container" class="content">
-        <!-- 加载动画 -->
-        <div id="loading-spinner">
-            <div class="spinner"></div>
-            <p>少女祈祷中...</p>
-        </div>
     
-        <!-- iframe -->
-        <iframe id="content-iframe" style="display: none;"></iframe>
+    <title>MCDR WebUI - 控制面板</title>
+    <!-- 主题预加载脚本 - 防止闪烁 -->
+    <script src="/js/theme-preload.js"></script>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Alpine.js -->
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <!-- 自定义配置 -->
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        primary: {
+                            50: '#f0f9ff',
+                            100: '#e0f2fe',
+                            200: '#bae6fd',
+                            300: '#7dd3fc',
+                            400: '#38bdf8',
+                            500: '#0ea5e9',
+                            600: '#0284c7',
+                            700: '#0369a1',
+                            800: '#075985',
+                            900: '#0c4a6e',
+                        },
+                    },
+                    animation: {
+                        'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+                        'float': 'float 3s ease-in-out infinite',
+                    },
+                    keyframes: {
+                        float: {
+                            '0%, 100%': { transform: 'translateY(0)' },
+                            '50%': { transform: 'translateY(-5px)' },
+                        }
+                    }
+                },
+            },
+        }
+    </script>
+    <style>
+        /* 自定义CSS变量 */
+        :root {
+            --sidebar-width: 260px;
+            --header-height: 64px;
+            --card-bg-light: rgba(255, 255, 255, 0.9);
+            --card-bg-dark: rgba(17, 24, 39, 0.8);
+        }
+        
+        /* 卡片悬停效果 */
+        .card-hover {
+            transition: all 0.3s ease;
+        }
+        
+        .card-hover:hover {
+            transform: translateY(-5px) rotate3d(1, 1, 0, 3deg);
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+        }
+        
+        /* 自定义滚动条 */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        
+        ::-webkit-scrollbar-thumb {
+            background: #d1d5db;
+            border-radius: 4px;
+        }
+        
+        .dark ::-webkit-scrollbar-thumb {
+            background: #4b5563;
+        }
+        
+        /* 侧边栏固定宽度 */
+        .sidebar-width {
+            width: var(--sidebar-width);
+        }
+        
+        /* 主内容区域的左边距，与侧边栏宽度相同 */
+        .main-content {
+            transition: margin-left 0.3s ease;
+        }
+        
+        .main-content.sidebar-open {
+            margin-left: var(--sidebar-width);
+        }
+    </style>
+</head>
+<body class="h-full bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100 transition-colors duration-300">
+    <div x-data="{ 
+        serverStatus: 'loading',
+        userName: '',
+        serverVersion: '',
+        serverPlayers: '0/0',
+        processingServer: false,
+        showNotification: false,
+        notificationMessage: '',
+        notificationType: 'success',
+
+        checkLoginStatus: async function() {
+            try {
+                const response = await fetch('/api/checkLogin');
+                const data = await response.json();
+                if (data.status === 'success') {
+                    this.userName = data.username;
+                }
+            } catch (error) {
+                console.error('Error checking login status:', error);
+            }
+        },
+        
+        checkServerStatus: async function() {
+            try {
+                this.serverStatus = 'loading';
+                const response = await fetch('/api/get_server_status');
+                const data = await response.json();
+                this.serverStatus = data.status || 'offline';
+                this.serverVersion = data.version || '';
+                this.serverPlayers = data.players || '0/0';
+            } catch (error) {
+                console.error('Error checking server status:', error);
+                this.serverStatus = 'error';
+            }
+        },
+        
+        controlServer: async function(action) {
+            if (this.processingServer) return;
+            
+            this.processingServer = true;
+            
+            try {
+                const response = await fetch('/api/control_server', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ action: action })
+                });
+                
+                const data = await response.json();
+                
+                if (data.status === 'success') {
+                    this.showNotificationMsg(data.message || `服务器${action === 'start' ? '启动' : (action === 'stop' ? '停止' : '重启')}命令已发送`, 'success');
+                    
+                    // 延迟几秒后刷新服务器状态
+                    setTimeout(() => this.checkServerStatus(), 5000);
+                } else {
+                    this.showNotificationMsg(`操作失败: ${data.message || '未知错误'}`, 'error');
+                }
+            } catch (error) {
+                console.error('Error controlling server:', error);
+                this.showNotificationMsg('服务器控制操作失败', 'error');
+            } finally {
+                this.processingServer = false;
+            }
+        },
+        
+        showNotificationMsg: function(message, type = 'success') {
+            this.notificationMessage = message;
+            this.notificationType = type;
+            this.showNotification = true;
+            
+            setTimeout(() => {
+                this.showNotification = false;
+            }, 5000);
+        }
+    }" 
+    x-init="
+        checkLoginStatus();
+        checkServerStatus();
+        
+        // 每60秒自动刷新服务器状态
+        setInterval(() => checkServerStatus(), 60000);
+        
+        // 保存主题设置到本地存储
+        $watch('darkMode', value => {
+            localStorage.setItem('darkMode', value);
+        });
+    ">
+        <!-- 侧边栏 -->
+        <div id="sidebar" :class="{'translate-x-0': sidebarOpen, '-translate-x-full': !sidebarOpen}" class="sidebar-width fixed top-0 left-0 bottom-0 z-30 transform transition-transform duration-300 ease-in-out bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 shadow-lg overflow-y-auto">
+            <div class="p-4 flex flex-col h-full">
+                <!-- Logo -->
+                <div class="flex items-center justify-center mb-8 mt-2">
+                    <div class="w-12 h-12 rounded-full bg-gradient-to-r from-blue-400 to-purple-500 flex items-center justify-center mr-3 shadow-lg">
+                        <i class="fas fa-server text-white text-xl"></i>
+                    </div>
+                    <div>
+                        <h1 class="text-xl font-bold text-gray-800 dark:text-white">MCDR WebUI</h1>
+                        <p class="text-xs text-gray-500 dark:text-gray-400">服务器管理平台</p>
+                    </div>
+                </div>
+                
+                <!-- 导航菜单 -->
+                <div class="flex-1 overflow-y-auto">
+                    <nav class="space-y-1">
+                        <a href="/index" class="flex items-center px-4 py-3 text-sm font-medium rounded-lg bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-200">
+                            <i class="fas fa-home w-6 text-center"></i>
+                            <span class="ml-3">仪表盘</span>
+                        </a>
+                        
+                        <a href="/mcdr" class="flex items-center px-4 py-3 text-sm font-medium rounded-lg text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
+                            <i class="fas fa-cogs w-6 text-center"></i>
+                            <span class="ml-3">MCDR 配置</span>
+                        </a>
+                        
+                        <a href="/mc" class="flex items-center px-4 py-3 text-sm font-medium rounded-lg text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
+                            <i class="fas fa-gamepad w-6 text-center"></i>
+                            <span class="ml-3">MC 服务器配置</span>
+                        </a>
+                        
+                        <a href="/plugins" class="flex items-center px-4 py-3 text-sm font-medium rounded-lg text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
+                            <i class="fas fa-puzzle-piece w-6 text-center"></i>
+                            <span class="ml-3">本地插件</span>
+                        </a>
+                        
+                        <a href="/online-plugins" class="flex items-center px-4 py-3 text-sm font-medium rounded-lg text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
+                            <i class="fas fa-cloud-download-alt w-6 text-center"></i>
+                            <span class="ml-3">在线插件</span>
+                        </a>
+                        
+                        <a href="/terminal" class="flex items-center px-4 py-3 text-sm font-medium rounded-lg text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
+                            <i class="fas fa-terminal w-6 text-center"></i>
+                            <span class="ml-3">终端日志</span>
+                        </a>
+
+                        <a href="/gugubot" class="flex items-center px-4 py-3 text-sm font-medium rounded-lg text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
+                            <i class="fas fa-robot w-6 text-center"></i>
+                            <span class="ml-3">GUGUBot 管理</span>
+                        </a>
+                        
+                        <a href="/cq" class="flex items-center px-4 py-3 text-sm font-medium rounded-lg text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
+                            <i class="fas fa-comments w-6 text-center"></i>
+                            <span class="ml-3">CQ-QQ-API</span>
+                        </a>
+                        
+                        <a href="/fabric" class="flex items-center px-4 py-3 text-sm font-medium rounded-lg text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
+                            <i class="fas fa-cube w-6 text-center"></i>
+                            <span class="ml-3">Fabric 管理</span>
+                        </a>
+                    </nav>
+                </div>
+                
+                <!-- 底部功能区 -->
+                <div class="pt-4 mt-6 border-t border-gray-200 dark:border-gray-700">
+                    <a href="/settings" class="flex items-center px-4 py-3 text-sm font-medium rounded-lg text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
+                        <i class="fas fa-cog w-6 text-center"></i>
+                        <span class="ml-3">Web设置</span>
+                    </a>
+                    
+                    <a href="/about" class="flex items-center px-4 py-3 text-sm font-medium rounded-lg text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
+                        <i class="fas fa-info-circle w-6 text-center"></i>
+                        <span class="ml-3">关于</span>
+                    </a>
+                    
+                    <a href="/logout" class="flex items-center px-4 py-3 text-sm font-medium rounded-lg text-red-700 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors mt-2">
+                        <i class="fas fa-sign-out-alt w-6 text-center"></i>
+                        <span class="ml-3">退出登录</span>
+                    </a>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 主内容区 -->
+        <div id="main-content" :class="{'sidebar-open': sidebarOpen}" class="main-content min-h-screen transition-all duration-300">
+            <!-- 顶部导航栏 -->
+            <header id="header" class="bg-white dark:bg-gray-800 shadow-sm border-b border-gray-200 dark:border-gray-700 h-16 fixed top-0 right-0 left-0 z-20" :class="{'left-0': !sidebarOpen, 'left-[260px]': sidebarOpen}">
+                <div class="h-full px-4 sm:px-6 flex items-center justify-between">
+                    <!-- 左侧部分 -->
+                    <div class="flex items-center">
+                        <!-- 移动端菜单按钮 -->
+                        <button @click="sidebarOpen = !sidebarOpen" class="inline-flex items-center justify-center p-2 rounded-md text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 focus:outline-none transition-colors">
+                            <i :class="sidebarOpen ? 'fa-times' : 'fa-bars'" class="fas"></i>
+                        </button>
+                        
+                        <!-- 页面标题 -->
+                        <h1 class="ml-4 text-xl font-semibold text-gray-800 dark:text-white">控制面板</h1>
+                    </div>
+                    
+                    <!-- 右侧部分 -->
+                    <div class="flex items-center space-x-4">
+                        <!-- 公告 -->
+                        <div class="nav-notice hidden md:flex items-center bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-300 px-3 py-1 rounded-full text-xs font-medium mr-2">
+                            <span class="nav-notice-text"><i class="fas fa-circle-notch fa-spin mr-1.5"></i> 加载公告中...</span>
+                        </div>
+                    
+                        <!-- 服务器状态 -->
+                        <div class="hidden sm:flex items-center">
+                            <div class="px-3 py-1 rounded-full text-xs font-medium flex items-center" :class="{
+                                'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300': serverStatus === 'online',
+                                'bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300': serverStatus === 'offline',
+                                'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300': serverStatus === 'error',
+                                'bg-gray-100 dark:bg-gray-900/30 text-gray-800 dark:text-gray-300': serverStatus === 'loading'
+                            }">
+                                <span x-show="serverStatus === 'online'" class="flex items-center">
+                                    <i class="fas fa-circle mr-1 text-xs"></i>
+                                    <span>在线</span>
+                                </span>
+                                <span x-show="serverStatus === 'offline'" class="flex items-center">
+                                    <i class="fas fa-circle mr-1 text-xs"></i>
+                                    <span>离线</span>
+                                </span>
+                                <span x-show="serverStatus === 'error'" class="flex items-center">
+                                    <i class="fas fa-exclamation-triangle mr-1"></i>
+                                    <span>错误</span>
+                                </span>
+                                <span x-show="serverStatus === 'loading'" class="flex items-center">
+                                    <i class="fas fa-circle-notch fa-spin mr-1 text-xs"></i>
+                                    <span>加载中</span>
+                                </span>
+                            </div>
+                        </div>
+                        
+                        <!-- 主题切换 -->
+                        <button @click="darkMode = !darkMode; localStorage.setItem('darkMode', darkMode)" class="inline-flex items-center justify-center p-2 rounded-md text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 focus:outline-none transition-colors">
+                            <i class="fas" :class="darkMode ? 'fa-sun' : 'fa-moon'"></i>
+                        </button>
+                        
+                        <!-- 用户信息 -->
+                        <div class="flex items-center">
+                            <div class="w-8 h-8 rounded-full bg-blue-500 flex items-center justify-center text-white user-avatar overflow-hidden">
+                                <i class="fas fa-user"></i>
+                            </div>
+                            <span class="ml-2 text-sm font-medium text-gray-700 dark:text-gray-300 js-username" x-text="userName || '用户'"></span>
+                        </div>
+                    </div>
+                </div>
+            </header>
+            
+            <!-- 主内容 -->
+            <main class="pt-16 px-4 sm:px-6 md:px-8 pb-8">
+                <!-- 统计卡片 -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mt-6">
+                    <!-- 服务器状态卡片 -->
+                    <div class="card-hover bg-white dark:bg-gray-800 rounded-xl shadow-md p-6 border border-gray-200 dark:border-gray-700 relative">
+                        <div class="flex items-center">
+                            <div class="flex items-center justify-center w-12 h-12 rounded-full bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400">
+                                <i class="fas fa-server"></i>
+                            </div>
+                            <div class="ml-4">
+                                <h3 class="text-sm font-medium text-gray-500 dark:text-gray-400">服务器</h3>
+                                <div class="mt-1 flex items-center">
+                                    <span 
+                                        class="text-lg font-semibold"
+                                        :class="{
+                                            'text-green-600 dark:text-green-400': serverStatus === 'online',
+                                            'text-red-600 dark:text-red-400': serverStatus === 'offline',
+                                            'text-yellow-600 dark:text-yellow-400': serverStatus === 'error',
+                                            'text-gray-600 dark:text-gray-400': serverStatus === 'loading'
+                                        }"
+                                    >
+                                        <i 
+                                            class="fas mr-2"
+                                            :class="{
+                                                'fa-check-circle': serverStatus === 'online',
+                                                'fa-times-circle': serverStatus === 'offline',
+                                                'fa-exclamation-circle': serverStatus === 'error',
+                                                'fa-circle-notch fa-spin': serverStatus === 'loading'
+                                            }"
+                                        ></i>
+                                        <span x-text="serverStatus === 'online' ? '运行中' : (serverStatus === 'loading' ? '加载中' : '已停止')"></span>
+                                    </span>
+                                </div>
+                                <div class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                                    <span id="server-version" x-text="serverVersion || '未知版本'"></span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- 服务器控制按钮 -->
+                        <div class="mt-4 flex justify-center gap-2">
+                            <button 
+                                @click="controlServer('start')"
+                                :disabled="serverStatus === 'online' || processingServer" 
+                                :class="{'opacity-50 cursor-not-allowed': serverStatus === 'online' || processingServer}"
+                                class="text-xs px-3 py-1.5 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 rounded hover:bg-green-200 dark:hover:bg-green-800/30 transition flex items-center"
+                                title="启动服务器"
+                            >
+                                <i class="fas fa-play mr-1"></i> 启动
+                            </button>
+                            <button 
+                                @click="controlServer('stop')"
+                                :disabled="serverStatus === 'offline' || processingServer" 
+                                :class="{'opacity-50 cursor-not-allowed': serverStatus === 'offline' || processingServer}"
+                                class="text-xs px-3 py-1.5 bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 rounded hover:bg-red-200 dark:hover:bg-red-800/30 transition flex items-center"
+                                title="停止服务器"
+                            >
+                                <i class="fas fa-stop mr-1"></i> 停止
+                            </button>
+                            <button 
+                                @click="controlServer('restart')"
+                                :disabled="serverStatus === 'offline' || processingServer" 
+                                :class="{'opacity-50 cursor-not-allowed': serverStatus === 'offline' || processingServer}"
+                                class="text-xs px-3 py-1.5 bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 rounded hover:bg-amber-200 dark:hover:bg-amber-800/30 transition flex items-center"
+                                title="重启服务器"
+                            >
+                                <i class="fas fa-sync-alt mr-1"></i> 重启
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <!-- 在线玩家卡片 -->
+                    <div class="card-hover bg-white dark:bg-gray-800 rounded-xl shadow-md p-6 border border-gray-200 dark:border-gray-700">
+                        <div class="flex items-center">
+                            <div class="flex items-center justify-center w-12 h-12 rounded-full bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400">
+                                <i class="fas fa-users"></i>
+                            </div>
+                            <div class="ml-4">
+                                <h3 class="text-sm font-medium text-gray-500 dark:text-gray-400">在线玩家</h3>
+                                <div class="mt-1 flex items-center">
+                                    <span id="server-players" class="text-lg font-semibold text-gray-800 dark:text-white" x-text="serverPlayers || '0/0'"></span>
+                                </div>
+                                <div class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                                    <span x-show="serverStatus === 'online'">当前在线</span>
+                                    <span x-show="serverStatus !== 'online'">服务器离线</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="mt-4 flex justify-center gap-2">
+                            <button 
+                                @click="checkServerStatus()"
+                                :disabled="serverStatus === 'offline' || processingServer" 
+                                class="text-xs px-3 py-1.5 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded hover:bg-blue-200 dark:hover:bg-blue-800/30 transition flex items-center"
+                                title="刷新服务器状态"
+                            >
+                                <i class="fas fa-sync-alt mr-1"></i> 刷新
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <!-- 系统状态卡片 -->
+                    <div class="card-hover bg-white dark:bg-gray-800 rounded-xl shadow-md p-6 border border-gray-200 dark:border-gray-700">
+                        <div class="flex items-center">
+                            <div class="flex items-center justify-center w-12 h-12 rounded-full bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400">
+                                <i class="fas fa-microchip"></i>
+                            </div>
+                            <div class="ml-4">
+                                <h3 class="text-sm font-medium text-gray-500 dark:text-gray-400">系统状态</h3>
+                                <div class="mt-1 flex items-center">
+                                    <span class="text-lg font-semibold text-gray-800 dark:text-white">运行正常</span>
+                                </div>
+                                <div class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                                    <span>WebUI 正常运行中</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- 快速导航卡片 -->
+                    <div class="card-hover bg-white dark:bg-gray-800 rounded-xl shadow-md p-6 border border-gray-200 dark:border-gray-700">
+                        <div class="flex items-center">
+                            <div class="flex items-center justify-center w-12 h-12 rounded-full bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400">
+                                <i class="fas fa-bolt"></i>
+                            </div>
+                            <div class="ml-4">
+                                <h3 class="text-sm font-medium text-gray-500 dark:text-gray-400">快速导航</h3>
+                                <div class="mt-2 flex flex-wrap gap-2">
+                                    <a href="/plugins" class="text-xs px-2 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded hover:bg-blue-200 dark:hover:bg-blue-800/30 transition">
+                                        <i class="fas fa-puzzle-piece mr-1"></i>插件
+                                    </a>
+                                    <a href="/mcdr" class="text-xs px-2 py-1 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 rounded hover:bg-green-200 dark:hover:bg-green-800/30 transition">
+                                        <i class="fas fa-cogs mr-1"></i>配置
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 系统状态概览 -->
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-8">
+                    <!-- 左侧面板：功能概览 -->
+                    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6 border border-gray-200 dark:border-gray-700">
+                        <h2 class="text-lg font-semibold text-gray-800 dark:text-white mb-6">功能概览</h2>
+                        
+                        <div class="space-y-4">
+                            <div class="card-hover flex items-center p-4 rounded-lg bg-gray-50 dark:bg-gray-700/30 transition-all">
+                                <div class="flex items-center justify-center w-10 h-10 rounded-full bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400">
+                                    <i class="fas fa-puzzle-piece"></i>
+                                </div>
+                                <div class="ml-4">
+                                    <h3 class="text-sm font-medium text-gray-800 dark:text-white">插件管理</h3>
+                                    <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">管理服务器的插件，包括安装、配置和更新</p>
+                                </div>
+                                <div class="ml-auto flex-shrink-0">
+                                    <a href="/plugins" class="inline-flex items-center justify-center w-8 h-8 rounded-full bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-300 hover:bg-blue-100 dark:hover:bg-blue-900/30 hover:text-blue-700 dark:hover:text-blue-400 transition-colors">
+                                        <i class="fas fa-arrow-right text-xs"></i>
+                                    </a>
+                                </div>
+                            </div>
+                            
+                            <div class="card-hover flex items-center p-4 rounded-lg bg-gray-50 dark:bg-gray-700/30 transition-all">
+                                <div class="flex items-center justify-center w-10 h-10 rounded-full bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400">
+                                    <i class="fas fa-cogs"></i>
+                                </div>
+                                <div class="ml-4">
+                                    <h3 class="text-sm font-medium text-gray-800 dark:text-white">MCDR 配置</h3>
+                                    <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">配置 MCDR 的参数和设置</p>
+                                </div>
+                                <div class="ml-auto flex-shrink-0">
+                                    <a href="/mcdr" class="inline-flex items-center justify-center w-8 h-8 rounded-full bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-300 hover:bg-green-100 dark:hover:bg-green-900/30 hover:text-green-700 dark:hover:text-green-400 transition-colors">
+                                        <i class="fas fa-arrow-right text-xs"></i>
+                                    </a>
+                                </div>
+                            </div>
+                            
+                            <div class="card-hover flex items-center p-4 rounded-lg bg-gray-50 dark:bg-gray-700/30 transition-all">
+                                <div class="flex items-center justify-center w-10 h-10 rounded-full bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400">
+                                    <i class="fas fa-gamepad"></i>
+                                </div>
+                                <div class="ml-4">
+                                    <h3 class="text-sm font-medium text-gray-800 dark:text-white">MC 服务器配置</h3>
+                                    <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">配置 Minecraft 服务器参数</p>
+                                </div>
+                                <div class="ml-auto flex-shrink-0">
+                                    <a href="/mc" class="inline-flex items-center justify-center w-8 h-8 rounded-full bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-300 hover:bg-purple-100 dark:hover:bg-purple-900/30 hover:text-purple-700 dark:hover:text-purple-400 transition-colors">
+                                        <i class="fas fa-arrow-right text-xs"></i>
+                                    </a>
+                                </div>
+                            </div>
+                            
+                            <div class="card-hover flex items-center p-4 rounded-lg bg-gray-50 dark:bg-gray-700/30 transition-all">
+                                <div class="flex items-center justify-center w-10 h-10 rounded-full bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400">
+                                    <i class="fas fa-cloud-download-alt"></i>
+                                </div>
+                                <div class="ml-4">
+                                    <h3 class="text-sm font-medium text-gray-800 dark:text-white">在线插件</h3>
+                                    <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">浏览并安装在线插件仓库中的插件</p>
+                                </div>
+                                <div class="ml-auto flex-shrink-0">
+                                    <a href="/online-plugins" class="inline-flex items-center justify-center w-8 h-8 rounded-full bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-300 hover:bg-amber-100 dark:hover:bg-amber-900/30 hover:text-amber-700 dark:hover:text-amber-400 transition-colors">
+                                        <i class="fas fa-arrow-right text-xs"></i>
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- 右侧面板：系统信息 -->
+                    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6 border border-gray-200 dark:border-gray-700">
+                        <h2 class="text-lg font-semibold text-gray-800 dark:text-white mb-6">系统信息</h2>
+                        
+                        <!-- 系统信息列表 -->
+                        <div class="space-y-4">
+                            <div class="flex items-center p-4 rounded-lg bg-gray-50 dark:bg-gray-700/30">
+                                <div class="flex items-center justify-center w-10 h-10 rounded-full bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400">
+                                    <i class="fas fa-info-circle"></i>
+                                </div>
+                                <div class="ml-4">
+                                    <h3 class="text-sm font-medium text-gray-800 dark:text-white">WebUI 版本</h3>
+                                    <p class="text-xs text-gray-500 dark:text-gray-400 mt-1" id="web-version">加载中...</p>
+                                </div>
+                            </div>
+                            
+                            <div class="flex items-center p-4 rounded-lg bg-gray-50 dark:bg-gray-700/30">
+                                <div class="flex items-center justify-center w-10 h-10 rounded-full bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400">
+                                    <i class="fas fa-clock"></i>
+                                </div>
+                                <div class="ml-4">
+                                    <h3 class="text-sm font-medium text-gray-800 dark:text-white">系统时间</h3>
+                                    <p class="text-xs text-gray-500 dark:text-gray-400 mt-1" id="current-time">加载中...</p>
+                                </div>
+                            </div>
+                            
+                            <div class="flex items-center p-4 rounded-lg bg-gray-50 dark:bg-gray-700/30">
+                                <div class="flex items-center justify-center w-10 h-10 rounded-full bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400">
+                                    <i class="fas fa-link"></i>
+                                </div>
+                                <div class="ml-4">
+                                    <h3 class="text-sm font-medium text-gray-800 dark:text-white">连接状态</h3>
+                                    <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">正常</p>
+                                </div>
+                            </div>
+                            
+                            <div class="flex items-center p-4 rounded-lg bg-gray-50 dark:bg-gray-700/30">
+                                <div class="flex items-center justify-center w-10 h-10 rounded-full bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400">
+                                    <i class="fas fa-shield-alt"></i>
+                                </div>
+                                <div class="ml-4">
+                                    <h3 class="text-sm font-medium text-gray-800 dark:text-white">安全状态</h3>
+                                    <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">已登录，会话有效</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 页脚 -->
+                <footer class="mt-12 text-center text-sm text-gray-500 dark:text-gray-400">
+                    <p>MCDR WebUI &copy; <span id="year"></span></p>
+                </footer>
+            </main>
+        </div>
+        
+        <!-- 通知组件 -->
+        <div 
+            x-show="showNotification" 
+            x-transition:enter="transition ease-out duration-300"
+            x-transition:enter-start="opacity-0 transform translate-y-2"
+            x-transition:enter-end="opacity-100 transform translate-y-0"
+            x-transition:leave="transition ease-in duration-200"
+            x-transition:leave-start="opacity-100 transform translate-y-0"
+            x-transition:leave-end="opacity-0 transform translate-y-2"
+            class="fixed bottom-4 right-4 z-50 px-4 py-3 rounded-lg shadow-lg flex items-center"
+            :class="notificationType === 'success' ? 'bg-green-500 text-white' : 'bg-red-500 text-white'"
+        >
+            <i 
+                class="fas mr-2"
+                :class="notificationType === 'success' ? 'fa-check-circle' : 'fa-exclamation-circle'"
+            ></i>
+            <span x-text="notificationMessage"></span>
+            <button @click="showNotification = false" class="ml-4 text-white hover:text-gray-200 focus:outline-none">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
     </div>
 
-    <p class="footer">WebUI版本: 获取中</p>
+    <!-- 导入主脚本 -->
+    <script src="/js/main.js"></script>
+    
+    <!-- 页面预加载脚本 -->
+    <script src="/js/preloader.js"></script>
+    
+    <!-- 公告脚本 -->
+    <script src="/js/notice.js"></script>
 
-    <script src="js/index.js"></script>
+    <script>
+        // 设置当前时间和版权年份
+        function updateTime() {
+            const now = new Date();
+            document.getElementById('current-time').textContent = now.toLocaleString('zh-CN');
+        }
+        
+        updateTime();
+        setInterval(updateTime, 1000);
+        
+        document.getElementById('year').textContent = new Date().getFullYear();
+        
+        // 获取WebUI版本
+        async function getWebUIVersion() {
+            try {
+                const response = await fetch('/api/gugubot_plugins');
+                const data = await response.json();
+                
+                if (data.gugubot_plugins) {
+                    const guguwebui = data.gugubot_plugins.find(p => p.id === 'guguwebui');
+                    
+                    if (guguwebui && guguwebui.version) {
+                        document.getElementById('web-version').textContent = guguwebui.version;
+                    } else {
+                        document.getElementById('web-version').textContent = '未知';
+                    }
+                }
+            } catch (error) {
+                console.error('获取WebUI版本失败:', error);
+                document.getElementById('web-version').textContent = '获取失败';
+            }
+        }
+        
+        // 页面加载完成后获取版本
+        document.addEventListener('DOMContentLoaded', getWebUIVersion);
+    </script>
 </body>
-</html>
+</html> 

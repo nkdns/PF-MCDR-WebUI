@@ -1,107 +1,751 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="zh-CN" class="h-full" x-data="{ darkMode: localStorage.getItem('darkMode') === 'true', sidebarOpen: window.innerWidth >= 1024 }" :class="{ 'dark': darkMode }">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CQ QQ API</title>
-    <link rel="stylesheet" href="css/gugubot.css">
-    <link rel="stylesheet" href="custom/overall.css">
-    <script src="custom/overall.js"></script>
-    <script src="js/overall.js"></script>
+    
+    <title>MCDR WebUI - CQ-QQ-API配置</title>
+    <!-- 主题预加载脚本 - 防止闪烁 -->
+    <script src="/js/theme-preload.js"></script>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Alpine.js -->
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <!-- 自定义CSS -->
+    <link rel="stylesheet" href="/css/main.css">
+    <!-- 自定义配置 -->
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        primary: {
+                            50: '#f0f9ff',
+                            100: '#e0f2fe',
+                            200: '#bae6fd',
+                            300: '#7dd3fc',
+                            400: '#38bdf8',
+                            500: '#0ea5e9',
+                            600: '#0284c7',
+                            700: '#0369a1',
+                            800: '#075985',
+                            900: '#0c4a6e',
+                        },
+                    },
+                    animation: {
+                        'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+                        'float': 'float 3s ease-in-out infinite',
+                    },
+                    keyframes: {
+                        float: {
+                            '0%, 100%': { transform: 'translateY(0)' },
+                            '50%': { transform: 'translateY(-5px)' },
+                        }
+                    }
+                },
+            },
+        }
+    </script>
     <style>
-        * {
-            padding: 0;
-            margin: 0;
-            color: #2b2b2b;
+        /* 自定义CSS变量 */
+        :root {
+            --sidebar-width: 260px;
+            --header-height: 64px;
+            --card-bg-light: rgba(255, 255, 255, 0.9);
+            --card-bg-dark: rgba(17, 24, 39, 0.8);
+        }
+        
+        /* 卡片悬停效果 */
+        .card-hover {
+            transition: all 0.3s ease;
+        }
+        
+        .card-hover:hover {
+            transform: translateY(-5px) rotate3d(1, 1, 0, 3deg);
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+        }
+        
+        /* 自定义滚动条 */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        
+        ::-webkit-scrollbar-thumb {
+            background: #d1d5db;
+            border-radius: 4px;
+        }
+        
+        .dark ::-webkit-scrollbar-thumb {
+            background: #4b5563;
+        }
+        
+        /* 侧边栏固定宽度 */
+        .sidebar-width {
+            width: var(--sidebar-width);
+        }
+        
+        /* 主内容区域的左边距，与侧边栏宽度相同 */
+        .main-content {
+            transition: margin-left 0.3s ease;
+        }
+        
+        .main-content.sidebar-open {
+            margin-left: var(--sidebar-width);
+        }
+
+        /* 配置项样式 */
+        .config-container {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 1rem;
+        }
+
+        .config-item {
+            padding: 1rem;
+            border-radius: 0.5rem;
+            border: 1px solid #e5e7eb;
+            background-color: #f9fafb;
+            transition: all 0.3s ease;
+        }
+
+        .dark .config-item {
+            border-color: #374151;
+            background-color: #1f2937;
+        }
+
+        .config-item:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+        }
+
+        .config-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 0.5rem;
+        }
+
+        .config-title {
+            font-weight: 600;
+            font-size: 1rem;
+            color: #111827;
+        }
+
+        .dark .config-title {
+            color: #f9fafb;
+        }
+
+        .config-key {
+            font-size: 0.75rem;
+            color: #6b7280;
+            background-color: #f3f4f6;
+            padding: 0.25rem 0.5rem;
+            border-radius: 0.25rem;
+        }
+
+        .dark .config-key {
+            color: #9ca3af;
+            background-color: #374151;
+        }
+
+        .config-description {
+            font-size: 0.875rem;
+            color: #6b7280;
+            margin-bottom: 0.75rem;
+        }
+
+        .dark .config-description {
+            color: #9ca3af;
+        }
+
+        .config-input {
+            margin-top: 0.5rem;
+        }
+
+        .toggle-switch {
+            position: relative;
+            display: inline-block;
+            width: 3rem;
+            height: 1.5rem;
+        }
+
+        .toggle-switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .toggle-slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #cbd5e1;
+            transition: .4s;
+            border-radius: 9999px;
+        }
+
+        .toggle-slider:before {
+            position: absolute;
+            content: "";
+            height: 1.25rem;
+            width: 1.25rem;
+            left: 0.125rem;
+            bottom: 0.125rem;
+            background-color: white;
+            transition: .4s;
+            border-radius: 50%;
+        }
+
+        input:checked + .toggle-slider {
+            background-color: #3b82f6;
+        }
+
+        input:focus + .toggle-slider {
+            box-shadow: 0 0 1px #3b82f6;
+        }
+
+        input:checked + .toggle-slider:before {
+            transform: translateX(1.5rem);
+        }
+
+        .text-input {
+            width: 100%;
+            padding: 0.5rem 0.75rem;
+            border: 1px solid #d1d5db;
+            border-radius: 0.375rem;
+            background-color: white;
+            color: #111827;
+            font-size: 0.875rem;
+            transition: all 0.2s;
+        }
+
+        .dark .text-input {
+            border-color: #4b5563;
+            background-color: #374151;
+            color: #f9fafb;
+        }
+
+        .text-input:focus {
+            outline: none;
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.3);
+        }
+
+        .select-input {
+            width: 100%;
+            padding: 0.5rem 2rem 0.5rem 0.75rem;
+            border: 1px solid #d1d5db;
+            border-radius: 0.375rem;
+            background-color: white;
+            color: #111827;
+            font-size: 0.875rem;
+            appearance: none;
+            background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
+            background-position: right 0.5rem center;
+            background-repeat: no-repeat;
+            background-size: 1.5em 1.5em;
+        }
+
+        .dark .select-input {
+            border-color: #4b5563;
+            background-color: #374151;
+            color: #f9fafb;
+            background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%239ca3af' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
+        }
+
+        .select-input:focus {
+            outline: none;
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.3);
+        }
+
+        .save-button {
+            display: inline-flex;
+            align-items: center;
+            padding: 0.5rem 1rem;
+            border-radius: 0.375rem;
             font-weight: 500;
+            font-size: 0.875rem;
+            background-color: #3b82f6;
+            color: white;
+            border: none;
+            transition: all 0.2s;
+        }
+
+        .save-button:hover {
+            background-color: #2563eb;
+        }
+
+        .save-button:focus {
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.3);
+        }
+
+        .save-button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .notification {
+            position: fixed;
+            right: 20px;
+            bottom: 20px;
+            display: flex;
+            align-items: center;
+            padding: 1rem 1.5rem;
+            border-radius: 0.375rem;
+            color: white;
+            font-weight: 500;
+            z-index: 100;
+            max-width: 24rem;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+        }
+
+        /* 加载动画 */
+        .loading-spinner {
+            display: inline-block;
+            width: 2.5rem;
+            height: 2.5rem;
+            border: 0.25rem solid rgba(59, 130, 246, 0.3);
+            border-radius: 50%;
+            border-top-color: #3b82f6;
+            animation: spin 1s ease-in-out infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
         }
     </style>
-    <script>
-        function checkIfEmbedded() {
-            if (window.top == window.self) {
-                // 跳转到首页
-                window.location.href = "{{ index_path }}";
-            }
-        }
-
-        // 当页面失去焦点时检测
-        window.onblur = checkIfEmbedded;
-        // 页面加载时检测
-        window.onload = checkIfEmbedded;
-        // 页面尺寸发生变化时
-        window.onresize = checkIfEmbedded;
-        // 页面滚动时
-        window.onscroll = checkIfEmbedded;
-        // 页面内容发生变化时
-        window.onhashchange = checkIfEmbedded;
-        // 页面内容被点击时
-        window.onclick = checkIfEmbedded;
-    </script>
 </head>
-<body id="cq">
-    <script>
-        // 获取用户的主题偏好
-        const savedTheme = localStorage.getItem('guguwebui-theme') || 'auto';
-
-        // 判断是否为自动模式，并根据系统的夜间模式设置调整主题
-        if (savedTheme === 'auto') {
-            const prefersDarkMode = window.matchMedia('(prefers-color-scheme: dark)').matches;
-            document.body.classList.add(prefersDarkMode ? 'dark' : 'light');
-        } else {
-            document.body.classList.add(savedTheme);
+<body class="h-full bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100 transition-colors duration-300">
+    <div x-data="{ 
+        serverStatus: 'loading',
+        userName: '',
+        serverVersion: '',
+        serverPlayers: '0/0',
+        configData: {},
+        translations: {},
+        loading: true,
+        saving: false,
+        notificationMessage: '',
+        notificationType: 'success',
+        showNotification: false,
+        
+        checkLoginStatus: async function() {
+            try {
+                const response = await fetch('/api/checkLogin');
+                const data = await response.json();
+                if (data.status === 'success') {
+                    this.userName = data.username;
+                }
+            } catch (error) {
+                console.error('Error checking login status:', error);
+            }
+        },
+        
+        checkServerStatus: async function() {
+            try {
+                this.serverStatus = 'loading';
+                const response = await fetch('/api/get_server_status');
+                const data = await response.json();
+                this.serverStatus = data.status || 'offline';
+                this.serverVersion = data.version || '';
+                this.serverPlayers = data.players || '0/0';
+            } catch (error) {
+                console.error('Error checking server status:', error);
+                this.serverStatus = 'error';
+            }
+        },
+        
+        // 加载翻译数据
+        loadTranslations: async function() {
+            try {
+                const response = await fetch('/api/load_config?path=config/cq_qq_api/config.json&translation=true');
+                this.translations = await response.json();
+            } catch (error) {
+                console.error('Error loading translations:', error);
+                this.showNotificationMsg('加载翻译数据失败', 'error');
+                // 默认翻译数据
+                this.translations = {
+                    'host': ['host', 'IP地址'],
+                    'port': ['port', '正向 Websocket 端口号'],
+                    'post_path': ['Endpoint', 'host:port/Endpoint (一般不用动)'],
+                    'token': ['token', 'QQ 的加密 token'],
+                    'language': ['language', ''],
+                    'max_wait_time': ['API 最长等待时间', '单位（秒）']
+                };
+            }
+        },
+        
+        // 加载配置数据
+        loadConfig: async function() {
+            try {
+                this.loading = true;
+                const response = await fetch('/api/load_config?path=config/cq_qq_api/config.json');
+                this.configData = await response.json();
+                this.loading = false;
+            } catch (error) {
+                console.error('Error loading config:', error);
+                this.loading = false;
+                this.showNotificationMsg('加载配置数据失败', 'error');
+            }
+        },
+        
+        // 保存配置数据
+        saveConfig: async function() {
+            try {
+                this.saving = true;
+                
+                const response = await fetch('/api/save_config', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        file_path: 'config/cq_qq_api/config.json',
+                        config_data: this.configData
+                    })
+                });
+                
+                const result = await response.json();
+                
+                if (result.status === 'success') {
+                    this.showNotificationMsg('配置保存成功', 'success');
+                } else {
+                    this.showNotificationMsg('配置保存失败: ' + result.message, 'error');
+                }
+                
+                this.saving = false;
+            } catch (error) {
+                console.error('Error saving config:', error);
+                this.showNotificationMsg('保存配置时出错', 'error');
+                this.saving = false;
+            }
+        },
+        
+        // 获取配置的翻译名称
+        getConfigName: function(key) {
+            if (this.translations[key]) {
+                return this.translations[key][0] || key;
+            }
+            return key;
+        },
+        
+        // 获取配置的翻译描述
+        getConfigDescription: function(key) {
+            if (this.translations[key]) {
+                return this.translations[key][1] || '';
+            }
+            return '';
+        },
+        
+        // 更新配置值
+        updateConfigValue: function(key, value) {
+            // 对于数字类型的配置项，转换为数字
+            if (key === 'port' || key === 'max_wait_time') {
+                value = parseInt(value);
+            }
+            
+            this.configData[key] = value;
+        },
+        
+        // 显示通知
+        showNotificationMsg: function(message, type = 'success') {
+            this.notificationMessage = message;
+            this.notificationType = type;
+            this.showNotification = true;
+            
+            // 3秒后自动关闭通知
+            setTimeout(() => {
+                this.showNotification = false;
+            }, 3000);
         }
-    </script>
-    <!-- 未安装插件提示 -->
-    <div id="no-plugin-hint" class="no-hint" style="display: none;">
-        <div class="no-plugin-hint-content">
-            <p>抱歉，您未安装cq插件无法进行配置，请前往<a href="https://mcdreforged.com/zh-CN/plugin/cq_qq_api" target="_blank">MCDR仓库</a>下载安装。</p>
-            <p>安装后请刷新页面。</p>
-            <p>或者点击以下按钮安装插件：</p>
-            <div onclick="installPlugin('cq_qq_api')" class="btn">安装插件</div>
-        </div>
-    </div>
-    <!-- 未运行插件提示 -->
-    <div id="no-run-hint" class="no-hint" style="display:none;">
-        <div class="no-run-hint-content">
-            <p>您未运行cq插件，请先运行插件。</p>
-            <div onclick="runPlugin('cq_qq_api')" class="btn">运行插件</div>
-        </div>
-    </div>
-    <div id="container" style="display: none;">
-        <h2 class="title">说明</h2>
-        <div class="about-list">
-            <div class="about-item">
-                <p>cq_qq_api: <span>基于CQ码的正向WebsocketQQ连接机器人，提供MCDR机器人插件接口，方便聊天类机器人的构建。</span></p>
-                <a href="https://mcdreforged.com/zh-CN/plugin/cq_qq_api" target="_blank">MCDR仓库</a>
-                <a href="https://github.com/XueK66/PF-cq_qq_api" target="_blank">Github仓库</a>
-                <a href="#about" id="cq_qq_api-version">版本：获取中...</a>
+    }" 
+    x-init="
+        checkLoginStatus();
+        checkServerStatus();
+        loadTranslations();
+        loadConfig();
+        
+        // 每60秒自动刷新服务器状态
+        setInterval(() => checkServerStatus(), 60000);
+        
+        // 保存主题设置到本地存储
+        $watch('darkMode', value => {
+            localStorage.setItem('darkMode', value);
+        });
+        
+        // 设置当前年份
+        document.getElementById('year').textContent = new Date().getFullYear();
+    ">
+        <!-- 侧边栏 -->
+        <div id="sidebar" :class="{'translate-x-0': sidebarOpen, '-translate-x-full': !sidebarOpen}" class="sidebar-width fixed top-0 left-0 bottom-0 z-30 transform transition-transform duration-300 ease-in-out bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 shadow-lg overflow-y-auto">
+            <div class="p-4 flex flex-col h-full">
+                <!-- Logo -->
+                <div class="flex items-center justify-center mb-8 mt-2">
+                    <div class="w-12 h-12 rounded-full bg-gradient-to-r from-blue-400 to-purple-500 flex items-center justify-center mr-3 shadow-lg">
+                        <i class="fas fa-server text-white text-xl"></i>
+                    </div>
+                    <div>
+                        <h1 class="text-xl font-bold text-gray-800 dark:text-white">MCDR WebUI</h1>
+                        <p class="text-xs text-gray-500 dark:text-gray-400">服务器管理平台</p>
+                    </div>
+                </div>
+                
+                <!-- 导航菜单 -->
+                <div class="flex-1 overflow-y-auto">
+                    <nav class="space-y-1">
+                        <a href="/index" class="flex items-center px-4 py-3 text-sm font-medium rounded-lg text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
+                            <i class="fas fa-home w-6 text-center"></i>
+                            <span class="ml-3">仪表盘</span>
+                        </a>
+                        
+                        <a href="/mcdr" class="flex items-center px-4 py-3 text-sm font-medium rounded-lg text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
+                            <i class="fas fa-cogs w-6 text-center"></i>
+                            <span class="ml-3">MCDR 配置</span>
+                        </a>
+                        
+                        <a href="/mc" class="flex items-center px-4 py-3 text-sm font-medium rounded-lg text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
+                            <i class="fas fa-gamepad w-6 text-center"></i>
+                            <span class="ml-3">MC 服务器配置</span>
+                        </a>
+                        
+                        <a href="/plugins" class="flex items-center px-4 py-3 text-sm font-medium rounded-lg text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
+                            <i class="fas fa-puzzle-piece w-6 text-center"></i>
+                            <span class="ml-3">本地插件</span>
+                        </a>
+                        
+                        <a href="/online-plugins" class="flex items-center px-4 py-3 text-sm font-medium rounded-lg text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
+                            <i class="fas fa-cloud-download-alt w-6 text-center"></i>
+                            <span class="ml-3">在线插件</span>
+                        </a>
+
+                        <a href="/terminal" class="flex items-center px-4 py-3 text-sm font-medium rounded-lg text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
+                            <i class="fas fa-terminal w-6 text-center"></i>
+                            <span class="ml-3">终端日志</span>
+                        </a>
+                        
+                        <a href="/gugubot" class="flex items-center px-4 py-3 text-sm font-medium rounded-lg text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
+                            <i class="fas fa-robot w-6 text-center"></i>
+                            <span class="ml-3">GUGUBot 管理</span>
+                        </a>
+                        
+                        <a href="/cq" class="flex items-center px-4 py-3 text-sm font-medium rounded-lg bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-200">
+                            <i class="fas fa-comments w-6 text-center"></i>
+                            <span class="ml-3">CQ-QQ-API</span>
+                        </a>
+                        
+                        <a href="/fabric" class="flex items-center px-4 py-3 text-sm font-medium rounded-lg text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
+                            <i class="fas fa-cube w-6 text-center"></i>
+                            <span class="ml-3">Fabric 管理</span>
+                        </a>
+                    </nav>
+                </div>
+                
+                <!-- 底部功能区 -->
+                <div class="pt-4 mt-6 border-t border-gray-200 dark:border-gray-700">
+                    <a href="/settings" class="flex items-center px-4 py-3 text-sm font-medium rounded-lg text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
+                        <i class="fas fa-cog w-6 text-center"></i>
+                        <span class="ml-3">Web设置</span>
+                    </a>
+                    
+                    <a href="/about" class="flex items-center px-4 py-3 text-sm font-medium rounded-lg text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
+                        <i class="fas fa-info-circle w-6 text-center"></i>
+                        <span class="ml-3">关于</span>
+                    </a>
+                    
+                    <a href="/logout" class="flex items-center px-4 py-3 text-sm font-medium rounded-lg text-red-700 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors mt-2">
+                        <i class="fas fa-sign-out-alt w-6 text-center"></i>
+                        <span class="ml-3">退出登录</span>
+                    </a>
+                </div>
             </div>
         </div>
-        <div class="config" id="config">
-            <div id="./config/cq_qq_api/config.json"></div>
-        </div>
-        <div class="btn" id="save" onclick="saveConfig('./config/cq_qq_api/config.json')">保存设置</div>
-        <script>
-            // 加载配置
-            fetch('/api/load_config?path=./config/cq_qq_api/config.json')
-                .then(response => response.json())
-                .then(jsonData => {
-                    buildHtmlFromJson(jsonData, './config/cq_qq_api/config.json');
-                })
-                .catch(error => console.error('Error fetching data:', error));
-        </script>
-        <script>
-            // 调用 GET /api/gugubot_plugins
-            document.addEventListener("DOMContentLoaded", function () {
-                // 获取插件状态
-                set_gugu_plugin('cq_qq_api') 
-            });
-        </script>
-        <script src="js/plugins.js"></script>
-    </div>
-    <pre id="JSON">
+        
+        <!-- 主内容区 -->
+        <div id="main-content" :class="{'sidebar-open': sidebarOpen}" class="main-content min-h-screen transition-all duration-300">
+            <!-- 顶部导航栏 -->
+            <header id="header" class="bg-white dark:bg-gray-800 shadow-sm border-b border-gray-200 dark:border-gray-700 h-16 fixed top-0 right-0 left-0 z-20" :class="{'left-0': !sidebarOpen, 'left-[260px]': sidebarOpen}">
+                <div class="h-full px-4 sm:px-6 flex items-center justify-between">
+                    <!-- 左侧部分 -->
+                    <div class="flex items-center">
+                        <!-- 移动端菜单按钮 -->
+                        <button @click="sidebarOpen = !sidebarOpen" class="inline-flex items-center justify-center p-2 rounded-md text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 focus:outline-none transition-colors">
+                            <i :class="sidebarOpen ? 'fa-times' : 'fa-bars'" class="fas"></i>
+                        </button>
+                        
+                        <!-- 页面标题 -->
+                        <h1 class="ml-4 text-xl font-semibold text-gray-800 dark:text-white">CQ-QQ-API 配置</h1>
+                    </div>
+                    
+                    <!-- 右侧部分 -->
+                    <div class="flex items-center space-x-4">
+                        <!-- 公告 -->
+                        <div class="nav-notice hidden md:flex items-center bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-300 px-3 py-1 rounded-full text-xs font-medium mr-2">
+                            <span class="nav-notice-text"><i class="fas fa-circle-notch fa-spin mr-1.5"></i> 加载公告中...</span>
+                        </div>
+                    
+                        <!-- 服务器状态 -->
+                        <div class="hidden sm:flex items-center">
+                            <div class="px-3 py-1 rounded-full text-xs font-medium flex items-center" :class="{
+                                'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300': serverStatus === 'online',
+                                'bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300': serverStatus === 'offline',
+                                'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300': serverStatus === 'error',
+                                'bg-gray-100 dark:bg-gray-900/30 text-gray-800 dark:text-gray-300': serverStatus === 'loading'
+                            }">
+                                <span x-show="serverStatus === 'online'" class="flex items-center">
+                                    <i class="fas fa-circle mr-1 text-xs"></i>
+                                    <span>在线</span>
+                                </span>
+                                <span x-show="serverStatus === 'offline'" class="flex items-center">
+                                    <i class="fas fa-circle mr-1 text-xs"></i>
+                                    <span>离线</span>
+                                </span>
+                                <span x-show="serverStatus === 'error'" class="flex items-center">
+                                    <i class="fas fa-exclamation-triangle mr-1"></i>
+                                    <span>错误</span>
+                                </span>
+                                <span x-show="serverStatus === 'loading'" class="flex items-center">
+                                    <i class="fas fa-circle-notch fa-spin mr-1 text-xs"></i>
+                                    <span>加载中</span>
+                                </span>
+                            </div>
+                        </div>
+                        
+                        <!-- 主题切换 -->
+                        <button @click="darkMode = !darkMode; localStorage.setItem('darkMode', darkMode)" class="inline-flex items-center justify-center p-2 rounded-md text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 focus:outline-none transition-colors">
+                            <i class="fas" :class="darkMode ? 'fa-sun' : 'fa-moon'"></i>
+                        </button>
+                        
+                        <!-- 用户信息 -->
+                        <div class="flex items-center">
+                            <div class="w-8 h-8 rounded-full bg-blue-500 flex items-center justify-center text-white user-avatar overflow-hidden">
+                                <i class="fas fa-user"></i>
+                            </div>
+                            <span class="ml-2 text-sm font-medium text-gray-700 dark:text-gray-300 js-username" x-text="userName || '用户'"></span>
+                        </div>
+                    </div>
+                </div>
+            </header>
+            
+            <!-- 主内容 -->
+            <main class="pt-24 px-4 sm:px-6 md:px-8 pb-8">
+                <div class="bg-white dark:bg-gray-800 shadow-sm rounded-lg p-6 border border-gray-200 dark:border-gray-700">
+                    <h2 class="text-xl font-bold text-gray-800 dark:text-white mb-4 pb-2 border-b border-gray-200 dark:border-gray-700">CQ-QQ-API 插件配置</h2>
 
-    </pre>
+                    <!-- 配置说明 -->
+                    <div class="mb-6 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-100 dark:border-blue-800">
+                        <div class="flex items-start">
+                            <i class="fas fa-info-circle text-blue-500 dark:text-blue-400 mt-0.5 mr-3 text-lg"></i>
+                            <div>
+                                <h3 class="font-medium text-blue-700 dark:text-blue-300 mb-1">配置说明</h3>
+                                <p class="text-sm text-blue-600 dark:text-blue-200">CQ-QQ-API 是一个用于连接 QQ 的插件，通过 Websocket 协议与 QQ 机器人框架通信。您需要设置正确的连接参数。</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 加载动画 -->
+                    <div x-show="loading" class="flex justify-center items-center py-12">
+                        <div class="loading-spinner"></div>
+                        <span class="ml-3 text-gray-600 dark:text-gray-400">加载配置中...</span>
+                    </div>
+
+                    <!-- 配置列表 -->
+                    <div x-show="!loading" class="config-container">
+                        <template x-for="(value, key) in configData" :key="key">
+                            <div class="config-item">
+                                <div class="config-header">
+                                    <h3 class="config-title" x-text="getConfigName(key)"></h3>
+                                    <span class="config-key" x-text="key"></span>
+                                </div>
+                                <div class="config-description" x-text="getConfigDescription(key)"></div>
+                                <div class="config-input">
+                                    <input 
+                                        type="text" 
+                                        class="text-input"
+                                        :value="value"
+                                        @input="updateConfigValue(key, $event.target.value)"
+                                        :placeholder="key"
+                                    >
+                                </div>
+                            </div>
+                        </template>
+                    </div>
+                    
+                    <!-- 保存按钮 -->
+                    <div class="mt-6 flex justify-end">
+                        <button 
+                            @click="saveConfig" 
+                            class="save-button"
+                            :disabled="saving"
+                        >
+                            <template x-if="!saving">
+                                <span>
+                                    <i class="fas fa-save mr-2"></i>
+                                    保存配置
+                                </span>
+                            </template>
+                            <template x-if="saving">
+                                <span>
+                                    <i class="fas fa-circle-notch fa-spin mr-2"></i>
+                                    保存中...
+                                </span>
+                            </template>
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- 通知 -->
+                <div 
+                    x-show="showNotification" 
+                    x-transition:enter="transition ease-out duration-300"
+                    x-transition:enter-start="opacity-0 transform scale-90"
+                    x-transition:enter-end="opacity-100 transform scale-100"
+                    x-transition:leave="transition ease-in duration-300"
+                    x-transition:leave-start="opacity-100 transform scale-100"
+                    x-transition:leave-end="opacity-0 transform scale-90"
+                    class="notification"
+                    :class="notificationType === 'success' ? 'bg-green-500' : 'bg-red-500'"
+                >
+                    <template x-if="notificationType === 'success'">
+                        <i class="fas fa-check-circle mr-2"></i>
+                    </template>
+                    <template x-if="notificationType === 'error'">
+                        <i class="fas fa-exclamation-circle mr-2"></i>
+                    </template>
+                    <span x-text="notificationMessage"></span>
+                </div>
+                
+                <!-- 页脚 -->
+                <footer class="mt-8 text-center text-gray-600 dark:text-gray-400 text-sm">
+                    <p>MCDR WebUI &copy; <span id="year"></span></p>
+                </footer>
+            </main>
+        </div>
+    </div>
+
+    <!-- 导入主脚本 -->
+    <script src="/js/main.js"></script>
     
+    <!-- 页面预加载脚本 -->
+    <script src="/js/preloader.js"></script>
+
+    <!-- 公告脚本 -->
+    <script src="/js/notice.js"></script>
+
+    <script>
+        // 设置当前年份
+        document.getElementById('year').textContent = new Date().getFullYear();
+    </script>
 </body>
-</html>
+</html> 

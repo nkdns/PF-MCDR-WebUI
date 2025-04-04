@@ -1,57 +1,1208 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="zh-CN" class="h-full" x-data="{ darkMode: localStorage.getItem('darkMode') === 'true', sidebarOpen: window.innerWidth >= 1024 }" :class="{ 'dark': darkMode }">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>终端</title>
-    <link rel="stylesheet" href="custom/overall.css">
-    <script src="custom/overall.js"></script>
-    <script src="js/overall.js"></script>
-    <link rel="stylesheet" href="css/terminal.css">
+    <title>MCDR WebUI - 终端日志</title>
+    <!-- 主题预加载脚本 - 防止闪烁 -->
+    <script src="/js/theme-preload.js"></script>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Alpine.js -->
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <!-- 自定义配置 -->
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        primary: {
+                            50: '#f0f9ff',
+                            100: '#e0f2fe',
+                            200: '#bae6fd',
+                            300: '#7dd3fc',
+                            400: '#38bdf8',
+                            500: '#0ea5e9',
+                            600: '#0284c7',
+                            700: '#0369a1',
+                            800: '#075985',
+                            900: '#0c4a6e',
+                        },
+                        terminal: {
+                            bg: '#1e1e1e',
+                            text: '#f0f0f0',
+                            green: '#00ff00',
+                            yellow: '#ffff00',
+                            red: '#ff6b6b',
+                            blue: '#58a6ff'
+                        }
+                    },
+                },
+            },
+        }
+    </script>
     <style>
-        * {
-            padding: 0;
-            margin: 0;
-            color: #2b2b2b;
-            font-weight: 500;
+        /* 自定义CSS变量 */
+        :root {
+            --sidebar-width: 260px;
+            --header-height: 64px;
+            --terminal-bg: #1e1e1e;
+            --terminal-text: #f0f0f0;
+        }
+        
+        /* 侧边栏固定宽度 */
+        .sidebar-width {
+            width: var(--sidebar-width);
+        }
+        
+        /* 主内容区域的左边距，与侧边栏宽度相同 */
+        .main-content {
+            transition: margin-left 0.3s ease;
+        }
+        
+        .main-content.sidebar-open {
+            margin-left: var(--sidebar-width);
+        }
+        
+        /* 终端样式 */
+        .terminal {
+            font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+            background-color: var(--terminal-bg);
+            color: var(--terminal-text);
+            overflow-y: auto;
+            white-space: pre-wrap;
+            font-size: 14px;
+            line-height: 1.5;
+            position: relative;
+        }
+        
+        .terminal::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        
+        .terminal::-webkit-scrollbar-track {
+            background: #2c2c2c;
+        }
+        
+        .terminal::-webkit-scrollbar-thumb {
+            background: #555;
+            border-radius: 4px;
+        }
+        
+        .terminal::-webkit-scrollbar-thumb:hover {
+            background: #777;
+        }
+        
+        .leading-relaxed {
+            line-height: 1;
+            white-space: normal;
+        }
+
+        /* 日志等级高亮 */
+        .log-info { color: #58a6ff; }
+        .log-warning { color: #ffcc00; }
+        .log-error { color: #ff6b6b; }
+        .log-success { color: #00cc00; }
+        .log-command { color: #bb9af7; }
+        .log-feedback { color: #ff79c6; font-style: italic; margin-top: 4px; padding: 4px; border-left: 2px solid #ff79c6; }
+        
+        /* 选择文本悬浮按钮 */
+        .selection-action-button {
+            position: absolute;
+            display: none;
+            padding: 6px 12px;
+            background-color: #0ea5e9;
+            color: white;
+            border-radius: 4px;
+            font-size: 12px;
+            cursor: pointer;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+            z-index: 100;
+            transition: all 0.2s;
+        }
+        
+        .selection-action-button:hover {
+            background-color: #0284c7;
+        }
+        
+        /* AI询问弹窗 */
+        .ai-query-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(0, 0, 0, 0.6);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            opacity: 0;
+            transition: opacity 0.3s;
+            pointer-events: none;
+        }
+        
+        .ai-query-modal.active {
+            opacity: 1;
+            pointer-events: auto;
+        }
+        
+        .ai-query-container {
+            width: 90%;
+            max-width: 700px;
+            background-color: white;
+            border-radius: 8px;
+            overflow: hidden;
+            transform: scale(0.95);
+            transition: transform 0.3s;
+            max-height: 80vh;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .dark .ai-query-container {
+            background-color: #1f2937;
+            color: #e5e7eb;
+        }
+        
+        .ai-query-modal.active .ai-query-container {
+            transform: scale(1);
+        }
+        
+        .ai-query-header {
+            padding: 16px;
+            border-bottom: 1px solid #e5e7eb;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .dark .ai-query-header {
+            border-color: #374151;
+        }
+        
+        .ai-query-body {
+            padding: 16px;
+            overflow-y: auto;
+            flex-grow: 1;
+        }
+        
+        .ai-query-textarea {
+            width: 100%;
+            min-height: 120px;
+            padding: 12px;
+            border: 1px solid #e5e7eb;
+            border-radius: 4px;
+            resize: vertical;
+            font-family: inherit;
+            margin-bottom: 16px;
+        }
+        
+        .dark .ai-query-textarea {
+            background-color: #374151;
+            border-color: #4b5563;
+            color: #e5e7eb;
+        }
+        
+        .ai-query-options {
+            margin-bottom: 16px;
+        }
+        
+        .ai-query-footer {
+            padding: 16px;
+            border-top: 1px solid #e5e7eb;
+            display: flex;
+            justify-content: flex-end;
+            gap: 8px;
+        }
+        
+        .dark .ai-query-footer {
+            border-color: #374151;
+        }
+        
+        .ai-response {
+            margin-top: 16px;
+            padding: 16px;
+            border-radius: 8px;
+            background-color: #f9fafb;
+            border-left: 4px solid #0ea5e9;
+            overflow-y: auto;
+            max-height: 300px;
+            white-space: pre-wrap;
+        }
+        
+        .dark .ai-response {
+            background-color: #111827;
+            border-left-color: #0284c7;
+        }
+        
+        .ai-loading {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        
+        .ai-loading-spinner {
+            border: 3px solid rgba(0, 0, 0, 0.1);
+            border-radius: 50%;
+            border-top: 3px solid #0ea5e9;
+            width: 24px;
+            height: 24px;
+            animation: spin 1s linear infinite;
+            margin-right: 10px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        /* 自定义滚动条 */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        
+        ::-webkit-scrollbar-thumb {
+            background: #d1d5db;
+            border-radius: 4px;
+        }
+        
+        .dark ::-webkit-scrollbar-thumb {
+            background: #4b5563;
         }
     </style>
-    <script>
-        function checkIfEmbedded() {
-            if (window.top == window.self) {
-                // 跳转到首页
-                window.location.href = "{{ index_path }}";
-            }
-        }
-
-        // 当页面失去焦点时检测
-        window.onblur = checkIfEmbedded;
-        // 页面加载时检测
-        window.onload = checkIfEmbedded;
-        // 页面尺寸发生变化时
-        window.onresize = checkIfEmbedded;
-        // 页面滚动时
-        window.onscroll = checkIfEmbedded;
-        // 页面内容发生变化时
-        window.onhashchange = checkIfEmbedded;
-        // 页面内容被点击时
-        window.onclick = checkIfEmbedded;
-    </script>
 </head>
-<body id="terminal">
-    <script>
-        // 获取用户的主题偏好
-        const savedTheme = localStorage.getItem('guguwebui-theme') || 'auto';
+<body class="h-full bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100 transition-colors duration-300">
+    <div x-data="{ 
+        serverStatus: 'loading',
+        userName: '',
+        serverVersion: '',
+        processingServer: false,
+        showNotification: false,
+        notificationMessage: '',
+        notificationType: 'success',
+        
+        // 终端相关数据
+        logType: 'merged', // 'mcdr' 或 'minecraft' 或 'merged'
+        mergedLogs: true, // 默认启用合并日志模式
+        logs: [],
+        lastLine: 0,
+        totalLines: 0,
+        isLoading: true,
+        autoScroll: true,
+        autoRefresh: true,
+        filterText: '',
+        refreshInterval: null,
+        commandInput: '', // 命令输入框内容
+        commandHistory: [], // 命令历史记录
+        historyIndex: -1, // 当前历史记录索引
+        tempCommand: '', // 临时保存当前命令
 
-        // 判断是否为自动模式，并根据系统的夜间模式设置调整主题
-        if (savedTheme === 'auto') {
-            const prefersDarkMode = window.matchMedia('(prefers-color-scheme: dark)').matches;
-            document.body.classList.add(prefersDarkMode ? 'dark' : 'light');
-        } else {
-            document.body.classList.add(savedTheme);
+        // AI询问相关
+        showAiQueryModal: false,
+        aiQueryTitle: 'AI日志分析询问',
+        aiQuery: '',
+        aiLogPreview: '',
+        aiSelectedText: '',
+        aiResponse: '',
+        aiLoading: false,
+        aiContinueChat: false,
+        aiChatHistory: [], // 用于连续对话
+
+        checkLoginStatus: async function() {
+            try {
+                const response = await fetch('/api/checkLogin');
+                const data = await response.json();
+                if (data.status === 'success') {
+                    this.userName = data.username;
+                }
+            } catch (error) {
+                console.error('Error checking login status:', error);
+            }
+        },
+        
+        checkServerStatus: async function() {
+            try {
+                this.serverStatus = 'loading';
+                const response = await fetch('/api/get_server_status');
+                const data = await response.json();
+                this.serverStatus = data.status || 'offline';
+                this.serverVersion = data.version || '';
+            } catch (error) {
+                console.error('Error checking server status:', error);
+                this.serverStatus = 'error';
+            }
+        },
+        
+        // 加载日志
+        loadLogs: async function() {
+            this.isLoading = true;
+            try {
+                // 构建URL参数
+                const params = new URLSearchParams({
+                    log_type: this.logType,
+                    max_lines: 500,
+                    merged: this.mergedLogs
+                });
+                
+                const response = await fetch(`/api/server_logs?${params.toString()}`);
+                const data = await response.json();
+                
+                if (data.status === 'success') {
+                    this.logs = data.logs || [];
+                    this.totalLines = data.total_lines || 0;
+                    this.lastLine = data.current_end || this.totalLines;
+                    
+                    // 加载完成后始终滚动到底部
+                    if (this.autoScroll) {
+                        this.$nextTick(() => {
+                            const terminal = document.getElementById('terminal');
+                            if (terminal) {
+                                terminal.scrollTop = terminal.scrollHeight;
+                            }
+                        });
+                    }
+                } else {
+                    this.showNotificationMsg(`加载日志失败: ${data.message || '未知错误'}`, 'error');
+                }
+            } catch (error) {
+                console.error('Error loading logs:', error);
+                this.showNotificationMsg('加载日志失败', 'error');
+            } finally {
+                this.isLoading = false;
+            }
+        },
+        
+        // 获取新日志
+        fetchNewLogs: async function() {
+            if (this.isLoading) return;
+            
+            try {
+                let url = `/api/new_logs?last_line=${this.lastLine}&log_type=${this.logType}`;
+                
+                // 如果是合并日志，使用合并模式获取
+                if (this.mergedLogs) {
+                    const params = new URLSearchParams({
+                        log_type: this.logType,
+                        max_lines: 500,
+                        merged: true
+                    });
+                    url = `/api/server_logs?${params.toString()}`;
+                }
+                
+                const response = await fetch(url);
+                const data = await response.json();
+                
+                if (data.status === 'success') {
+                    if (this.mergedLogs) {
+                        // 合并模式直接刷新全部日志
+                        this.logs = data.logs || [];
+                        this.totalLines = data.total_lines || 0;
+                    } else {
+                        // 标准模式增量更新
+                        if (data.logs && data.logs.length > 0) {
+                            // 合并新日志
+                            this.logs = [...this.logs, ...data.logs];
+                            this.lastLine = data.total_lines || this.lastLine;
+                            this.totalLines = data.total_lines || this.totalLines;
+                        }
+                    }
+                    
+                    // 如果启用了自动滚动，滚动到底部
+                    if (this.autoScroll) {
+                        this.$nextTick(() => {
+                            const terminal = document.getElementById('terminal');
+                            if (terminal) {
+                                terminal.scrollTop = terminal.scrollHeight;
+                            }
+                        });
+                    }
+                }
+            } catch (error) {
+                console.error('Error fetching new logs:', error);
+            }
+        },
+        
+        // 切换日志类型
+        switchLogType: function(type) {
+            if (this.logType === type && !this.mergedLogs) return;
+            
+            this.logType = type;
+            this.mergedLogs = false;
+            this.logs = [];
+            this.lastLine = 0;
+            this.loadLogs();
+        },
+        
+        // 切换合并日志模式
+        toggleMergedLogs: function() {
+            this.mergedLogs = !this.mergedLogs;
+            this.logs = [];
+            this.lastLine = 0;
+            this.loadLogs();
+        },
+        
+        // 切换自动刷新
+        toggleAutoRefresh: function() {
+            this.autoRefresh = !this.autoRefresh;
+            
+            if (this.autoRefresh) {
+                // 启动定时刷新
+                this.refreshInterval = setInterval(() => this.fetchNewLogs(), 3000);
+            } else {
+                // 停止定时刷新
+                clearInterval(this.refreshInterval);
+            }
+        },
+        
+        // 清空终端
+        clearTerminal: function() {
+            this.logs = [];
+        },
+        
+        // 高亮日志
+        highlightLog: function(log) {
+            // 如果log是undefined，返回空字符串
+            if (!log || !log.content) return '';
+            
+            // 根据日志内容添加高亮类
+            const content = log.content;
+            
+            if (content.includes('INFO') || content.includes('[I]')) return 'log-info';
+            if (content.includes('WARN') || content.includes('[W]')) return 'log-warning';
+            if (content.includes('ERROR') || content.includes('[E]')) return 'log-error';
+            if (content.includes('SUCCESS')) return 'log-success';
+            if (content.includes('Command')) return 'log-command';
+            return '';
+        },
+        
+        // 过滤日志
+        filteredLogs: function() {
+            if (!this.filterText) return this.logs;
+            return this.logs.filter(log => 
+                log.content.toLowerCase().includes(this.filterText.toLowerCase())
+            );
+        },
+        
+        // 复制日志到剪贴板
+        copyLogs: function() {
+            if (!this.logs || this.logs.length === 0) {
+                this.showNotificationMsg('没有日志可复制', 'error');
+                return;
+            }
+            
+            const logText = this.logs.map(log => `${log.line_number}: ${log.content}`).join('\n');
+            navigator.clipboard.writeText(logText)
+                .then(() => this.showNotificationMsg('日志已复制到剪贴板', 'success'))
+                .catch(err => {
+                    console.error('复制失败:', err);
+                    this.showNotificationMsg('复制失败', 'error');
+                });
+        },
+        
+        showNotificationMsg: function(message, type = 'success') {
+            this.notificationMessage = message;
+            this.notificationType = type;
+            this.showNotification = true;
+            
+            setTimeout(() => {
+                this.showNotification = false;
+            }, 3000);
+        },
+        
+        // 发送命令到MCDR终端
+        sendCommand: async function() {
+            if (!this.commandInput.trim()) {
+                return;
+            }
+            
+            const command = this.commandInput.trim();
+            
+            // 检查是否为禁止的命令（会导致UI自身插件卸载或重载）
+            const forbiddenCommands = [
+                '!!MCDR plugin reload guguwebui',
+                '!!MCDR plugin unload guguwebui'
+            ];
+            
+            if (forbiddenCommands.includes(command)) {
+                this.showNotificationMsg(`不允许执行该命令，这可能导致WebUI自身停止运行`, 'error');
+                return;
+            }
+            
+            try {
+                const response = await fetch('/api/send_command', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ command: command })
+                });
+                
+                const data = await response.json();
+                
+                if (data.status === 'success') {
+                    // 添加到历史记录
+                    if (this.commandHistory.length === 0 || this.commandHistory[0] !== command) {
+                        this.commandHistory.unshift(command);
+                        // 限制历史记录长度
+                        if (this.commandHistory.length > 50) {
+                            this.commandHistory.pop();
+                        }
+                        // 保存到本地存储
+                        localStorage.setItem('commandHistory', JSON.stringify(this.commandHistory));
+                    }
+                    
+                    // 重置历史索引
+                    this.historyIndex = -1;
+                    // 命令发送成功后清空输入框
+                    this.commandInput = '';
+                    // 可以选择显示提示信息
+                    this.showNotificationMsg(`命令已发送：${data.feedback}`, 'success');
+                } else {
+                    this.showNotificationMsg(`发送失败: ${data.message || '未知错误'}`, 'error');
+                }
+            } catch (error) {
+                console.error('Error sending command:', error);
+                this.showNotificationMsg('发送命令失败', 'error');
+            }
+        },
+        
+        // 处理键盘上下键浏览历史记录
+        handleHistoryNavigation: function(event) {
+            // 上方向键
+            if (event.key === 'ArrowUp') {
+                event.preventDefault();
+                if (this.historyIndex === -1) {
+                    // 首次按上键，保存当前输入
+                    this.tempCommand = this.commandInput;
+                }
+                
+                if (this.historyIndex < this.commandHistory.length - 1) {
+                    this.historyIndex++;
+                    this.commandInput = this.commandHistory[this.historyIndex];
+                }
+            } 
+            // 下方向键
+            else if (event.key === 'ArrowDown') {
+                event.preventDefault();
+                if (this.historyIndex > 0) {
+                    this.historyIndex--;
+                    this.commandInput = this.commandHistory[this.historyIndex];
+                } else if (this.historyIndex === 0) {
+                    // 返回到临时保存的命令
+                    this.historyIndex = -1;
+                    this.commandInput = this.tempCommand;
+                }
+            }
+        },
+        
+        // 打开AI询问弹窗
+        openAIQueryModal: function(selectedText = '') {
+            this.aiQuery = '';
+            this.aiResponse = '';
+            this.aiLoading = false;
+            this.aiSelectedText = selectedText;
+            
+            // 如果有选中的文本，则使用选中的文本作为询问内容
+            if (selectedText) {
+                this.aiLogPreview = selectedText;
+                this.aiQueryTitle = '询问选中内容';
+            } else {
+                // 否则，获取最近的200行日志
+                const recentLogs = this.logs.slice(Math.max(0, this.logs.length - 200));
+                this.aiLogPreview = recentLogs.map(log => {
+                    let prefix = '';
+                    if (this.mergedLogs) {
+                        prefix = log.source === 'mcdr' ? '[MCDR] ' : '[MC] ';
+                    }
+                    return `${prefix}${log.content}`;
+                }).join('\n');
+                this.aiQueryTitle = 'AI日志分析询问';
+            }
+            
+            // 显示弹窗
+            const modal = document.getElementById('aiQueryModal');
+            if (modal) {
+                modal.classList.add('active');
+                this.showAiQueryModal = true;
+            }
+        },
+        
+        // 关闭AI询问弹窗
+        closeAIQueryModal: function() {
+            const modal = document.getElementById('aiQueryModal');
+            if (modal) {
+                modal.classList.remove('active');
+                setTimeout(() => {
+                    this.showAiQueryModal = false;
+                }, 300);
+            }
+        },
+        
+        // 提交AI询问
+        submitAIQuery: function() {
+            if (this.aiLoading) return;
+            
+            this.aiLoading = true;
+            this.aiResponse = '';
+            
+            // 如果用户没有输入问题，使用默认问题
+            const query = this.aiQuery.trim() || '分析这些日志中的错误并提供解决方案';
+            
+            // 准备发送到API的数据
+            let requestData = {
+                query: query,
+                system_prompt: '你是一个Minecraft服务器日志分析专家，请分析以下日志并提供详细的解释和解决方案。请只关注与问题相关的内容，不要重复日志内容。'
+            };
+            
+            // 如果启用了连续对话，添加聊天历史
+            if (this.aiContinueChat && this.aiChatHistory.length > 0) {
+                requestData.chat_history = this.aiChatHistory;
+            }
+            
+            // 添加日志内容
+            if (this.aiSelectedText) {
+                requestData.query += `\n\n选中的日志内容：\n${this.aiSelectedText}`;
+            } else {
+                requestData.query += `\n\n最近的日志内容：\n${this.aiLogPreview}`;
+            }
+            
+            // 发送请求到API
+            fetch('/api/deepseek', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(requestData)
+            })
+            .then(response => response.json())
+            .then(data => {
+                this.aiLoading = false;
+                
+                if (data.status === 'success') {
+                    this.aiResponse = data.answer;
+                    
+                    // 如果启用了连续对话，更新聊天历史
+                    if (this.aiContinueChat) {
+                        this.aiChatHistory.push({
+                            role: 'user',
+                            content: query
+                        });
+                        this.aiChatHistory.push({
+                            role: 'assistant',
+                            content: data.answer
+                        });
+                        
+                        // 限制历史长度，避免token过多
+                        if (this.aiChatHistory.length > 10) {
+                            this.aiChatHistory = this.aiChatHistory.slice(this.aiChatHistory.length - 10);
+                        }
+                    }
+                } else {
+                    this.aiResponse = `错误: ${data.message || '请求失败'}`;
+                }
+            })
+            .catch(error => {
+                console.error('AI询问出错:', error);
+                this.aiLoading = false;
+                this.aiResponse = `请求出错: ${error.message}`;
+            });
+        },
+        
+        // 初始化选择文本悬浮按钮
+        initSelectionButton: function() {
+            const terminal = document.getElementById('terminal');
+            const selectionButton = document.getElementById('selectionActionButton');
+            const self = this;
+            
+            if (!terminal || !selectionButton) return;
+            
+            document.addEventListener('mouseup', function(e) {
+                const selection = window.getSelection();
+                const selectedText = selection.toString().trim();
+                
+                // 如果有选中文本并且在终端内部
+                if (selectedText && terminal.contains(selection.anchorNode)) {
+                    const range = selection.getRangeAt(0);
+                    const rect = range.getBoundingClientRect();
+                    
+                    // 计算按钮位置
+                    const terminalRect = terminal.getBoundingClientRect();
+                    selectionButton.style.top = (rect.bottom - terminalRect.top + 8) + 'px';
+                    selectionButton.style.left = (rect.left - terminalRect.left + rect.width / 2 - 40) + 'px';
+                    selectionButton.style.display = 'block';
+                    
+                    // 设置点击事件
+                    selectionButton.onclick = function() {
+                        self.openAIQueryModal(selectedText);
+                        selectionButton.style.display = 'none';
+                    };
+                } else {
+                    selectionButton.style.display = 'none';
+                }
+            });
+            
+            // 点击其他地方时隐藏按钮
+            document.addEventListener('mousedown', function(e) {
+                if (!selectionButton.contains(e.target)) {
+                    selectionButton.style.display = 'none';
+                }
+            });
+        },
+        
+        init()
+        {
+            // 添加现有的初始化代码
+            this.checkLoginStatus();
+            this.checkServerStatus();
+            
+            // 每60秒自动刷新服务器状态
+            setInterval(() => this.checkServerStatus(), 60000);
+            
+            // 初始加载日志
+            this.loadLogs();
+            
+            // 启动自动刷新
+            this.refreshInterval = setInterval(() => {
+                if (this.autoRefresh) this.fetchNewLogs();
+            }, 3000);
+            
+            // 保存主题设置到本地存储
+            this.$watch('darkMode', value => {
+                localStorage.setItem('darkMode', value);
+            });
+            
+            // 组件销毁时清除定时器
+            this.$cleanup = () => {
+                clearInterval(this.refreshInterval);
+            };
+            
+            // 加载历史命令记录
+            const savedHistory = localStorage.getItem('commandHistory');
+            if (savedHistory) {
+                try {
+                    this.commandHistory = JSON.parse(savedHistory);
+                } catch (e) {
+                    console.error('Error loading command history:', e);
+                    this.commandHistory = [];
+                }
+            }
+            
+            // 初始化选择文本悬浮按钮功能
+            this.initSelectionButton();
         }
-    </script>
+    }" 
+    x-init="init()">
+        <!-- 侧边栏 -->
+        <div id="sidebar" :class="{'translate-x-0': sidebarOpen, '-translate-x-full': !sidebarOpen}" class="sidebar-width fixed top-0 left-0 bottom-0 z-30 transform transition-transform duration-300 ease-in-out bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 shadow-lg overflow-y-auto">
+            <div class="p-4 flex flex-col h-full">
+                <!-- Logo -->
+                <div class="flex items-center justify-center mb-8 mt-2">
+                    <div class="w-12 h-12 rounded-full bg-gradient-to-r from-blue-400 to-purple-500 flex items-center justify-center mr-3 shadow-lg">
+                        <i class="fas fa-server text-white text-xl"></i>
+                    </div>
+                    <div>
+                        <h1 class="text-xl font-bold text-gray-800 dark:text-white">MCDR WebUI</h1>
+                        <p class="text-xs text-gray-500 dark:text-gray-400">服务器管理平台</p>
+                    </div>
+                </div>
+                
+                <!-- 导航菜单 -->
+                <div class="flex-1 overflow-y-auto">
+                    <nav class="space-y-1">
+                        <a href="/index" class="flex items-center px-4 py-3 text-sm font-medium rounded-lg text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
+                            <i class="fas fa-home w-6 text-center"></i>
+                            <span class="ml-3">仪表盘</span>
+                        </a>
+                        
+                        <a href="/mcdr" class="flex items-center px-4 py-3 text-sm font-medium rounded-lg text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
+                            <i class="fas fa-cogs w-6 text-center"></i>
+                            <span class="ml-3">MCDR 配置</span>
+                        </a>
+                        
+                        <a href="/mc" class="flex items-center px-4 py-3 text-sm font-medium rounded-lg text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
+                            <i class="fas fa-gamepad w-6 text-center"></i>
+                            <span class="ml-3">MC 服务器配置</span>
+                        </a>
+                        
+                        <a href="/plugins" class="flex items-center px-4 py-3 text-sm font-medium rounded-lg text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
+                            <i class="fas fa-puzzle-piece w-6 text-center"></i>
+                            <span class="ml-3">本地插件</span>
+                        </a>
+                        
+                        <a href="/online-plugins" class="flex items-center px-4 py-3 text-sm font-medium rounded-lg text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
+                            <i class="fas fa-cloud-download-alt w-6 text-center"></i>
+                            <span class="ml-3">在线插件</span>
+                        </a>
+                        
+                        <a href="/terminal" class="flex items-center px-4 py-3 text-sm font-medium rounded-lg bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-200">
+                            <i class="fas fa-terminal w-6 text-center"></i>
+                            <span class="ml-3">终端日志</span>
+                        </a>
+                        
+                        <a href="/gugubot" class="flex items-center px-4 py-3 text-sm font-medium rounded-lg text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
+                            <i class="fas fa-robot w-6 text-center"></i>
+                            <span class="ml-3">GUGUBot 管理</span>
+                        </a>
+                        
+                        <a href="/cq" class="flex items-center px-4 py-3 text-sm font-medium rounded-lg text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
+                            <i class="fas fa-comments w-6 text-center"></i>
+                            <span class="ml-3">CQ-QQ-API</span>
+                        </a>
+                        
+                        <a href="/fabric" class="flex items-center px-4 py-3 text-sm font-medium rounded-lg text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
+                            <i class="fas fa-cube w-6 text-center"></i>
+                            <span class="ml-3">Fabric 管理</span>
+                        </a>
+                    </nav>
+                </div>
+                
+                <!-- 底部功能区 -->
+                <div class="pt-4 mt-6 border-t border-gray-200 dark:border-gray-700">
+                    <a href="/settings" class="flex items-center px-4 py-3 text-sm font-medium rounded-lg text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
+                        <i class="fas fa-cog w-6 text-center"></i>
+                        <span class="ml-3">Web设置</span>
+                    </a>
+                    
+                    <a href="/about" class="flex items-center px-4 py-3 text-sm font-medium rounded-lg text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
+                        <i class="fas fa-info-circle w-6 text-center"></i>
+                        <span class="ml-3">关于</span>
+                    </a>
+                    
+                    <a href="/logout" class="flex items-center px-4 py-3 text-sm font-medium rounded-lg text-red-700 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors mt-2">
+                        <i class="fas fa-sign-out-alt w-6 text-center"></i>
+                        <span class="ml-3">退出登录</span>
+                    </a>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 主内容区 -->
+        <div id="main-content" :class="{'sidebar-open': sidebarOpen}" class="main-content min-h-screen transition-all duration-300">
+            <!-- 顶部导航栏 -->
+            <header id="header" class="bg-white dark:bg-gray-800 shadow-sm border-b border-gray-200 dark:border-gray-700 h-16 fixed top-0 right-0 left-0 z-20" :class="{'left-0': !sidebarOpen, 'left-[260px]': sidebarOpen}">
+                <div class="h-full px-4 sm:px-6 flex items-center justify-between">
+                    <!-- 左侧部分 -->
+                    <div class="flex items-center">
+                        <!-- 移动端菜单按钮 -->
+                        <button @click="sidebarOpen = !sidebarOpen" class="text-gray-500 dark:text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 focus:outline-none lg:hidden">
+                            <i class="fas fa-bars text-xl"></i>
+                        </button>
+                        
+                        <!-- 标题 -->
+                        <h1 class="ml-4 text-lg font-semibold text-gray-800 dark:text-white">终端日志</h1>
+                    </div>
+                    
+                    <!-- 右侧部分 -->
+                    <div class="flex items-center space-x-4">
+                        <!-- 公告 -->
+                        <div class="nav-notice hidden md:flex items-center bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-300 px-3 py-1 rounded-full text-xs font-medium mr-2">
+                            <span class="nav-notice-text"><i class="fas fa-circle-notch fa-spin mr-1.5"></i> 加载公告中...</span>
+                        </div>
+
+                        <!-- 服务器状态 -->
+                        <div class="hidden sm:flex items-center">
+                            <div class="px-3 py-1 rounded-full text-xs font-medium flex items-center" :class="{
+                                'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300': serverStatus === 'online',
+                                'bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300': serverStatus === 'offline',
+                                'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300': serverStatus === 'error',
+                                'bg-gray-100 dark:bg-gray-900/30 text-gray-800 dark:text-gray-300': serverStatus === 'loading'
+                            }">
+                                <span x-show="serverStatus === 'online'" class="flex items-center">
+                                    <i class="fas fa-circle mr-1 text-xs"></i>
+                                    <span>在线</span>
+                                </span>
+                                <span x-show="serverStatus === 'offline'" class="flex items-center">
+                                    <i class="fas fa-circle mr-1 text-xs"></i>
+                                    <span>离线</span>
+                                </span>
+                                <span x-show="serverStatus === 'error'" class="flex items-center">
+                                    <i class="fas fa-exclamation-triangle mr-1"></i>
+                                    <span>错误</span>
+                                </span>
+                                <span x-show="serverStatus === 'loading'" class="flex items-center">
+                                    <i class="fas fa-circle-notch fa-spin mr-1 text-xs"></i>
+                                    <span>加载中</span>
+                                </span>
+                            </div>
+                        </div>
+                        
+                        <!-- 主题切换 -->
+                        <button @click="darkMode = !darkMode; localStorage.setItem('darkMode', darkMode)" class="inline-flex items-center justify-center p-2 rounded-md text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 focus:outline-none transition-colors">
+                            <i class="fas" :class="darkMode ? 'fa-sun' : 'fa-moon'"></i>
+                        </button>
+                        
+                        <!-- 用户信息 -->
+                        <div class="flex items-center">
+                            <div class="w-8 h-8 rounded-full bg-blue-500 flex items-center justify-center text-white user-avatar overflow-hidden">
+                                <i class="fas fa-user"></i>
+                            </div>
+                            <span class="ml-2 text-sm font-medium text-gray-700 dark:text-gray-300 js-username" x-text="userName || '用户'"></span>
+                        </div>
+                    </div>
+                </div>
+            </header>
+            
+            <!-- 主内容 -->
+            <main class="pt-16 px-4 sm:px-6 md:px-8 pb-20">
+                <!-- 控制栏 -->
+                <div class="mt-6 bg-white dark:bg-gray-800 rounded-lg shadow p-4 mb-4">
+                    <div class="flex flex-wrap items-center justify-between gap-4">
+                        <!-- 日志类型选择 -->
+                        <div class="flex items-center space-x-2">
+                            <span class="text-sm font-medium text-gray-700 dark:text-gray-300">日志类型:</span>
+                            <button @click="switchLogType('mcdr')" class="px-3 py-1.5 text-xs rounded-md" :class="logType === 'mcdr' && !mergedLogs ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 font-medium' : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300'">
+                                MCDR 日志
+                            </button>
+                            <button @click="switchLogType('minecraft')" class="px-3 py-1.5 text-xs rounded-md" :class="logType === 'minecraft' && !mergedLogs ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 font-medium' : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300'">
+                                Minecraft 日志
+                            </button>
+                            <button @click="toggleMergedLogs()" class="px-3 py-1.5 text-xs rounded-md" :class="mergedLogs ? 'bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 font-medium' : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300'">
+                                <i class="fas fa-code-merge mr-1"></i>合并日志
+                            </button>
+                        </div>
+                        
+                        <!-- 过滤器 -->
+                        <div class="flex-1 max-w-md">
+                            <div class="relative">
+                                <input 
+                                    type="text" 
+                                    x-model="filterText" 
+                                    placeholder="过滤日志..." 
+                                    class="w-full pl-10 pr-4 py-2 text-sm rounded-md bg-gray-100 dark:bg-gray-700 border-none focus:ring-2 focus:ring-blue-500 text-gray-800 dark:text-gray-200"
+                                >
+                                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                    <i class="fas fa-search text-gray-400"></i>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- 控制按钮 -->
+                        <div class="flex items-center space-x-2">
+                            <button @click="loadLogs()" class="px-3 py-1.5 text-xs bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded-md hover:bg-blue-200 dark:hover:bg-blue-800/30 flex items-center" title="刷新日志">
+                                <i class="fas fa-sync-alt mr-1.5"></i>
+                                <span>刷新</span>
+                            </button>
+                            
+                            <button @click="toggleAutoRefresh()" class="px-3 py-1.5 text-xs rounded-md flex items-center" :class="autoRefresh ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300' : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300'" title="自动刷新">
+                                <i class="fas fa-circle mr-1.5" :class="autoRefresh ? 'text-green-500 animate-pulse' : 'text-gray-400'"></i>
+                                <span x-text="autoRefresh ? '自动刷新开' : '自动刷新关'"></span>
+                            </button>
+                            
+                            <button @click="autoScroll = !autoScroll" class="px-3 py-1.5 text-xs rounded-md flex items-center" :class="autoScroll ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300' : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300'" title="自动滚动">
+                                <i class="fas fa-angle-double-down mr-1.5"></i>
+                                <span>自动滚动</span>
+                            </button>
+                            
+                            <button @click="copyLogs()" class="px-3 py-1.5 text-xs bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 rounded-md hover:bg-purple-200 dark:hover:bg-purple-800/30 flex items-center" title="复制日志">
+                                <i class="fas fa-copy mr-1.5"></i>
+                                <span>复制</span>
+                            </button>
+                            
+                            <button @click="clearTerminal()" class="px-3 py-1.5 text-xs bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 rounded-md hover:bg-red-200 dark:hover:bg-red-800/30 flex items-center" title="清空终端">
+                                <i class="fas fa-trash-alt mr-1.5"></i>
+                                <span>清空</span>
+                            </button>
+                            
+                            <button @click="openAIQueryModal()" class="px-3 py-1.5 text-xs bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 rounded-md hover:bg-green-200 dark:hover:bg-green-800/30 flex items-center" title="AI询问">
+                                <i class="fas fa-robot mr-1.5"></i>
+                                <span>AI询问</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 选中文本时显示的询问按钮 -->
+                <div id="selectionActionButton" class="selection-action-button">
+                    <i class="fas fa-question-circle mr-1"></i> 询问AI
+                </div>
+                
+                <!-- 终端显示区域 -->
+                <div class="relative">
+                    <!-- 加载指示器 -->
+                    <div x-show="isLoading" class="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center z-10 rounded-lg">
+                        <div class="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-lg flex items-center space-x-3">
+                            <div class="w-6 h-6 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+                            <span class="text-sm font-medium text-gray-700 dark:text-gray-300">加载日志中...</span>
+                        </div>
+                    </div>
+                    
+                    <!-- 终端窗口 -->
+                    <div id="terminal" class="h-[65vh] terminal rounded-lg p-4 overflow-auto">
+                        <template x-if="logs.length === 0 && !isLoading">
+                            <div class="text-center text-gray-500 h-full flex items-center justify-center">
+                                <span>无日志记录或日志已被清空</span>
+                            </div>
+                        </template>
+                        
+                        <template x-for="(log, index) in logs" :key="index">
+                            <div x-show="!filterText || log.content.toLowerCase().includes(filterText.toLowerCase())" :class="highlightLog(log)" class="leading-relaxed">
+                                <!-- 日志来源指示器 -->
+                                <span x-show="mergedLogs" :class="log.source === 'mcdr' ? 'text-blue-400' : 'text-green-400'" class="mr-1">
+                                    <span x-show="log.source === 'mcdr'">[MCDR #<span class="text-blue-400" x-text="log.line_number"></span>]</span>
+                                    <span x-show="log.source === 'minecraft'">[MC #<span class="text-blue-400" x-text="log.line_number"></span>]</span>
+                                </span>
+                                <!-- <span class="text-gray-500">[</span><span class="text-blue-400" x-text="log.line_number"></span><span class="text-gray-500">]</span> --><span x-text="log.content"></span> 
+                            </div>
+                        </template>
+                    </div>
+                    
+                    <!-- 状态栏 -->
+                    <div class="mt-2 flex justify-between text-xs text-gray-500 dark:text-gray-400 px-2">
+                        <div>
+                            <span>共 </span>
+                            <span x-text="totalLines"></span>
+                            <span> 行日志</span>
+                            <span x-show="filterText"> | 过滤: "</span>
+                            <span x-show="filterText" x-text="filterText"></span>
+                            <span x-show="filterText">"</span>
+                        </div>
+                        <div>
+                            <span x-show="!mergedLogs" x-text="logType === 'mcdr' ? 'MCDR 日志' : 'Minecraft 日志'"></span>
+                            <span x-show="mergedLogs">合并日志</span>
+                            <span> | </span>
+                            <span x-text="autoRefresh ? '自动刷新：开' : '自动刷新：关'"></span>
+                        </div>
+                    </div>
+                </div>
+            </main>
+            
+            <!-- 命令输入区域 -->
+            <div class="fixed bottom-0 left-0 right-0 bg-gray-100 dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700" :class="{'left-[260px]': sidebarOpen}">
+                <div class="container mx-auto px-4 py-3">
+                    <form @submit.prevent="sendCommand" class="flex items-center">
+                        <div class="relative flex-1">
+                            <input 
+                                type="text" 
+                                x-model="commandInput" 
+                                @keydown="handleHistoryNavigation"
+                                placeholder="输入命令发送到MCDR终端..." 
+                                class="w-full pl-10 pr-4 py-2 rounded-md bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-800 dark:text-gray-200"
+                                autofocus
+                            >
+                            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                <i class="fas fa-terminal text-gray-400"></i>
+                            </div>
+                        </div>
+                        <button 
+                            type="submit"
+                            class="ml-2 px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-md flex items-center"
+                        >
+                            <i class="fas fa-paper-plane mr-2"></i>
+                            <span>发送</span>
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 通知组件 -->
+        <div 
+            x-show="showNotification" 
+            x-transition:enter="transition ease-out duration-300"
+            x-transition:enter-start="opacity-0 transform translate-y-2"
+            x-transition:enter-end="opacity-100 transform translate-y-0"
+            x-transition:leave="transition ease-in duration-200"
+            x-transition:leave-start="opacity-100 transform translate-y-0"
+            x-transition:leave-end="opacity-0 transform translate-y-2"
+            class="fixed bottom-4 right-4 z-50 px-4 py-3 rounded-lg shadow-lg flex items-center"
+            :class="notificationType === 'success' ? 'bg-green-500 text-white' : 'bg-red-500 text-white'"
+        >
+            <i 
+                class="fas mr-2"
+                :class="notificationType === 'success' ? 'fa-check-circle' : 'fa-exclamation-circle'"
+            ></i>
+            <span x-text="notificationMessage"></span>
+            <button @click="showNotification = false" class="ml-4 text-white hover:text-gray-200 focus:outline-none">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+
+        <!-- AI询问弹窗 -->
+        <div id="aiQueryModal" class="ai-query-modal" x-show="showAiQueryModal" x-cloak>
+            <div class="ai-query-container">
+                <div class="ai-query-header">
+                    <h3 class="text-lg font-semibold" x-text="aiQueryTitle">AI日志分析询问</h3>
+                    <button @click="closeAIQueryModal" class="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div class="ai-query-body">
+                    <div class="mb-4">
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">要询问的问题</label>
+                        <textarea 
+                            x-model="aiQuery" 
+                            class="ai-query-textarea" 
+                            placeholder="请输入您的问题，不填则默认为'分析这些日志中的错误并提供解决方案'"
+                        ></textarea>
+                    </div>
+                    
+                    <div class="ai-query-options">
+                        <label class="flex items-center text-sm text-gray-700 dark:text-gray-300">
+                            <input type="checkbox" x-model="aiContinueChat" class="mr-2 h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500">
+                            启用连续对话（保留上下文）
+                        </label>
+                    </div>
+                    
+                    <!-- 显示日志内容预览 -->
+                    <div x-show="aiLogPreview" class="mt-4">
+                        <div class="flex justify-between items-center mb-2">
+                            <h4 class="text-sm font-medium text-gray-700 dark:text-gray-300">日志内容预览</h4>
+                            <span class="text-xs text-gray-500 dark:text-gray-400" x-text="'约 ' + (aiLogPreview?.split('\n').length || 0) + ' 行'"></span>
+                        </div>
+                        <div class="bg-gray-100 dark:bg-gray-800 p-3 rounded-md text-xs text-gray-700 dark:text-gray-300 max-h-32 overflow-y-auto">
+                            <pre x-text="aiLogPreview?.substring(0, 500) + (aiLogPreview?.length > 500 ? '...' : '')"></pre>
+                        </div>
+                    </div>
+                    
+                    <!-- AI回答显示区域 -->
+                    <div x-show="aiResponse" class="ai-response">
+                        <pre x-text="aiResponse"></pre>
+                    </div>
+                    
+                    <!-- 加载状态 -->
+                    <div x-show="aiLoading" class="ai-loading">
+                        <div class="ai-loading-spinner"></div>
+                        <span>正在分析日志，请稍候...</span>
+                    </div>
+                </div>
+                <div class="ai-query-footer">
+                    <button 
+                        @click="closeAIQueryModal"
+                        class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700"
+                    >
+                        取消
+                    </button>
+                    <button 
+                        @click="submitAIQuery"
+                        class="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 focus:outline-none"
+                        :disabled="aiLoading"
+                    >
+                        <i class="fas fa-paper-plane mr-2"></i>
+                        发送询问
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 导入主脚本 -->
+    <script src="/js/main.js"></script>
     
-    <script src="js/terminal.js"></script>
+    <!-- 页面预加载脚本 -->
+    <script src="/js/preloader.js"></script>
+    
+    <!-- 公告脚本 -->
+    <script src="/js/notice.js"></script>
 </body>
-</html>
+</html> 

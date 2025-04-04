@@ -1,0 +1,739 @@
+<!DOCTYPE html>
+<html lang="zh-CN" class="h-full" x-data="{ darkMode: localStorage.getItem('darkMode') === 'true', sidebarOpen: window.innerWidth >= 1024 }" :class="{ 'dark': darkMode }">
+<head>
+    <meta charset="UTF-8">
+    
+    <title>MCDR WebUI - Web设置</title>
+    <!-- 主题预加载脚本 - 防止闪烁 -->
+    <script src="/js/theme-preload.js"></script>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Alpine.js -->
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <!-- 自定义CSS -->
+    <link rel="stylesheet" href="/css/main.css">
+    <!-- Tailwind配置 -->
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        primary: {
+                            50: '#f0f9ff',
+                            100: '#e0f2fe',
+                            200: '#bae6fd',
+                            300: '#7dd3fc',
+                            400: '#38bdf8',
+                            500: '#0ea5e9',
+                            600: '#0284c7',
+                            700: '#0369a1',
+                            800: '#075985',
+                            900: '#0c4a6e',
+                        },
+                    },
+                    animation: {
+                        'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+                        'float': 'float 3s ease-in-out infinite',
+                    },
+                    keyframes: {
+                        float: {
+                            '0%, 100%': { transform: 'translateY(0)' },
+                            '50%': { transform: 'translateY(-5px)' },
+                        }
+                    }
+                },
+            },
+        }
+    </script>
+</head>
+<body class="h-full bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100 transition-colors duration-300">
+    <div x-data="settingsApp()" x-init="init()">
+        <!-- 侧边栏 -->
+        <div id="sidebar" :class="{'translate-x-0': sidebarOpen, '-translate-x-full': !sidebarOpen}" class="sidebar-width fixed top-0 left-0 bottom-0 z-30 transform transition-transform duration-300 ease-in-out bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 shadow-lg overflow-y-auto">
+            <div class="p-4 flex flex-col h-full">
+                <!-- Logo -->
+                <div class="flex items-center justify-center mb-8 mt-2">
+                    <div class="w-12 h-12 rounded-full bg-gradient-to-r from-blue-400 to-purple-500 flex items-center justify-center mr-3 shadow-lg">
+                        <i class="fas fa-server text-white text-xl"></i>
+                    </div>
+                    <div>
+                        <h1 class="text-xl font-bold text-gray-800 dark:text-white">MCDR WebUI</h1>
+                        <p class="text-xs text-gray-500 dark:text-gray-400">服务器管理平台</p>
+                    </div>
+                </div>
+                
+                <!-- 导航菜单 -->
+                <div class="flex-1 overflow-y-auto">
+                    <nav class="space-y-1">
+                        <a href="/index" class="flex items-center px-4 py-3 text-sm font-medium rounded-lg text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
+                            <i class="fas fa-home w-6 text-center"></i>
+                            <span class="ml-3">仪表盘</span>
+                        </a>
+                        
+                        <a href="/mcdr" class="flex items-center px-4 py-3 text-sm font-medium rounded-lg text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
+                            <i class="fas fa-cogs w-6 text-center"></i>
+                            <span class="ml-3">MCDR 配置</span>
+                        </a>
+                        
+                        <a href="/mc" class="flex items-center px-4 py-3 text-sm font-medium rounded-lg text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
+                            <i class="fas fa-gamepad w-6 text-center"></i>
+                            <span class="ml-3">MC 服务器配置</span>
+                        </a>
+                        
+                        <a href="/plugins" class="flex items-center px-4 py-3 text-sm font-medium rounded-lg text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
+                            <i class="fas fa-puzzle-piece w-6 text-center"></i>
+                            <span class="ml-3">本地插件</span>
+                        </a>
+                        
+                        <a href="/online-plugins" class="flex items-center px-4 py-3 text-sm font-medium rounded-lg text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
+                            <i class="fas fa-cloud-download-alt w-6 text-center"></i>
+                            <span class="ml-3">在线插件</span>
+                        </a>
+
+                        <a href="/terminal" class="flex items-center px-4 py-3 text-sm font-medium rounded-lg text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
+                            <i class="fas fa-terminal w-6 text-center"></i>
+                            <span class="ml-3">终端日志</span>
+                        </a>
+                        
+                        <a href="/gugubot" class="flex items-center px-4 py-3 text-sm font-medium rounded-lg text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
+                            <i class="fas fa-robot w-6 text-center"></i>
+                            <span class="ml-3">GUGUBot 管理</span>
+                        </a>
+                        
+                        <a href="/cq" class="flex items-center px-4 py-3 text-sm font-medium rounded-lg text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
+                            <i class="fas fa-comments w-6 text-center"></i>
+                            <span class="ml-3">CQ-QQ-API</span>
+                        </a>
+                        
+                        <a href="/fabric" class="flex items-center px-4 py-3 text-sm font-medium rounded-lg text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
+                            <i class="fas fa-cube w-6 text-center"></i>
+                            <span class="ml-3">Fabric 管理</span>
+                        </a>
+                    </nav>
+                </div>
+                
+                <!-- 底部功能区 -->
+                <div class="pt-4 mt-6 border-t border-gray-200 dark:border-gray-700">
+                    <a href="/settings" class="flex items-center px-4 py-3 text-sm font-medium rounded-lg bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-200">
+                        <i class="fas fa-cog w-6 text-center"></i>
+                        <span class="ml-3">Web设置</span>
+                    </a>
+                    
+                    <a href="/about" class="flex items-center px-4 py-3 text-sm font-medium rounded-lg text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
+                        <i class="fas fa-info-circle w-6 text-center"></i>
+                        <span class="ml-3">关于</span>
+                    </a>
+                    
+                    <a href="/logout" class="flex items-center px-4 py-3 text-sm font-medium rounded-lg text-red-700 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors mt-2">
+                        <i class="fas fa-sign-out-alt w-6 text-center"></i>
+                        <span class="ml-3">退出登录</span>
+                    </a>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 主内容区 -->
+        <div id="main-content" :class="{'sidebar-open': sidebarOpen}" class="main-content min-h-screen transition-all duration-300">
+            <!-- 顶部导航栏 -->
+            <header id="header" class="bg-white dark:bg-gray-800 shadow-sm border-b border-gray-200 dark:border-gray-700 h-16 fixed top-0 right-0 left-0 z-20" :class="{'left-0': !sidebarOpen, 'left-[260px]': sidebarOpen}">
+                <div class="h-full px-4 sm:px-6 flex items-center justify-between">
+                    <!-- 左侧部分 -->
+                    <div class="flex items-center">
+                        <!-- 移动端菜单按钮 -->
+                        <button @click="sidebarOpen = !sidebarOpen" class="inline-flex items-center justify-center p-2 rounded-md text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 focus:outline-none transition-colors">
+                            <i :class="sidebarOpen ? 'fa-times' : 'fa-bars'" class="fas"></i>
+                        </button>
+                        
+                        <!-- 页面标题 -->
+                        <h1 class="ml-4 text-xl font-semibold text-gray-800 dark:text-white">Web设置</h1>
+                    </div>
+                    
+                    <!-- 右侧部分 -->
+                    <div class="flex items-center space-x-4">
+                        <!-- 公告 -->
+                        <div class="nav-notice hidden md:flex items-center bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-300 px-3 py-1 rounded-full text-xs font-medium mr-2">
+                            <span class="nav-notice-text"><i class="fas fa-circle-notch fa-spin mr-1.5"></i> 加载公告中...</span>
+                        </div>
+                    
+                        <!-- 服务器状态 -->
+                        <div class="hidden sm:flex items-center">
+                            <div class="px-3 py-1 rounded-full text-xs font-medium flex items-center" :class="{
+                                'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300': serverStatus === 'online',
+                                'bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300': serverStatus === 'offline',
+                                'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300': serverStatus === 'error',
+                                'bg-gray-100 dark:bg-gray-900/30 text-gray-800 dark:text-gray-300': serverStatus === 'loading'
+                            }">
+                                <span x-show="serverStatus === 'online'" class="flex items-center">
+                                    <i class="fas fa-circle mr-1 text-xs"></i>
+                                    <span>在线</span>
+                                </span>
+                                <span x-show="serverStatus === 'offline'" class="flex items-center">
+                                    <i class="fas fa-circle mr-1 text-xs"></i>
+                                    <span>离线</span>
+                                </span>
+                                <span x-show="serverStatus === 'error'" class="flex items-center">
+                                    <i class="fas fa-exclamation-triangle mr-1"></i>
+                                    <span>错误</span>
+                                </span>
+                                <span x-show="serverStatus === 'loading'" class="flex items-center">
+                                    <i class="fas fa-circle-notch fa-spin mr-1 text-xs"></i>
+                                    <span>加载中</span>
+                                </span>
+                            </div>
+                        </div>
+                        
+                        <!-- 主题切换 -->
+                        <button @click="darkMode = !darkMode; localStorage.setItem('darkMode', darkMode)" class="inline-flex items-center justify-center p-2 rounded-md text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 focus:outline-none transition-colors">
+                            <i class="fas" :class="darkMode ? 'fa-sun' : 'fa-moon'"></i>
+                        </button>
+                        
+                        <!-- 用户信息 -->
+                        <div class="flex items-center">
+                            <div class="w-8 h-8 rounded-full bg-blue-500 flex items-center justify-center text-white user-avatar overflow-hidden">
+                                <i class="fas fa-user"></i>
+                            </div>
+                            <span class="ml-2 text-sm font-medium text-gray-700 dark:text-gray-300 js-username" x-text="userName || '用户'"></span>
+                        </div>
+                    </div>
+                </div>
+            </header>
+            
+            <!-- 主内容 -->
+            <main class="pt-24 px-4 sm:px-6 md:px-8 pb-8">
+                <!-- 设置卡片 -->
+                <div class="bg-white dark:bg-gray-800 shadow-sm rounded-lg p-6 border border-gray-200 dark:border-gray-700">
+                    <h2 class="text-xl font-bold text-gray-800 dark:text-white mb-6 pb-2 border-b border-gray-200 dark:border-gray-700">WebUI 设置</h2>
+                    
+                    <!-- 网络设置 -->
+                    <div class="mb-8">
+                        <h3 class="text-lg font-semibold text-gray-800 dark:text-white mb-4">网络设置</h3>
+                        <div class="space-y-4">
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                    <label for="host" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">主机地址</label>
+                                    <div class="relative">
+                                        <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-500 dark:text-gray-400">
+                                            <i class="fas fa-globe"></i>
+                                        </span>
+                                        <input type="text" id="host" x-model="webConfig.host" class="pl-10 w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400">
+                                    </div>
+                                    <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">服务器绑定的主机地址 (例如: 0.0.0.0 或 127.0.0.1)</p>
+                                </div>
+                                <div>
+                                    <label for="port" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">端口</label>
+                                    <div class="relative">
+                                        <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-500 dark:text-gray-400">
+                                            <i class="fas fa-network-wired"></i>
+                                        </span>
+                                        <input type="number" id="port" x-model="webConfig.port" class="pl-10 w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400">
+                                    </div>
+                                    <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">WebUI 服务端口 (例如: 8000)</p>
+                                </div>
+                            </div>
+                            <div class="text-right">
+                                <button @click="saveNetworkConfig()" class="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-colors duration-200 flex items-center ml-auto">
+                                    <i class="fas fa-save mr-2"></i> 保存网络设置
+                                </button>
+                            </div>
+                            <div class="bg-yellow-50 dark:bg-yellow-900/20 text-yellow-800 dark:text-yellow-300 p-4 rounded-lg">
+                                <div class="flex">
+                                    <div class="flex-shrink-0">
+                                        <i class="fas fa-exclamation-triangle"></i>
+                                    </div>
+                                    <div class="ml-3">
+                                        <p class="text-sm">更改网络设置后需要重启 WebUI 服务才能生效。</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- 账户设置 -->
+                    <div class="mb-8">
+                        <h3 class="text-lg font-semibold text-gray-800 dark:text-white mb-4">账户设置</h3>
+                        <div class="space-y-4">
+                            <div>
+                                <label for="superAdminAccount" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">超级管理员账号</label>
+                                <div class="relative">
+                                    <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-500 dark:text-gray-400">
+                                        <i class="fas fa-user-shield"></i>
+                                    </span>
+                                    <input type="text" id="superAdminAccount" x-model="webConfig.super_admin_account" class="pl-10 w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400">
+                                </div>
+                                <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">具有超级管理员权限的QQ账号</p>
+                            </div>
+                            <div class="text-right">
+                                <button @click="saveAccountConfig()" class="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-colors duration-200 flex items-center ml-auto">
+                                    <i class="fas fa-save mr-2"></i> 保存账户设置
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- 安全设置 -->
+                    <div>
+                        <h3 class="text-lg font-semibold text-gray-800 dark:text-white mb-4">安全设置</h3>
+                        <div class="space-y-4">
+                            <div class="flex items-center">
+                                <button @click="toggleSetting('disable_admin_login_web')" class="relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+                                    :class="webConfig.disable_admin_login_web ? 'bg-blue-600' : 'bg-gray-200 dark:bg-gray-700'">
+                                    <span class="sr-only">Toggle</span>
+                                    <span class="inline-block h-4 w-4 transform rounded-full bg-white transition-transform"
+                                        :class="webConfig.disable_admin_login_web ? 'translate-x-6' : 'translate-x-1'"></span>
+                                </button>
+                                <span class="ml-3 text-sm text-gray-700 dark:text-gray-300">禁用管理员网页登录</span>
+                            </div>
+                            <div class="flex items-center">
+                                <button @click="toggleSetting('enable_temp_login_password')" class="relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+                                    :class="webConfig.enable_temp_login_password ? 'bg-blue-600' : 'bg-gray-200 dark:bg-gray-700'">
+                                    <span class="sr-only">Toggle</span>
+                                    <span class="inline-block h-4 w-4 transform rounded-full bg-white transition-transform"
+                                        :class="webConfig.enable_temp_login_password ? 'translate-x-6' : 'translate-x-1'"></span>
+                                </button>
+                                <span class="ml-3 text-sm text-gray-700 dark:text-gray-300">启用临时登录密码</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- DeepSeek配置 -->
+                <div class="bg-white dark:bg-gray-800 shadow-md rounded-lg p-6 mb-6">
+                    <h2 class="text-xl font-semibold mb-4 text-gray-800 dark:text-gray-200 flex items-center">
+                        <i class="fas fa-robot mr-2"></i> DeepSeek AI 配置
+                    </h2>
+                    
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2" for="deepseek_api_key">
+                                API 密钥
+                            </label>
+                            <div class="relative">
+                                <input 
+                                    type="password" 
+                                    id="deepseek_api_key" 
+                                    x-model="deepseekApiKey"
+                                    class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500" 
+                                    placeholder="输入新的DeepSeek API密钥"
+                                >
+                                <button type="button" @click="togglePasswordVisibility('deepseek_api_key')" class="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 focus:outline-none">
+                                    <i class="fas fa-eye" id="deepseek_api_key_toggle"></i>
+                                </button>
+                                <div x-show="isKeyValid" class="absolute inset-y-0 right-10 flex items-center text-green-500">
+                                    <i class="fas fa-check-circle"></i>
+                                </div>
+                                <div x-show="keyValidated && !isKeyValid" class="absolute inset-y-0 right-10 flex items-center text-red-500">
+                                    <i class="fas fa-times-circle"></i>
+                                </div>
+                            </div>
+                            <p class="mt-1 text-xs text-gray-500 dark:text-gray-400 flex items-center justify-between">
+                                <span>API密钥在DeepSeek官网可以获取: <a href="https://platform.deepseek.com/" target="_blank" class="text-blue-500 hover:underline">platform.deepseek.com</a></span>
+                                <button 
+                                    type="button" 
+                                    @click="validateApiKey"
+                                    class="px-2 py-1 text-xs bg-blue-500 text-white rounded hover:bg-blue-600 focus:outline-none"
+                                    :disabled="!deepseekApiKey"
+                                >
+                                    验证密钥
+                                </button>
+                            </p>
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2" for="deepseek_model">
+                                模型选择
+                            </label>
+                            <select 
+                                id="deepseek_model" 
+                                x-model="deepseekModel"
+                                class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                            >
+                                <option value="deepseek-chat">deepseek-chat (默认)</option>
+                                <option value="deepseek-reasonerr">deepseek-reasonerr</option>
+                            </select>
+                            <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                                选择使用的DeepSeek AI模型
+                            </p>
+                        </div>
+                        
+                        <div class="flex justify-end">
+                            <button 
+                                type="button" 
+                                @click="saveDeepseekConfig"
+                                class="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:focus:ring-offset-gray-800 flex items-center"
+                            >
+                                <i class="fas fa-save mr-2"></i>
+                                保存DeepSeek配置
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 页脚 -->
+                <footer class="mt-12 text-center text-sm text-gray-500 dark:text-gray-400">
+                    <p>MCDR WebUI &copy; <span id="year"></span></p>
+                </footer>
+            </main>
+        </div>
+
+        <!-- 通知 -->
+        <div id="notification-container" class="fixed top-16 right-4 z-50 flex flex-col gap-2"></div>
+    </div>
+
+    <!-- JavaScript -->
+    <script src="/js/main.js"></script>
+    <script src="/js/preloader.js"></script>
+    <!-- 公告脚本 -->
+    <script src="/js/notice.js"></script>
+    <script>
+        function settingsApp() {
+            return {
+                serverStatus: 'loading',
+                userName: '',
+                webConfig: {
+                    host: '',
+                    port: 8000,
+                    super_admin_account: '',
+                    disable_admin_login_web: false,
+                    enable_temp_login_password: false
+                },
+                deepseekApiKey: '',
+                deepseekModel: 'deepseek-chat',
+                isKeyValid: false,
+                keyValidated: false,
+                
+                // 初始化
+                init() {
+                    this.checkLoginStatus();
+                    this.checkServerStatus();
+                    this.getConfig();
+                    
+                    // 每60秒自动刷新服务器状态
+                    setInterval(() => this.checkServerStatus(), 60000);
+                    
+                    // 设置当前年份
+                    document.getElementById('year').textContent = new Date().getFullYear();
+                },
+                
+                // 检查登录状态
+                async checkLoginStatus() {
+                    try {
+                        const response = await fetch('/api/checkLogin');
+                        const data = await response.json();
+                        if (data.status === 'success') {
+                            this.userName = data.username;
+                        }
+                    } catch (error) {
+                        console.error('Error checking login status:', error);
+                    }
+                },
+                
+                // 检查服务器状态
+                async checkServerStatus() {
+                    try {
+                        this.serverStatus = 'loading';
+                        const response = await fetch('/api/get_server_status');
+                        const data = await response.json();
+                        this.serverStatus = data.status || 'offline';
+                    } catch (error) {
+                        console.error('Error checking server status:', error);
+                        this.serverStatus = 'error';
+                    }
+                },
+                
+                // 获取配置
+                async getConfig() {
+                    try {
+                        const response = await fetch('/api/get_web_config');
+                        const config = await response.json();
+                        
+                        this.webConfig.host = config.host || '0.0.0.0';
+                        this.webConfig.port = config.port || 8000;
+                        this.webConfig.super_admin_account = config.super_admin_account || '';
+                        this.webConfig.disable_admin_login_web = config.disable_admin_login_web || false;
+                        this.webConfig.enable_temp_login_password = config.enable_temp_login_password || false;
+                        this.deepseekModel = config.deepseek_model || 'deepseek-chat';
+                        // 不加载已保存的API密钥，留空等待用户设置新的密钥
+                        this.deepseekApiKey = '';
+                        // 如果已配置过密钥，标记为已验证和有效
+                        if (config.deepseek_api_key && config.deepseek_api_key.trim() !== '') {
+                            this.isKeyValid = true;
+                            this.keyValidated = true;
+                        }
+                        
+                        // 更新后台切换开关状态
+                        this.$nextTick(() => {
+                            const toggleSwitches = document.querySelectorAll('.toggle-switch');
+                            toggleSwitches.forEach((switchEl) => {
+                                switchEl.checked = this[switchEl.id];
+                            });
+                        });
+                    } catch (error) {
+                        console.error('Error loading config:', error);
+                        this.showNotification('加载配置失败', 'error');
+                    }
+                },
+                
+                // 保存网络配置
+                async saveNetworkConfig() {
+                    try {
+                        // 验证输入
+                        if (!this.webConfig.host) {
+                            this.showNotification('主机地址不能为空', 'error');
+                            return;
+                        }
+                        
+                        if (!this.webConfig.port || this.webConfig.port < 1 || this.webConfig.port > 65535) {
+                            this.showNotification('端口必须是1-65535之间的有效数字', 'error');
+                            return;
+                        }
+                        
+                        const response = await fetch('/api/save_web_config', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify({
+                                action: 'config',
+                                host: this.webConfig.host,
+                                port: this.webConfig.port
+                            })
+                        });
+                        
+                        const result = await response.json();
+                        if (result.status === 'success') {
+                            this.showNotification('网络设置保存成功', 'success');
+                        } else {
+                            this.showNotification('保存失败: ' + result.message, 'error');
+                        }
+                    } catch (error) {
+                        console.error('Error saving network config:', error);
+                        this.showNotification('保存出错: ' + error.message, 'error');
+                    }
+                },
+                
+                // 保存账户配置
+                async saveAccountConfig() {
+                    try {
+                        // 验证输入
+                        if (!this.webConfig.super_admin_account) {
+                            this.showNotification('超级管理员账号不能为空', 'error');
+                            return;
+                        }
+                        
+                        const response = await fetch('/api/save_web_config', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify({
+                                action: 'config',
+                                superaccount: this.webConfig.super_admin_account
+                            })
+                        });
+                        
+                        const result = await response.json();
+                        if (result.status === 'success') {
+                            this.showNotification('账户设置保存成功', 'success');
+                        } else {
+                            this.showNotification('保存失败: ' + result.message, 'error');
+                        }
+                    } catch (error) {
+                        console.error('Error saving account config:', error);
+                        this.showNotification('保存出错: ' + error.message, 'error');
+                    }
+                },
+                
+                // 切换布尔设置
+                async toggleSetting(setting) {
+                    try {
+                        const apiSetting = setting === 'disable_admin_login_web' ? 'disable_admin_login_web' : 'enable_temp_login_password';
+                        
+                        const response = await fetch('/api/save_web_config', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify({
+                                action: apiSetting
+                            })
+                        });
+                        
+                        const result = await response.json();
+                        if (result.status === 'success') {
+                            // 切换本地状态
+                            this.webConfig[setting] = result.message;
+                            this.showNotification(`设置已${this.webConfig[setting] ? '启用' : '禁用'}`, 'success');
+                        } else {
+                            this.showNotification('设置切换失败: ' + result.message, 'error');
+                        }
+                    } catch (error) {
+                        console.error('Error toggling setting:', error);
+                        this.showNotification('设置出错: ' + error.message, 'error');
+                    }
+                },
+                
+                // 显示通知
+                showNotification(message, type = 'info') {
+                    // 获取或创建通知容器
+                    let notificationContainer = document.getElementById('notification-container');
+                    if (!notificationContainer) {
+                        notificationContainer = document.createElement('div');
+                        notificationContainer.id = 'notification-container';
+                        notificationContainer.className = 'fixed top-16 right-4 z-50 flex flex-col gap-2';
+                        document.body.appendChild(notificationContainer);
+                    }
+                    
+                    // 创建通知元素
+                    const notification = document.createElement('div');
+                    notification.className = `p-3 rounded-lg shadow-lg transition-all duration-300 transform translate-x-full opacity-0`;
+                    
+                    // 根据类型设置样式
+                    switch (type) {
+                        case 'success':
+                            notification.className += ' bg-green-500 text-white';
+                            notification.innerHTML = `<i class="fas fa-check-circle mr-2"></i>${message}`;
+                            break;
+                        case 'error':
+                            notification.className += ' bg-red-500 text-white';
+                            notification.innerHTML = `<i class="fas fa-times-circle mr-2"></i>${message}`;
+                            break;
+                        default:
+                            notification.className += ' bg-blue-500 text-white';
+                            notification.innerHTML = `<i class="fas fa-info-circle mr-2"></i>${message}`;
+                    }
+                    
+                    // 添加到容器
+                    notificationContainer.appendChild(notification);
+                    
+                    // 触发动画
+                    setTimeout(() => {
+                        notification.classList.remove('translate-x-full', 'opacity-0');
+                        notification.classList.add('translate-x-0', 'opacity-100');
+                    }, 10);
+                    
+                    // 自动移除
+                    setTimeout(() => {
+                        notification.classList.remove('translate-x-0', 'opacity-100');
+                        notification.classList.add('translate-x-full', 'opacity-0');
+                        setTimeout(() => {
+                            notificationContainer.removeChild(notification);
+                        }, 300);
+                    }, 3000);
+                },
+                
+                // 保存DeepSeek配置
+                async saveDeepseekConfig() {
+                    try {
+                        // 如果没有验证，提示用户先验证密钥
+                        if (this.deepseekApiKey && !this.keyValidated) {
+                            this.showNotification('请先验证API密钥', 'warning');
+                            return;
+                        }
+                        
+                        // 如果密钥不为空且验证不通过，提示用户
+                        if (this.deepseekApiKey && !this.isKeyValid) {
+                            this.showNotification('API密钥无效，请重新输入', 'error');
+                            return;
+                        }
+                        
+                        // 如果密钥为空且没有之前验证过的有效密钥，显示警告
+                        if (!this.deepseekApiKey && !this.isKeyValid) {
+                            if (!confirm('您没有设置API密钥，确定要保存吗？')) {
+                                return;
+                            }
+                        }
+                        
+                        const response = await fetch('/api/save_web_config', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify({
+                                action: 'config',
+                                deepseek_api_key: this.deepseekApiKey || undefined, // 如果为空，传undefined表示不修改
+                                deepseek_model: this.deepseekModel
+                            })
+                        });
+                        
+                        const result = await response.json();
+                        if (result.status === 'success') {
+                            this.showNotification('DeepSeek配置保存成功', 'success');
+                            // 保存成功后重置状态
+                            if (this.deepseekApiKey) {
+                                this.deepseekApiKey = '';
+                                this.keyValidated = false;
+                            }
+                        } else {
+                            this.showNotification('保存失败: ' + result.message, 'error');
+                        }
+                    } catch (error) {
+                        console.error('Error saving DeepSeek config:', error);
+                        this.showNotification('保存出错: ' + error.message, 'error');
+                    }
+                },
+                
+                // 切换密码可见性
+                togglePasswordVisibility(id) {
+                    const input = document.getElementById(id);
+                    const toggle = document.getElementById(`${id}_toggle`);
+                    
+                    if (input.type === 'password') {
+                        input.type = 'text';
+                        toggle.classList.remove('fa-eye');
+                        toggle.classList.add('fa-eye-slash');
+                    } else {
+                        input.type = 'password';
+                        toggle.classList.remove('fa-eye-slash');
+                        toggle.classList.add('fa-eye');
+                    }
+                },
+                
+                // 添加API密钥验证方法
+                async validateApiKey() {
+                    if (!this.deepseekApiKey) {
+                        this.showNotification('请输入API密钥', 'error');
+                        return;
+                    }
+                    
+                    try {
+                        this.showNotification('正在验证API密钥...', 'info');
+                        
+                        // 向DeepSeek API发送简单测试请求
+                        const response = await fetch('/api/deepseek', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify({
+                                query: '测试密钥是否有效，请回复"有效"',
+                                system_prompt: '你是一个简单的验证程序，只需回复"有效"',
+                                model: this.deepseekModel
+                            })
+                        });
+                        
+                        const result = await response.json();
+                        
+                        if (result.status === 'success') {
+                            this.isKeyValid = true;
+                            this.keyValidated = true;
+                            this.showNotification('API密钥验证成功', 'success');
+                        } else {
+                            this.isKeyValid = false;
+                            this.keyValidated = true;
+                            this.showNotification(`API密钥验证失败: ${result.message}`, 'error');
+                        }
+                    } catch (error) {
+                        console.error('API密钥验证错误:', error);
+                        this.isKeyValid = false;
+                        this.keyValidated = true;
+                        this.showNotification(`验证出错: ${error.message}`, 'error');
+                    }
+                }
+            };
+        }
+    </script>
+</body>
+</html> 

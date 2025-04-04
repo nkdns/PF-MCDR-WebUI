@@ -1,6 +1,7 @@
 import datetime
 import javaproperties
 import secrets
+import aiohttp
 
 from pathlib import Path
 
@@ -209,44 +210,76 @@ async def render_template_if_logged_in(request: Request, template_name: str):
         return RedirectResponse(url="/login")
     return templates.TemplateResponse(template_name, {"request": request, "index_path": "/index"})
 
-
 @app.get("/gugubot", response_class=HTMLResponse)
 async def gugubot(request: Request, token_valid: bool = Depends(verify_token)):
-    return await render_template_if_logged_in(request, "gugubot.html")
+    try:
+        return await render_template_if_logged_in(request, "gugubot.html")
+    except Exception:
+        return templates.TemplateResponse("404.html", {"request": request}, status_code=404)
 
 
 @app.get("/cq", response_class=HTMLResponse)
 async def cq(request: Request, token_valid: bool = Depends(verify_token)):
-    return await render_template_if_logged_in(request, "cq.html")
+    try:
+        return await render_template_if_logged_in(request, "cq.html")
+    except Exception:
+        return templates.TemplateResponse("404.html", {"request": request}, status_code=404)
 
 
 @app.get("/mc", response_class=HTMLResponse)
 async def mc(request: Request, token_valid: bool = Depends(verify_token)):
-    return await render_template_if_logged_in(request, "mc.html")
+    try:
+        return await render_template_if_logged_in(request, "mc.html")
+    except Exception:
+        return templates.TemplateResponse("404.html", {"request": request}, status_code=404)
 
 
 @app.get("/mcdr", response_class=HTMLResponse)
 async def mcdr(request: Request, token_valid: bool = Depends(verify_token)):
-    return await render_template_if_logged_in(request, "mcdr.html")
+    try:
+        return await render_template_if_logged_in(request, "mcdr.html")
+    except Exception:
+        return templates.TemplateResponse("404.html", {"request": request}, status_code=404)
 
 
 @app.get("/plugins", response_class=HTMLResponse)
 async def plugins(request: Request, token_valid: bool = Depends(verify_token)):
-    return await render_template_if_logged_in(request, "plugins.html")
+    try:
+        return await render_template_if_logged_in(request, "plugins.html")
+    except Exception:
+        return templates.TemplateResponse("404.html", {"request": request}, status_code=404)
 
 
 @app.get("/online-plugins", response_class=HTMLResponse)
-async def plugins(request: Request, token_valid: bool = Depends(verify_token)):
-    return await render_template_if_logged_in(request, "online-plugins.html")
+async def online_plugins(request: Request, token_valid: bool = Depends(verify_token)):
+    try:
+        return await render_template_if_logged_in(request, "online-plugins.html")
+    except Exception:
+        return templates.TemplateResponse("404.html", {"request": request}, status_code=404)
+
 
 @app.get("/fabric", response_class=HTMLResponse)
 async def fabric(request: Request, token_valid: bool = Depends(verify_token)):
-    return await render_template_if_logged_in(request, "fabric.html")
+    try:
+        return await render_template_if_logged_in(request, "fabric.html")
+    except Exception:
+        return templates.TemplateResponse("404.html", {"request": request}, status_code=404)
+
+
+@app.get("/settings", response_class=HTMLResponse)
+async def settings(request: Request, token_valid: bool = Depends(verify_token)):
+    try:
+        return await render_template_if_logged_in(request, "settings.html")
+    except Exception:
+        return templates.TemplateResponse("404.html", {"request": request}, status_code=404)
 
 
 @app.get("/about", response_class=HTMLResponse)
 async def about(request: Request, token_valid: bool = Depends(verify_token)):
-    return await render_template_if_logged_in(request, "about.html")
+    try:
+        return await render_template_if_logged_in(request, "about.html")
+    except Exception:
+        return templates.TemplateResponse("404.html", {"request": request}, status_code=404)
 
 # 404 page
 @app.exception_handler(404)
@@ -476,6 +509,8 @@ async def get_web_config(request: Request):
             "super_admin_account": config["super_admin_account"],
             "disable_admin_login_web": config["disable_other_admin"],
             "enable_temp_login_password": config["allow_temp_password"],
+            "deepseek_api_key": config.get("deepseek_api_key", ""),
+            "deepseek_model": config.get("deepseek_model", "deepseek-chat"),
         }
     )
 
@@ -490,14 +525,19 @@ async def save_web_config(request: Request, config: saveconfig):
         "config.json", DEFALUT_CONFIG
     )
     # change port & account
-    if config.action == "config" and config.port:
-        web_config["host"] = config.host
-        web_config["port"] = int(config.port)
-        web_config["super_admin_account"] = (
-            int(config.superaccount)
-            if config.superaccount
-            else web_config["super_admin_account"]
-        )
+    if config.action == "config":
+        if config.host:
+            web_config["host"] = config.host
+        if config.port:
+            web_config["port"] = int(config.port)
+        if config.superaccount:
+            web_config["super_admin_account"] = int(config.superaccount)
+        # 更新DeepSeek配置
+        if config.deepseek_api_key is not None:
+            web_config["deepseek_api_key"] = config.deepseek_api_key
+        if config.deepseek_model is not None:
+            web_config["deepseek_model"] = config.deepseek_model
+        
         response = {"status": "success"}
     # disable_admin_login_web & enable_temp_login_password
     elif config.action in ["disable_admin_login_web", "enable_temp_login_password"]:
@@ -773,3 +813,384 @@ async def get_server_status(request: Request):
     }
 
     return JSONResponse(result)
+
+# 控制Minecraft服务器
+@app.post("/api/control_server")
+async def control_server(request: Request, control_info: server_control):
+    if not request.session.get("logged_in"):
+        return JSONResponse(
+            {"status": "error", "message": "User not logged in"}, status_code=401
+        )
+    
+    server:PluginServerInterface = app.state.server_interface
+    action = control_info.action
+    
+    allowed_actions = ["start", "stop", "restart"]
+    if action not in allowed_actions:
+        return JSONResponse(
+            {"status": "error", "message": f"无效的操作: {action}，允许的操作: {', '.join(allowed_actions)}"}, 
+            status_code=400
+        )
+    
+    try:
+        # 发送命令到MCDR
+        server.execute_command(f"!!MCDR server {action}")
+        
+        # 根据操作返回对应的消息
+        messages = {
+            "start": "服务器启动命令已发送",
+            "stop": "服务器停止命令已发送",
+            "restart": "服务器重启命令已发送"
+        }
+        
+        return JSONResponse({
+            "status": "success",
+            "message": messages[action]
+        })
+    except Exception as e:
+        return JSONResponse(
+            {"status": "error", "message": f"执行命令出错: {str(e)}"}, 
+            status_code=500
+        )
+
+# 获取服务器日志
+@app.get("/api/server_logs")
+async def get_server_logs(request: Request, start_line: int = 0, max_lines: int = 100, log_type: str = "mcdr", merged: bool = False):
+    """
+    获取服务器日志
+    
+    Args:
+        start_line: 开始行号（0为文件开始）
+        max_lines: 最大返回行数（防止返回过多数据）
+        log_type: 日志类型，支持 'mcdr'（MCDR日志）、'minecraft'（Minecraft服务器日志）和'merged'（合并日志）
+        merged: 是否合并MCDR和Minecraft日志
+    """
+    if not request.session.get("logged_in"):
+        return JSONResponse(
+            {"status": "error", "message": "User not logged in"}, status_code=401
+        )
+    
+    try:
+        # 限制最大返回行数，防止过多数据导致性能问题
+        if max_lines > 500:
+            max_lines = 500
+        
+        # 获取日志文件路径
+        mcdr_log_path = "logs/MCDR.log"
+        mc_log_path = get_minecraft_log_path(app.state.server_interface)
+        
+        # 处理合并日志请求
+        if merged:
+            log_watcher = LogWatcher()
+            result = log_watcher.get_merged_logs(mcdr_log_path, mc_log_path, max_lines)
+            
+            # 格式化合并日志内容
+            formatted_logs = []
+            for i, log in enumerate(result["logs"]):
+                formatted_logs.append({
+                    "line_number": i,
+                    "content": log["content"],
+                    "source": log["source"]
+                })
+            
+            return JSONResponse({
+                "status": "success",
+                "logs": formatted_logs,
+                "total_lines": result["total_lines"],
+                "current_start": result["start_line"],
+                "current_end": result["end_line"],
+                "log_type": "merged"
+            })
+        
+        # 处理单一类型日志请求
+        if log_type == "minecraft":
+            log_file_path = mc_log_path
+        else:
+            log_file_path = mcdr_log_path
+        
+        log_watcher = LogWatcher(log_file_path=log_file_path)
+        
+        # 如果请求特定行号之后的日志
+        if start_line > 0:
+            result = log_watcher.get_logs_after_line(start_line, max_lines)
+        else:
+            # 否则获取最新的日志
+            result = log_watcher.get_latest_logs(max_lines)
+        
+        # 格式化日志内容，去除行尾换行符，添加行号
+        formatted_logs = []
+        for i, line in enumerate(result["logs"]):
+            line_number = result["start_line"] + i
+            formatted_logs.append({
+                "line_number": line_number,
+                "content": line.rstrip("\n"),
+                "source": log_type
+            })
+        
+        return JSONResponse({
+            "status": "success",
+            "logs": formatted_logs,
+            "total_lines": result["total_lines"],
+            "current_start": result["start_line"],
+            "current_end": result["end_line"],
+            "log_type": log_type
+        })
+    except Exception as e:
+        return JSONResponse(
+            {"status": "error", "message": f"获取日志出错: {str(e)}"}, 
+            status_code=500
+        )
+
+# 获取最新的日志更新
+@app.get("/api/new_logs")
+async def get_new_logs(request: Request, last_line: int = 0, log_type: str = "mcdr"):
+    """
+    获取最新的日志更新，用于增量更新日志
+    
+    Args:
+        last_line: 客户端已有的最后一行行号
+        log_type: 日志类型，支持 'mcdr'（MCDR日志）和 'minecraft'（Minecraft服务器日志）
+    """
+    if not request.session.get("logged_in"):
+        return JSONResponse(
+            {"status": "error", "message": "User not logged in"}, status_code=401
+        )
+    
+    try:
+        # 根据日志类型选择不同的日志文件
+        if log_type == "minecraft":
+            # 获取基于MCDR配置的Minecraft日志路径，传递服务器接口
+            log_file_path = get_minecraft_log_path(app.state.server_interface)
+        else:
+            log_file_path = "logs/MCDR.log"  # 默认MCDR日志
+            
+        log_watcher = LogWatcher(log_file_path=log_file_path)
+        
+        # 先获取总行数，以确定是否有新日志
+        total_info = log_watcher.get_logs_after_line(0, 1)
+        total_lines = total_info["total_lines"]
+        
+        # 没有新日志
+        if last_line >= total_lines:
+            return JSONResponse({
+                "status": "success",
+                "logs": [],
+                "total_lines": total_lines,
+                "has_new": False
+            })
+        
+        # 有新日志，获取新的日志行
+        max_new_lines = 200  # 限制一次获取的最大新日志行数
+        result = log_watcher.get_logs_after_line(last_line, min(total_lines - last_line, max_new_lines))
+        
+        # 格式化日志内容
+        formatted_logs = []
+        for i, line in enumerate(result["logs"]):
+            line_number = last_line + i
+            formatted_logs.append({
+                "line_number": line_number,
+                "content": line.rstrip("\n")
+            })
+        
+        return JSONResponse({
+            "status": "success",
+            "logs": formatted_logs,
+            "total_lines": total_lines,
+            "has_new": True
+        })
+    except Exception as e:
+        return JSONResponse(
+            {"status": "error", "message": f"获取日志更新出错: {str(e)}"}, 
+            status_code=500
+        )
+
+@app.get("/terminal")
+async def terminal_page(request: Request):
+    """提供终端日志页面
+    
+    Args:
+        request: FastAPI请求对象
+    
+    Returns:
+        TemplateResponse: 终端日志页面
+    """
+    # 检查是否已登录
+    username = request.session.get("username")
+    if not username:
+        return RedirectResponse(url="/login?redirect=/terminal")
+    
+    return templates.TemplateResponse("terminal.html", {"request": request})
+
+@app.post("/api/send_command")
+async def send_command(request: Request):
+    """
+    发送命令到MCDR终端
+    """
+    if not request.session.get("logged_in"):
+        return JSONResponse(
+            {"status": "error", "message": "User not logged in"}, status_code=401
+        )
+    
+    try:
+        # 获取请求体中的命令
+        data = await request.json()
+        command = data.get("command", "").strip()
+        
+        if not command:
+            return JSONResponse(
+                {"status": "error", "message": "Command cannot be empty"}, 
+                status_code=400
+            )
+        
+        # 获取MCDR服务器接口
+        server:PluginServerInterface = app.state.server_interface
+        
+        # 输出到MCDR的日志
+        server.logger.info(f"发送命令: {command}")
+        
+        # 处理以/开头的命令，尝试通过RCON发送
+        if command.startswith("/"):
+            # 去掉开头的/，因为RCON不需要
+            mc_command = command[1:]
+            
+            # 检查RCON是否已连接
+            if hasattr(server, "is_rcon_running") and server.is_rcon_running():
+                try:
+                    # 通过RCON发送命令并获取反馈
+                    feedback = server.rcon_query(mc_command)
+                    server.logger.info(f"RCON反馈: {feedback}")
+                    return JSONResponse({
+                        "status": "success",
+                        "message": f"Command sent via RCON: {command}",
+                        "feedback": feedback
+                    })
+                except Exception as e:
+                    server.logger.error(f"RCON执行命令出错: {str(e)}")
+                    # RCON执行失败，回退到普通方式执行
+                    server.execute_command(command)
+                    return JSONResponse({
+                        "status": "success",
+                        "message": f"Command sent (RCON failed): {command}",
+                        "error": str(e)
+                    })
+            else:
+                server.logger.info("RCON未启用，使用普通方式发送命令")
+        
+        # 普通方式执行命令
+        server.execute_command(command)
+        
+        return JSONResponse({
+            "status": "success",
+            "message": f"Command sent: {command}"
+        })
+    except Exception as e:
+        return JSONResponse(
+            {"status": "error", "message": f"Error sending command: {str(e)}"}, 
+            status_code=500
+        )
+
+@app.post("/api/deepseek")
+async def query_deepseek(request: Request, query_data: DeepseekQuery):
+    """
+    向DeepSeek API发送问题并获取回答
+    
+    Args:
+        request: FastAPI请求对象
+        query_data: 查询数据，包含问题内容
+    
+    Returns:
+        JSONResponse: AI回答内容
+    """
+    # 检查是否已登录
+    if not request.session.get("logged_in"):
+        return JSONResponse(
+            {"status": "error", "message": "用户未登录"}, status_code=401
+        )
+    
+    try:
+        # 加载配置
+        server = app.state.server_interface
+        config = server.load_config_simple("config.json", DEFALUT_CONFIG)
+        
+        # 获取API密钥
+        api_key = config.get("deepseek_api_key", "")
+        if not api_key:
+            return JSONResponse(
+                {"status": "error", "message": "未配置DeepSeek API密钥"}, 
+                status_code=400
+            )
+        
+        # 获取模型配置
+        model = query_data.model or config.get("deepseek_model", "deepseek-chat")
+        
+        # 检查查询内容
+        query = query_data.query.strip()
+        if not query:
+            return JSONResponse(
+                {"status": "error", "message": "查询内容不能为空"}, 
+                status_code=400
+            )
+        
+        # 准备API请求
+        headers = {
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {api_key}"
+        }
+        
+        # 构建消息
+        messages = []
+        
+        # 添加系统指令（如果有）
+        if query_data.system_prompt:
+            messages.append({
+                "role": "system",
+                "content": query_data.system_prompt
+            })
+        
+        # 添加用户问题
+        messages.append({
+            "role": "user",
+            "content": query
+        })
+        
+        # 准备请求数据
+        json_data = {
+            "model": model,
+            "messages": messages,
+            "temperature": 0.7,
+            "max_tokens": 4000
+        }
+        
+        # 发送请求到DeepSeek API
+        async with aiohttp.ClientSession() as session:
+            async with session.post(
+                "https://api.deepseek.com/chat/completions", 
+                headers=headers, 
+                json=json_data
+            ) as response:
+                # 解析响应
+                result = await response.json()
+                
+                if response.status != 200:
+                    error_msg = result.get("error", {}).get("message", "未知错误")
+                    return JSONResponse(
+                        {"status": "error", "message": f"API错误: {error_msg}"}, 
+                        status_code=response.status
+                    )
+                
+                # 从响应中提取AI回答
+                answer = result.get("choices", [{}])[0].get("message", {}).get("content", "")
+                
+                return JSONResponse({
+                    "status": "success",
+                    "answer": answer,
+                    "model": model
+                })
+                
+    except Exception as e:
+        server = app.state.server_interface
+        server.logger.error(f"DeepSeek API请求失败: {str(e)}")
+        return JSONResponse(
+            {"status": "error", "message": f"请求失败: {str(e)}"}, 
+            status_code=500
+        )

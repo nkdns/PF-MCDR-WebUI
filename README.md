@@ -1,11 +1,11 @@
 # PF-MCDR-WebUI
 为 MCDR 开发的在线 WebUI 插件
 
-[![页面浏览量计数](https://badges.toozhao.com/badges/01JC0ZMB6718E924N6H2FEZRC5/green.svg)](/) 
+[![页面浏览量计数](https://badges.toozhao.com/badges/01JC0ZMB6718E924N6H2FEZRC5/green.svg)](/) 
 [![查看次数起始时间](https://img.shields.io/badge/查看次数统计起始于-2024%2F11%2F06-2?style=flat-square)](/)
-[![仓库大小](https://img.shields.io/github/repo-size/LoosePrince/PF-MCDR-WebUI?style=flat-square&label=仓库占用)](/) 
+[![仓库大小](https://img.shields.io/github/repo-size/LoosePrince/PF-MCDR-WebUI?style=flat-square&label=仓库占用)](/) 
 [![最新版](https://img.shields.io/github/v/release/LoosePrince/PF-MCDR-WebUI?style=flat-square&label=最新版)](https://github.com/LoosePrince/PF-MCDR-WebUI/releases/latest/)
-[![议题](https://img.shields.io/github/issues/LoosePrince/PF-MCDR-WebUI?style=flat-square&label=Issues)](https://github.com/LoosePrince/PF-MCDR-WebUI/issues) 
+[![议题](https://img.shields.io/github/issues/LoosePrince/PF-MCDR-WebUI?style=flat-square&label=Issues)](https://github.com/LoosePrince/PF-MCDR-WebUI/issues) 
 [![已关闭issues](https://img.shields.io/github/issues-closed/LoosePrince/PF-MCDR-WebUI?style=flat-square&label=已关闭%20Issues)](https://github.com/LoosePrince/PF-MCDR-WebUI/issues?q=is%3Aissue+is%3Aclosed)
 [![下载量](https://img.shields.io/github/downloads/LoosePrince/PF-MCDR-WebUI/total?style=flat-square&label=下载量)](https://github.com/LoosePrince/PF-MCDR-WebUI/releases)
 [![最新发布下载量](https://img.shields.io/github/downloads/LoosePrince/PF-MCDR-WebUI/latest/total?style=flat-square&label=最新版本下载量)](https://github.com/LoosePrince/PF-MCDR-WebUI/releases/latest)
@@ -24,11 +24,17 @@
   - `yml文件` 识别每项上一行注释作为中文标题，使用 `::` 分割，第二项为副标题，例 `标题::副标题` ，请注意，使用的是英文的符号；
   - `json文件` 需要创建同级文件 `需要加标题的配置文件名_lang.josn` 例如 `abc_lang.json` 则会为 `abc.json` 创建中文标题，使用 `[标题,副标题]` 创建标题和副标题，参考示例: [config_lang.json](https://github.com/LoosePrince/PF-MCDR-WebUI/blob/main/config_lang.json)
   - `html格式`, 使用 `main.json` 在其中使用键对值的方式指定每个配置文件对应的 `html文件` ，届时加载时会加载 `html文件内容` ，请不要使用相对路径的文件，如 `/1.css` 、`/2.js` 。
+- [x] **服务器终端:** 提供服务器命令执行界面，支持RCON实时反馈和命令历史记录。
+- [x] **AI辅助:** 集成DeepSeek AI接口，支持日志分析和问题解答。
 - [x] **主题切换:** 支持`浅色主题`、`深色主题`、`自动`，默认为自动，需要登录后修改显示模式。
-- [x] **自定义:** 支持 `全局css和js配置文件` ，在首页提供在线编辑。
+<!-- - [x] **自定义:** 支持 `全局css和js配置文件` ，在首页提供在线编辑。 -->
 
 > [!IMPORTANT]
 > **关于数据:** 重载插件 *本插件* **会** 自动更新 `guguwebui_static` 文件夹中的内容，如果您修改过内部的文件请自行保存，以防您的数据丢失。
+
+> [!IMPORTANT]
+> **关于V1.3.0版本:** 更新请删除 `guguwebui_static` 文件夹中的内容，保留 `db.json` 即可。
+
 
 ## 依赖配置
 
@@ -105,26 +111,25 @@ A:WebUI不打算使用任何插件前置，如果有好的方案我们会考虑�
 
 - 首页:100%
   - 主要功能:100%
-  - 最近配置项:取消
-- GUGUbot管理:90%
-  - 配置:100%
+- GUGUbot管理:0%
+  - 配置:0%
   - 附加功能:0%
-- cq-qq-api:80%
+- cq-qq-api:100%
   - 配置:100%
-  - 文档:0%
-  - 附加功能:0%
 - MC服务器配置:100%
 - MCDR配置:100%
-- 本地插件管理:90%
+- 本地插件管理:100%
   - 管理:100%
   - 更新:100%
   - 配置修改:100%
-  - 附加功能:0%
-- 在线插件（插件仓库）:90%
+  - 附加功能:100%
+- 在线插件（插件仓库）:100%
   - 一键安装:100%
   - 搜索:100%
-  - 附加功能:0%
-- 服务器终端:0%
+- 服务器终端:100%
+  - 命令执行:100%
+  - RCON支持:100%
+  - AI辅助:100%
 - Fabric（部分）:0%
 
 # TODO
@@ -147,8 +152,10 @@ A:WebUI不打算使用任何插件前置，如果有好的方案我们会考虑�
 
 | 贡献项目 | 功能 | 备注 |
 |---|---|---|
-| [Ace Editor](https://ace.c9.io/) | 在线编辑器 | |
+| [Ace Editor](https://ace.c9.io/) | 在线编辑器 | 已不再使用 |
+| [CodeMirror](https://codemirror.net/) | 在线编辑器 | 目前使用 |
 | [MC-Server-Info](https://github.com/Spark-Code-China/MC-Server-Info) | Python Minecraft 服务器信息查询 | 仓库被作者删除 |
+| [DeepSeek AI](https://deepseek.com/) | AI辅助功能接口支持 | |
 
 
 | 特别鸣谢 | 说明 |

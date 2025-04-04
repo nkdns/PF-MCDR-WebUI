@@ -115,7 +115,7 @@ def load_plugin_info(server_interface:PluginServerInterface):
 
 # Get gugu plugins metadata
 def get_gugubot_plugins_info(server_interface:PluginServerInterface):
-    target_plugin = ["player_ip_logger", "online_player_api", "gugubot", "cq_qq_api"]
+    target_plugin = ["player_ip_logger", "online_player_api", "gugubot", "cq_qq_api", "guguwebui"]
     loaded_metadata, unloaded_metadata, unloaded_plugins, disabled_plugins = load_plugin_info(server_interface)
 
     respond = []
@@ -293,7 +293,7 @@ def get_java_server_info():
         tcp_client.connect((temp_ip, port))
         tcp_client.sendall(b'\xfe\x01')
         data = tcp_client.recv(1024)
-        print(data)
+        # print(data)
         if data:
             if data[:2] == b'\xff\x00':
                 data_parts = data.split(b'\x00\x00\x00')
@@ -321,39 +321,33 @@ def __copyFile(server, path, target_path):
         f.write(message)
         
 def amount_static_files(server):
-    __copyFile(server, 'guguwebui/css/about.css', './guguwebui_static/css/about.css')
-    __copyFile(server, 'guguwebui/css/gugubot.css', './guguwebui_static/css/gugubot.css')
-    __copyFile(server, 'guguwebui/css/home.css', './guguwebui_static/css/home.css')
-    __copyFile(server, 'guguwebui/css/index.css', './guguwebui_static/css/index.css')
-    __copyFile(server, 'guguwebui/css/login.css', './guguwebui_static/css/login.css')
-    __copyFile(server, 'guguwebui/css/mc.css', './guguwebui_static/css/mc.css')
-    __copyFile(server, 'guguwebui/css/plugins.css', './guguwebui_static/css/plugins.css')
+    __copyFile(server, 'guguwebui/custom/server_lang.json', './guguwebui_static/custom/server_lang.json')
+
+    __copyFile(server, 'guguwebui/css/main.css', './guguwebui_static/css/main.css')
     __copyFile(server, 'guguwebui/custom/overall.css', './guguwebui_static/custom/overall.css')
-    __copyFile(server, 'guguwebui/custom/overall.js', './guguwebui_static/custom/overall.js')
-    __copyFile(server, 'guguwebui/custom/server_lang.json', './server/server_lang.json')
-    __copyFile(server, 'guguwebui/js/about.js', './guguwebui_static/js/about.js')
-    __copyFile(server, 'guguwebui/js/home.js', './guguwebui_static/js/home.js')
-    __copyFile(server, 'guguwebui/js/index.js', './guguwebui_static/js/index.js')
-    __copyFile(server, 'guguwebui/js/login.js', './guguwebui_static/js/login.js')
-    __copyFile(server, 'guguwebui/js/mc.js', './guguwebui_static/js/mc.js')
-    __copyFile(server, 'guguwebui/js/plugins.js', './guguwebui_static/js/plugins.js')
-    __copyFile(server, 'guguwebui/js/online-plugins.js', './guguwebui_static/js/online-plugins.js')
-    __copyFile(server, 'guguwebui/js/overall.js', './guguwebui_static/js/overall.js')
+    __copyFile(server, 'guguwebui/css/minecraft-config.css', './guguwebui_static/css/minecraft-config.css')
+
+    __copyFile(server, 'guguwebui/js/preloader.js', './guguwebui_static/js/preloader.js')
+    __copyFile(server, 'guguwebui/js/main.js', './guguwebui_static/js/main.js')
+    __copyFile(server, 'guguwebui/js/theme-preload.js', './guguwebui_static/js/theme-preload.js')
+    __copyFile(server, 'guguwebui/js/mcdr-config.js', './guguwebui_static/js/mcdr-config.js')
+    __copyFile(server, 'guguwebui/js/notice.js', './guguwebui_static/js/notice.js')
+
     __copyFile(server, 'guguwebui/src/bg.png', './guguwebui_static/src/bg.png')
-    __copyFile(server, 'guguwebui/src/checkbox_select.png', './guguwebui_static/src/checkbox_select.png')
     __copyFile(server, 'guguwebui/src/default_avatar.jpg', './guguwebui_static/src/default_avatar.jpg')
+
     __copyFile(server, 'guguwebui/templates/404.html', './guguwebui_static/templates/404.html')
-    __copyFile(server, 'guguwebui/templates/about.html', './guguwebui_static/templates/about.html')
-    __copyFile(server, 'guguwebui/templates/cq.html', './guguwebui_static/templates/cq.html')
-    __copyFile(server, 'guguwebui/templates/fabric.html', './guguwebui_static/templates/fabric.html')
-    __copyFile(server, 'guguwebui/templates/gugubot.html', './guguwebui_static/templates/gugubot.html')
-    __copyFile(server, 'guguwebui/templates/home.html', './guguwebui_static/templates/home.html')
     __copyFile(server, 'guguwebui/templates/index.html', './guguwebui_static/templates/index.html')
     __copyFile(server, 'guguwebui/templates/login.html', './guguwebui_static/templates/login.html')
-    __copyFile(server, 'guguwebui/templates/mc.html', './guguwebui_static/templates/mc.html')
     __copyFile(server, 'guguwebui/templates/mcdr.html', './guguwebui_static/templates/mcdr.html')
+    __copyFile(server, 'guguwebui/templates/mc.html', './guguwebui_static/templates/mc.html')
     __copyFile(server, 'guguwebui/templates/plugins.html', './guguwebui_static/templates/plugins.html')
     __copyFile(server, 'guguwebui/templates/online-plugins.html', './guguwebui_static/templates/online-plugins.html')
+    __copyFile(server, 'guguwebui/templates/terminal.html', './guguwebui_static/templates/terminal.html')
+    # __copyFile(server, 'guguwebui/templates/fabric.html', './guguwebui_static/templates/fabric.html')
+    __copyFile(server, 'guguwebui/templates/cq.html', './guguwebui_static/templates/cq.html')
+    __copyFile(server, 'guguwebui/templates/about.html', './guguwebui_static/templates/about.html')
+    __copyFile(server, 'guguwebui/templates/settings.html', './guguwebui_static/templates/settings.html')
 
 # Command to generate __copyFile list above
 # import os
@@ -373,5 +367,58 @@ def amount_static_files(server):
 
 # for i in generate_copy_instructions("./", "./guguwebui_static"):
 #     print(i)
+
+#============================================================#
+
+def get_minecraft_log_path(server_interface=None):
+    """
+    获取Minecraft服务器日志文件的完整路径
+    基于MCDR配置中的working_directory值
+    
+    Args:
+        server_interface: MCDR服务器接口，用于获取配置
+        
+    Returns:
+        str: Minecraft服务器日志文件的完整路径
+    """
+    try:
+        import os
+        from ruamel.yaml import YAML
+        
+        # 尝试通过服务器接口获取配置
+        working_directory = None
+        if server_interface:
+            try:
+                # 尝试获取MCDR配置中的工作目录
+                mcdr_config = server_interface.get_mcdr_config()
+                if hasattr(mcdr_config, 'working_directory'):
+                    working_directory = mcdr_config.working_directory
+            except:
+                pass
+        
+        # 如果无法通过接口获取，尝试读取配置文件
+        if not working_directory:
+            # 尝试读取MCDR的配置文件
+            mcdr_config_path = "config.yml"
+            if not os.path.exists(mcdr_config_path):
+                # 如果找不到配置文件，返回默认路径
+                return "server/logs/latest.log"
+            
+            # 读取配置文件
+            yaml = YAML()
+            with open(mcdr_config_path, 'r', encoding='utf-8') as f:
+                config = yaml.load(f)
+            
+            # 获取工作目录
+            working_directory = config.get('working_directory', '')
+        
+        # 构建日志路径
+        if working_directory:
+            return os.path.join(working_directory, "logs", "latest.log")
+        else:
+            return "server/logs/latest.log"
+    except Exception as e:
+        # 出错时返回默认路径
+        return "server/logs/latest.log"
 
 #============================================================#

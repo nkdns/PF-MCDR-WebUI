@@ -40,7 +40,9 @@ DEFALUT_CONFIG = {
     "port": 8000,
     "super_admin_account": 123456789123456789,
     "disable_other_admin": False,
-    "allow_temp_password": True
+    "allow_temp_password": True,
+    "deepseek_api_key": "",  # DeepSeek API密钥
+    "deepseek_model": "deepseek-chat"  # DeepSeek 使用的模型
 }
 
 user_db = table(USER_DB_PATH, default_content=DEFALUT_DB)
@@ -56,6 +58,8 @@ class saveconfig(BaseModel):
     host: Optional[str] = None
     port: Optional[str] = None
     superaccount: Optional[str] = None
+    deepseek_api_key: Optional[str] = None
+    deepseek_model: Optional[str] = None
 
 class toggleconfig(BaseModel):
     plugin_id: str
@@ -70,4 +74,12 @@ class plugin_info(BaseModel):
 
 class config_data(BaseModel):
     file_path:str
-    config_data: dict
+    config_data:dict
+
+class server_control(BaseModel):
+    action:str
+
+class DeepseekQuery(BaseModel):
+    query: str
+    system_prompt: Optional[str] = None
+    model: Optional[str] = None

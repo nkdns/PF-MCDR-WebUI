@@ -1,76 +1,1182 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="zh-CN" class="h-full" x-data="{ darkMode: localStorage.getItem('darkMode') === 'true', sidebarOpen: window.innerWidth >= 1024 }" :class="{ 'dark': darkMode }">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>在线插件</title>
-    <link rel="stylesheet" href="custom/overall.css">
-    <script src="custom/overall.js"></script>
-    <script src="js/overall.js"></script>
-    <link rel="stylesheet" href="css/plugins.css">
+    
+    <title>MCDR WebUI - 在线插件</title>
+    <!-- 主题预加载脚本 - 防止闪烁 -->
+    <script src="/js/theme-preload.js"></script>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Alpine.js -->
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <!-- 自定义CSS -->
+    <link rel="stylesheet" href="/css/main.css">
+    <!-- 自定义配置 -->
     <script>
-        function checkIfEmbedded() {
-            if (window.top == window.self) {
-                // 跳转到首页
-                window.location.href = "{{ index_path }}";
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        primary: {
+                            50: '#f0f9ff',
+                            100: '#e0f2fe',
+                            200: '#bae6fd',
+                            300: '#7dd3fc',
+                            400: '#38bdf8',
+                            500: '#0ea5e9',
+                            600: '#0284c7',
+                            700: '#0369a1',
+                            800: '#075985',
+                            900: '#0c4a6e',
+                        },
+                    },
+                    animation: {
+                        'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+                        'float': 'float 3s ease-in-out infinite',
+                    },
+                    keyframes: {
+                        float: {
+                            '0%, 100%': { transform: 'translateY(0)' },
+                            '50%': { transform: 'translateY(-5px)' },
+                        }
+                    }
+                },
+            },
+        }
+    </script>
+    <style>
+        /* 自定义CSS变量 */
+        :root {
+            --sidebar-width: 260px;
+            --header-height: 64px;
+            --card-bg-light: rgba(255, 255, 255, 0.9);
+            --card-bg-dark: rgba(17, 24, 39, 0.8);
+        }
+        
+        /* 卡片悬停效果 */
+        .card-hover {
+            transition: all 0.3s ease;
+        }
+        
+        .card-hover:hover {
+            transform: translateY(-5px) rotate3d(1, 1, 0, 3deg);
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+        }
+        
+        /* 自定义滚动条 */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        
+        ::-webkit-scrollbar-thumb {
+            background: #d1d5db;
+            border-radius: 4px;
+        }
+        
+        .dark ::-webkit-scrollbar-thumb {
+            background: #4b5563;
+        }
+        
+        /* 侧边栏固定宽度 */
+        .sidebar-width {
+            width: var(--sidebar-width);
+        }
+        
+        /* 主内容区域的左边距，与侧边栏宽度相同 */
+        .main-content {
+            transition: margin-left 0.3s ease;
+        }
+        
+        .main-content.sidebar-open {
+            margin-left: var(--sidebar-width);
+        }
+
+        /* 标签样式 */
+        .plugin-tag {
+            font-size: 0.7rem;
+            padding: 0.1rem 0.5rem;
+            border-radius: 9999px;
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .plugin-tag.tool {
+            background-color: rgba(59, 130, 246, 0.1);
+            color: rgb(59, 130, 246);
+        }
+
+        .dark .plugin-tag.tool {
+            background-color: rgba(59, 130, 246, 0.2);
+            color: rgb(96, 165, 250);
+        }
+
+        .plugin-tag.game {
+            background-color: rgba(16, 185, 129, 0.1);
+            color: rgb(16, 185, 129);
+        }
+
+        .dark .plugin-tag.game {
+            background-color: rgba(16, 185, 129, 0.2);
+            color: rgb(52, 211, 153);
+        }
+
+        .plugin-tag.api {
+            background-color: rgba(245, 158, 11, 0.1);
+            color: rgb(245, 158, 11);
+        }
+
+        .dark .plugin-tag.api {
+            background-color: rgba(245, 158, 11, 0.2);
+            color: rgb(252, 211, 77);
+        }
+
+        /* 通知样式 */
+        .notification {
+            position: fixed;
+            right: 20px;
+            bottom: 20px;
+            display: flex;
+            align-items: center;
+            padding: 1rem 1.5rem;
+            border-radius: 0.375rem;
+            color: white;
+            font-weight: 500;
+            z-index: 100;
+            max-width: 24rem;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+            font-size: 1rem;
+            transform: scale(1.05);
+            animation: notification-pulse 2s infinite;
+        }
+
+        @keyframes notification-pulse {
+            0% {
+                box-shadow: 0 0 0 0 rgba(66, 153, 225, 0.5);
+            }
+            70% {
+                box-shadow: 0 0 0 10px rgba(66, 153, 225, 0);
+            }
+            100% {
+                box-shadow: 0 0 0 0 rgba(66, 153, 225, 0);
             }
         }
 
-        // 当页面失去焦点时检测
-        window.onblur = checkIfEmbedded;
-        // 页面加载时检测
-        window.onload = checkIfEmbedded;
-        // 页面尺寸发生变化时
-        window.onresize = checkIfEmbedded;
-        // 页面滚动时
-        window.onscroll = checkIfEmbedded;
-        // 页面内容发生变化时
-        window.onhashchange = checkIfEmbedded;
-        // 页面内容被点击时
-        window.onclick = checkIfEmbedded;
-    </script>
-</head>
-<body id="plugins">
-    <script>
-        // 获取用户的主题偏好
-        const savedTheme = localStorage.getItem('guguwebui-theme') || 'auto';
-
-        // 判断是否为自动模式，并根据系统的夜间模式设置调整主题
-        if (savedTheme === 'auto') {
-            const prefersDarkMode = window.matchMedia('(prefers-color-scheme: dark)').matches;
-            document.body.classList.add(prefersDarkMode ? 'dark' : 'light');
-        } else {
-            document.body.classList.add(savedTheme);
+        /* 插件详情模态窗口样式 */
+        .modal-backdrop {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(0, 0, 0, 0.5);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 100;
         }
-    </script>
-    <div class="about-list">
-        <h2>插件列表<input type="text" id="search-input" class="btn" placeholder="搜索插件"><span class="tip">可以在此处从插件仓库快速安装插件，如果没有显示<bold>一键安装</bold>按钮请点击<bold>插件详细</bold>内的<bold>安装</bold>按钮</span></h2>
-        <div>
-            <a class="btn" href="https://mcdreforged.com/zh-CN/plugin/" target="_blank">插件仓库</a>
-            <a class="btn" href="#" onclick="loadPlugins();return false;">刷新插件列表</a>
-        </div>
-    </div>
-    <div id="plugin-list"></div>
 
-    <div id="pagination"></div>
+        .modal-content {
+            background-color: white;
+            border-radius: 0.5rem;
+            max-width: 90%;
+            width: 800px;
+            max-height: 90vh;
+            overflow: hidden;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+        }
 
-    <!-- 画布 -->
-    <div id="overlay"></div>
-    <div id="mcdr-popup">
-        <div class="popup-controls">
-            <button class="btn" id="cancel">返回</button>       
-            <button class="btn" id="install">一键安装</button>
-        </div>
-        <iframe src="" frameborder="0" id="mcdr-frame"></iframe>
-    </div>
+        .dark .modal-content {
+            background-color: #1f2937;
+            border: 1px solid #374151;
+        }
 
-    <script>
-        const itemsPerPage = 10;
-        let currentPage = 1;
-    </script>
-    <script src="js/online-plugins.js"></script>
-    <script>
+        .modal-header {
+            padding: 1rem 1.5rem;
+            border-bottom: 1px solid #e5e7eb;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .dark .modal-header {
+            border-bottom-color: #374151;
+        }
+
+        .modal-body {
+            padding: 1.5rem;
+            overflow-y: auto;
+            max-height: calc(90vh - 130px);
+        }
+
+        .modal-footer {
+            padding: 1rem 1.5rem;
+            border-top: 1px solid #e5e7eb;
+            display: flex;
+            justify-content: flex-end;
+            gap: 0.5rem;
+        }
+
+        .dark .modal-footer {
+            border-top-color: #374151;
+        }
+
+        /* 依赖项列表样式 */
+        .dependencies-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+        }
+
+        .dependency-item {
+            font-size: 0.75rem;
+            padding: 0.25rem 0.5rem;
+            border-radius: 0.25rem;
+            background-color: #f3f4f6;
+            color: #4b5563;
+        }
+
+        .dark .dependency-item {
+            background-color: #374151;
+            color: #d1d5db;
+        }
+
+        /* 分页控件样式 */
+        .pagination-control {
+            width: 2.5rem;
+            height: 2.5rem;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 0.375rem;
+            font-weight: 500;
+            transition: all 0.2s;
+        }
+
+        .pagination-control.active {
+            background-color: #3b82f6;
+            color: white;
+        }
+
+        .dark .pagination-control.active {
+            background-color: #2563eb;
+        }
+
+        .pagination-control:not(.active):hover {
+            background-color: #f3f4f6;
+            color: #1f2937;
+        }
+
+        .dark .pagination-control:not(.active):hover {
+            background-color: #374151;
+            color: #f9fafb;
+        }
+
+        .pagination-control.disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+    </style>
+</head>
+<body class="h-full bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100 transition-colors duration-300">
+    <div x-data="{ 
+        serverStatus: 'loading',
+        userName: '',
+        serverVersion: '',
+        serverPlayers: '0/0',
+        plugins: [],
+        loading: true,
+        processingPlugins: {},
+        searchQuery: '',
+        currentPage: 1,
+        itemsPerPage: 10,
+        showNotification: false,
+        notificationMessage: '',
+        notificationType: 'success',
+        showPluginModal: false,
+        currentPlugin: null,
+        showRepoModal: false,
+        currentRepoUrl: '',
+        sortMethod: 'time', // 'name', 'time'
+        sortDirection: 'desc', // 'asc', 'desc'
+        
+        async checkLoginStatus() {
+            try {
+                const response = await fetch('/api/checkLogin');
+                const data = await response.json();
+                if (data.status === 'success') {
+                    this.userName = data.username;
+                }
+            } catch (error) {
+                console.error('Error checking login status:', error);
+            }
+        },
+        
+        async checkServerStatus() {
+            try {
+                this.serverStatus = 'loading';
+                const response = await fetch('/api/get_server_status');
+                const data = await response.json();
+                this.serverStatus = data.status || 'offline';
+                this.serverVersion = data.version || '';
+                this.serverPlayers = data.players || '0/0';
+            } catch (error) {
+                console.error('Error checking server status:', error);
+                this.serverStatus = 'error';
+            }
+        },
+        
+        async loadPlugins() {
+            try {
+                this.loading = true;
+                const response = await fetch('/api/online-plugins');
+                const data = await response.json();
+                this.plugins = data || [];
+                this.loading = false;
+                
+                // 确保每个插件的处理状态被正确初始化
+                if (this.plugins && this.plugins.length > 0) {
+                    this.plugins.forEach(plugin => {
+                        if (!this.processingPlugins.hasOwnProperty(plugin.id)) {
+                            this.processingPlugins[plugin.id] = false;
+                        }
+                    });
+                }
+            } catch (error) {
+                console.error('Error loading online plugins:', error);
+                this.loading = false;
+                this.showNotificationMsg('加载在线插件列表失败', 'error');
+            }
+        },
+        
+        filterPlugins() {
+            if (!this.searchQuery) return this.sortPlugins(this.plugins);
+            
+            const query = this.searchQuery.toLowerCase();
+            const filtered = this.plugins.filter(plugin => {
+                if (!plugin) return false;
+                
+                return (
+                    (plugin.id && plugin.id.toLowerCase().includes(query)) ||
+                    (plugin.name && plugin.name.toLowerCase().includes(query)) ||
+                    (plugin.description && plugin.description.zh_cn && plugin.description.zh_cn.toLowerCase().includes(query)) ||
+                    (plugin.description && plugin.description.en_us && plugin.description.en_us.toLowerCase().includes(query)) ||
+                    (plugin.authors && Array.isArray(plugin.authors) && plugin.authors.some(author => author && author.name && author.name.toLowerCase().includes(query)))
+                );
+            });
+            
+            return this.sortPlugins(filtered);
+        },
+        
+        sortPlugins(pluginsArray) {
+            if (!pluginsArray || pluginsArray.length === 0) return [];
+            
+            const sorted = [...pluginsArray];
+            
+            if (this.sortMethod === 'name') {
+                sorted.sort((a, b) => {
+                    if (!a || !b) return 0;
+                    const nameA = (a.name || a.id || '').toLowerCase();
+                    const nameB = (b.name || b.id || '').toLowerCase();
+                    return this.sortDirection === 'asc' 
+                        ? nameA.localeCompare(nameB) 
+                        : nameB.localeCompare(nameA);
+                });
+            } else if (this.sortMethod === 'time') {
+                sorted.sort((a, b) => {
+                    if (!a || !b) return 0;
+                    const timeA = a.last_update_time ? new Date(a.last_update_time).getTime() : 0;
+                    const timeB = b.last_update_time ? new Date(b.last_update_time).getTime() : 0;
+                    return this.sortDirection === 'asc' 
+                        ? timeA - timeB 
+                        : timeB - timeA;
+                });
+            }
+            
+            return sorted;
+        },
+        
+        toggleSortMethod(method) {
+            if (this.sortMethod === method) {
+                this.sortDirection = this.sortDirection === 'asc' ? 'desc' : 'asc';
+            } else {
+                this.sortMethod = method;
+                this.sortDirection = method === 'time' ? 'desc' : 'asc'; // 默认时间是最新的在前
+            }
+            this.currentPage = 1; // 重置到第一页
+        },
+        
+        getPaginatedPlugins() {
+            const filtered = this.filterPlugins();
+            const start = (this.currentPage - 1) * this.itemsPerPage;
+            const end = start + this.itemsPerPage;
+            return filtered.slice(start, end);
+        },
+        
+        getTotalPages() {
+            return Math.ceil(this.filterPlugins().length / this.itemsPerPage);
+        },
+        
+        goToPage(page) {
+            if (page < 1 || page > this.getTotalPages()) return;
+            this.currentPage = page;
+        },
+        
+        getPageNumbers() {
+            const totalPages = this.getTotalPages();
+            if (totalPages <= 7) {
+                return Array.from({length: totalPages}, (_, i) => i + 1);
+            }
+            
+            let pages = [];
+            
+            // 始终显示第一页
+            pages.push(1);
+            
+            if (this.currentPage > 3) {
+                pages.push('...');
+            }
+            
+            // 当前页附近的页码
+            let start = Math.max(2, this.currentPage - 1);
+            let end = Math.min(totalPages - 1, this.currentPage + 1);
+            
+            // 确保在开始和结束位置显示更多页码
+            if (this.currentPage <= 3) {
+                end = Math.min(5, totalPages - 1);
+            }
+            
+            if (this.currentPage >= totalPages - 2) {
+                start = Math.max(2, totalPages - 4);
+            }
+            
+            // 添加当前页附近的页码
+            for (let i = start; i <= end; i++) {
+                pages.push(i);
+            }
+            
+            if (this.currentPage < totalPages - 2) {
+                pages.push('...');
+            }
+            
+            // 始终显示最后一页
+            if (totalPages > 1) {
+                pages.push(totalPages);
+            }
+            
+            return pages;
+        },
+        
+        showPluginDetails(plugin) {
+            this.currentPlugin = plugin;
+            this.showPluginModal = true;
+        },
+        
+        closePluginModal() {
+            this.showPluginModal = false;
+            this.currentPlugin = null;
+        },
+        
+        showRepositoryPage(pluginId) {
+            this.currentRepoUrl = 'https://mcdreforged.com/zh-CN/plugin/' + pluginId;
+            this.showRepoModal = true;
+        },
+        
+        closeRepoModal() {
+            this.showRepoModal = false;
+            this.currentRepoUrl = '';
+        },
+        
+        async installPlugin(pluginId) {
+            if (this.processingPlugins[pluginId]) return;
+            
+            this.processingPlugins[pluginId] = true;
+            
+            try {
+                const response = await fetch('/api/install_plugin', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        plugin_id: pluginId
+                    })
+                });
+                
+                const result = await response.json();
+                
+                if (result.status === 'success') {
+                    this.showNotificationMsg('插件安装成功', 'success');
+                } else {
+                    this.showNotificationMsg(`安装失败: ${result.message || ''}`, 'error');
+                }
+            } catch (error) {
+                console.error(`Error installing plugin ${pluginId}:`, error);
+                this.showNotificationMsg('安装插件失败', 'error');
+            } finally {
+                this.processingPlugins[pluginId] = false;
+            }
+        },
+        
+        showNotificationMsg(message, type = 'success') {
+            this.notificationMessage = message;
+            this.notificationType = type;
+            this.showNotification = true;
+            
+            setTimeout(() => {
+                this.showNotification = false;
+            }, 5000);
+        },
+        
+        getPluginDescription(plugin) {
+            if (!plugin.description) return '';
+            return plugin.description.zh_cn || plugin.description.en_us || '';
+        },
+        
+        formatDate(dateString) {
+            if (!dateString) return '';
+            try {
+                const date = new Date(dateString);
+                return date.toLocaleDateString('zh-CN', {
+                    year: 'numeric',
+                    month: 'long',
+                    day: 'numeric'
+                });
+            } catch (e) {
+                return dateString;
+            }
+        }
+    }" 
+    x-init="
+        checkLoginStatus();
+        checkServerStatus();
         loadPlugins();
+        
+        // 初始化处理中插件状态
+        processingPlugins = {};
+        
+        // 每60秒自动刷新服务器状态
+        setInterval(() => checkServerStatus(), 60000);
+        
+        // 保存主题设置到本地存储
+        $watch('darkMode', value => {
+            localStorage.setItem('darkMode', value);
+        });
+
+        // 重置分页
+        $watch('searchQuery', () => {
+            currentPage = 1;
+        });
+        
+        // 监视排序方法和方向的变化
+        $watch('sortMethod', () => {
+            // 强制重新计算分页数据
+            const temp = currentPage;
+            currentPage = 0;
+            currentPage = temp;
+        });
+        
+        $watch('sortDirection', () => {
+            // 强制重新计算分页数据
+            const temp = currentPage;
+            currentPage = 0;
+            currentPage = temp;
+        });
+    ">
+        <!-- 侧边栏 -->
+        <div id="sidebar" :class="{'translate-x-0': sidebarOpen, '-translate-x-full': !sidebarOpen}" class="sidebar-width fixed top-0 left-0 bottom-0 z-30 transform transition-transform duration-300 ease-in-out bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 shadow-lg overflow-y-auto">
+            <div class="p-4 flex flex-col h-full">
+                <!-- Logo -->
+                <div class="flex items-center justify-center mb-8 mt-2">
+                    <div class="w-12 h-12 rounded-full bg-gradient-to-r from-blue-400 to-purple-500 flex items-center justify-center mr-3 shadow-lg">
+                        <i class="fas fa-server text-white text-xl"></i>
+                    </div>
+                    <div>
+                        <h1 class="text-xl font-bold text-gray-800 dark:text-white">MCDR WebUI</h1>
+                        <p class="text-xs text-gray-500 dark:text-gray-400">服务器管理平台</p>
+                    </div>
+                </div>
+                
+                <!-- 导航菜单 -->
+                <div class="flex-1 overflow-y-auto">
+                    <nav class="space-y-1">
+                        <a href="/index" class="flex items-center px-4 py-3 text-sm font-medium rounded-lg text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
+                            <i class="fas fa-home w-6 text-center"></i>
+                            <span class="ml-3">仪表盘</span>
+                        </a>
+                        
+                        <a href="/mcdr" class="flex items-center px-4 py-3 text-sm font-medium rounded-lg text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
+                            <i class="fas fa-cogs w-6 text-center"></i>
+                            <span class="ml-3">MCDR 配置</span>
+                        </a>
+                        
+                        <a href="/mc" class="flex items-center px-4 py-3 text-sm font-medium rounded-lg text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
+                            <i class="fas fa-gamepad w-6 text-center"></i>
+                            <span class="ml-3">MC 服务器配置</span>
+                        </a>
+                        
+                        <a href="/plugins" class="flex items-center px-4 py-3 text-sm font-medium rounded-lg text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
+                            <i class="fas fa-puzzle-piece w-6 text-center"></i>
+                            <span class="ml-3">本地插件</span>
+                        </a>
+                        
+                        <a href="/online-plugins" class="flex items-center px-4 py-3 text-sm font-medium rounded-lg bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-200">
+                            <i class="fas fa-cloud-download-alt w-6 text-center"></i>
+                            <span class="ml-3">在线插件</span>
+                        </a>
+
+                        <a href="/terminal" class="flex items-center px-4 py-3 text-sm font-medium rounded-lg text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
+                            <i class="fas fa-terminal w-6 text-center"></i>
+                            <span class="ml-3">终端日志</span>
+                        </a>
+                        
+                        <a href="/gugubot" class="flex items-center px-4 py-3 text-sm font-medium rounded-lg text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
+                            <i class="fas fa-robot w-6 text-center"></i>
+                            <span class="ml-3">GUGUBot 管理</span>
+                        </a>
+                        
+                        <a href="/cq" class="flex items-center px-4 py-3 text-sm font-medium rounded-lg text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
+                            <i class="fas fa-comments w-6 text-center"></i>
+                            <span class="ml-3">CQ-QQ-API</span>
+                        </a>
+                        
+                        <a href="/fabric" class="flex items-center px-4 py-3 text-sm font-medium rounded-lg text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
+                            <i class="fas fa-cube w-6 text-center"></i>
+                            <span class="ml-3">Fabric 管理</span>
+                        </a>
+                    </nav>
+                </div>
+                
+                <!-- 底部功能区 -->
+                <div class="pt-4 mt-6 border-t border-gray-200 dark:border-gray-700">
+                    <a href="/settings" class="flex items-center px-4 py-3 text-sm font-medium rounded-lg text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
+                        <i class="fas fa-cog w-6 text-center"></i>
+                        <span class="ml-3">Web设置</span>
+                    </a>
+                    
+                    <a href="/about" class="flex items-center px-4 py-3 text-sm font-medium rounded-lg text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
+                        <i class="fas fa-info-circle w-6 text-center"></i>
+                        <span class="ml-3">关于</span>
+                    </a>
+                    
+                    <a href="/logout" class="flex items-center px-4 py-3 text-sm font-medium rounded-lg text-red-700 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors mt-2">
+                        <i class="fas fa-sign-out-alt w-6 text-center"></i>
+                        <span class="ml-3">退出登录</span>
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- 主内容区 -->
+        <div id="main-content" :class="{'sidebar-open': sidebarOpen}" class="main-content min-h-screen transition-all duration-300">
+            <!-- 顶部导航栏 -->
+            <header id="header" class="bg-white dark:bg-gray-800 shadow-sm border-b border-gray-200 dark:border-gray-700 h-16 fixed top-0 right-0 left-0 z-20" :class="{'left-0': !sidebarOpen, 'left-[260px]': sidebarOpen}">
+                <div class="h-full px-4 sm:px-6 flex items-center justify-between">
+                    <!-- 左侧部分 -->
+                    <div class="flex items-center">
+                        <!-- 移动端菜单按钮 -->
+                        <button @click="sidebarOpen = !sidebarOpen" class="inline-flex items-center justify-center p-2 rounded-md text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 focus:outline-none transition-colors">
+                            <i :class="sidebarOpen ? 'fa-times' : 'fa-bars'" class="fas"></i>
+                        </button>
+                        
+                        <!-- 页面标题 -->
+                        <h1 class="ml-4 text-xl font-semibold text-gray-800 dark:text-white">在线插件</h1>
+                    </div>
+                    
+                    <!-- 右侧部分 -->
+                    <div class="flex items-center space-x-4">
+                        <!-- 公告 -->
+                        <div class="nav-notice hidden md:flex items-center bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-300 px-3 py-1 rounded-full text-xs font-medium mr-2">
+                            <span class="nav-notice-text"><i class="fas fa-circle-notch fa-spin mr-1.5"></i> 加载公告中...</span>
+                        </div>
+                    
+                        <!-- 服务器状态 -->
+                        <div class="hidden sm:flex items-center">
+                            <div class="px-3 py-1 rounded-full text-xs font-medium flex items-center" :class="{
+                                'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300': serverStatus === 'online',
+                                'bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300': serverStatus === 'offline',
+                                'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300': serverStatus === 'error',
+                                'bg-gray-100 dark:bg-gray-900/30 text-gray-800 dark:text-gray-300': serverStatus === 'loading'
+                            }">
+                                <span x-show="serverStatus === 'online'" class="flex items-center">
+                                    <i class="fas fa-circle mr-1 text-xs"></i>
+                                    <span>在线</span>
+                                </span>
+                                <span x-show="serverStatus === 'offline'" class="flex items-center">
+                                    <i class="fas fa-circle mr-1 text-xs"></i>
+                                    <span>离线</span>
+                                </span>
+                                <span x-show="serverStatus === 'error'" class="flex items-center">
+                                    <i class="fas fa-exclamation-triangle mr-1"></i>
+                                    <span>错误</span>
+                                </span>
+                                <span x-show="serverStatus === 'loading'" class="flex items-center">
+                                    <i class="fas fa-circle-notch fa-spin mr-1 text-xs"></i>
+                                    <span>加载中</span>
+                                </span>
+                            </div>
+                        </div>
+                        
+                        <!-- 主题切换 -->
+                        <button @click="darkMode = !darkMode; localStorage.setItem('darkMode', darkMode)" class="inline-flex items-center justify-center p-2 rounded-md text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 focus:outline-none transition-colors">
+                            <i class="fas" :class="darkMode ? 'fa-sun' : 'fa-moon'"></i>
+                        </button>
+                        
+                        <!-- 用户信息 -->
+                        <div class="flex items-center">
+                            <div class="w-8 h-8 rounded-full bg-blue-500 flex items-center justify-center text-white user-avatar overflow-hidden">
+                                <i class="fas fa-user"></i>
+                            </div>
+                            <span class="ml-2 text-sm font-medium text-gray-700 dark:text-gray-300 js-username" x-text="userName || '用户'"></span>
+                        </div>
+                    </div>
+                </div>
+            </header>
+            
+            <!-- 主内容 -->
+            <main class="pt-24 px-4 sm:px-6 md:px-8 pb-8">
+                <div class="bg-white dark:bg-gray-800 shadow-sm rounded-lg p-6 border border-gray-200 dark:border-gray-700">
+                    <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
+                        <h2 class="text-xl font-bold text-gray-800 dark:text-white">在线插件仓库</h2>
+                        
+                        <div class="flex flex-col sm:flex-row gap-4 w-full md:w-auto">
+                            <!-- 排序控件 -->
+                            <div class="flex items-center space-x-2">
+                                <span class="text-sm text-gray-600 dark:text-gray-300">排序:</span>
+                                <button 
+                                    @click="toggleSortMethod('name')" 
+                                    class="inline-flex items-center px-2 py-1 text-xs rounded border"
+                                    :class="sortMethod === 'name' ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 border-blue-200 dark:border-blue-800' : 'border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300'"
+                                >
+                                    <span>按名称</span>
+                                    <template x-if="sortMethod === 'name'">
+                                        <i class="ml-1 fas" :class="sortDirection === 'asc' ? 'fa-sort-alpha-down' : 'fa-sort-alpha-up'"></i>
+                                    </template>
+                                </button>
+                                <button 
+                                    @click="toggleSortMethod('time')" 
+                                    class="inline-flex items-center px-2 py-1 text-xs rounded border"
+                                    :class="sortMethod === 'time' ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 border-blue-200 dark:border-blue-800' : 'border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300'"
+                                >
+                                    <span>按时间</span>
+                                    <template x-if="sortMethod === 'time'">
+                                        <i class="ml-1 fas" :class="sortDirection === 'asc' ? 'fa-sort-numeric-down' : 'fa-sort-numeric-up'"></i>
+                                    </template>
+                                </button>
+                            </div>
+                        
+                            <!-- 搜索栏 -->
+                            <div class="relative flex-1">
+                                <input 
+                                    type="text" 
+                                    class="w-full pl-10 pr-4 py-2 rounded-lg border dark:border-gray-700 bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white"
+                                    placeholder="搜索插件..."
+                                    x-model="searchQuery"
+                                >
+                                <i class="fas fa-search absolute left-3 top-3 text-gray-400"></i>
+                                <button 
+                                    x-show="searchQuery" 
+                                    @click="searchQuery = ''"
+                                    class="absolute right-3 top-3 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                                >
+                                    <i class="fas fa-times"></i>
+                                </button>
+                            </div>
+
+                            <!-- 刷新按钮 -->
+                            <button 
+                                @click="loadPlugins" 
+                                class="inline-flex items-center justify-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
+                                :disabled="loading"
+                            >
+                                <template x-if="!loading">
+                                    <i class="fas fa-sync-alt mr-2"></i>
+                                </template>
+                                <template x-if="loading">
+                                    <i class="fas fa-circle-notch fa-spin mr-2"></i>
+                                </template>
+                                <span x-text="loading ? '加载中...' : '刷新插件列表'"></span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- 加载状态 -->
+                    <div x-show="loading" class="flex justify-center items-center py-12">
+                        <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
+                        <span class="ml-3 text-gray-600 dark:text-gray-400">加载插件中...</span>
+                    </div>
+
+                    <!-- 插件列表 -->
+                    <div x-show="!loading && getPaginatedPlugins().length === 0" class="text-center py-12">
+                        <i class="fas fa-puzzle-piece text-4xl text-gray-400 mb-4"></i>
+                        <p class="text-gray-500 dark:text-gray-400">未找到符合条件的插件</p>
+                    </div>
+
+                    <div x-show="!loading && getPaginatedPlugins().length > 0" class="grid grid-cols-1 gap-4">
+                        <template x-for="plugin in getPaginatedPlugins()" :key="plugin.id">
+                            <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-sm overflow-hidden hover:shadow-md transition-shadow">
+                                <div class="p-5">
+                                    <div class="flex flex-col md:flex-row md:items-center justify-between">
+                                        <div class="flex-1">
+                                            <div class="flex items-start">
+                                                <h3 class="text-lg font-semibold text-gray-900 dark:text-white" x-text="plugin.name || plugin.id"></h3>
+                                                <span class="ml-2 text-sm text-gray-500 dark:text-gray-400" x-text="'v' + (plugin.latest_version || '未知')"></span>
+                                            </div>
+                                            <p class="text-sm text-gray-500 dark:text-gray-400" x-text="'ID: ' + plugin.id"></p>
+                                        </div>
+                                        
+                                        <div class="flex flex-wrap mt-2 md:mt-0 gap-2">
+                                            <template x-for="label in plugin.labels || []" :key="label">
+                                                <span class="plugin-tag" :class="label && typeof label === 'string' ? label.toLowerCase() : ''" x-text="label"></span>
+                                            </template>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="mt-3">
+                                        <p class="text-sm text-gray-600 dark:text-gray-300" x-text="getPluginDescription(plugin)"></p>
+                                    </div>
+                                    
+                                    <div class="mt-3 text-xs text-gray-500 dark:text-gray-400 flex items-center flex-wrap gap-2">
+                                        <span>
+                                            <i class="fas fa-user mr-1"></i>
+                                            <template x-for="(author, index) in plugin.authors || []" :key="index">
+                                                <span>
+                                                    <template x-if="index > 0">
+                                                        <span>, </span>
+                                                    </template>
+                                                    <template x-if="author.link">
+                                                        <a :href="author.link" target="_blank" class="text-blue-500 hover:underline" x-text="author.name"></a>
+                                                    </template>
+                                                    <template x-if="!author.link">
+                                                        <span x-text="author.name"></span>
+                                                    </template>
+                                                </span>
+                                            </template>
+                                        </span>
+                                        
+                                        <span x-show="plugin.last_update_time">
+                                            <i class="fas fa-calendar-alt mr-1"></i>
+                                            <span x-text="formatDate(plugin.last_update_time)"></span>
+                                        </span>
+                                    </div>
+                                    
+                                    <div class="mt-4 flex flex-wrap justify-end gap-2">
+                                        <button 
+                                            @click="showPluginDetails(plugin)"
+                                            class="inline-flex items-center px-3 py-1.5 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm text-xs font-medium text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none transition-colors"
+                                        >
+                                            <i class="fas fa-info-circle mr-1.5"></i>
+                                            <span>详情</span>
+                                        </button>
+                                        
+                                        <button 
+                                            @click="showRepositoryPage(plugin.id)" 
+                                            class="inline-flex items-center px-3 py-1.5 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm text-xs font-medium text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none transition-colors"
+                                        >
+                                            <i class="fas fa-external-link-alt mr-1.5"></i>
+                                            <span>查看仓库页</span>
+                                        </button>
+                                        
+                                        <a 
+                                            x-show="plugin.repository_url"
+                                            :href="plugin.repository_url" 
+                                            target="_blank"
+                                            class="inline-flex items-center px-3 py-1.5 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm text-xs font-medium text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none transition-colors"
+                                        >
+                                            <i class="fab fa-github mr-1.5"></i>
+                                            <span>GitHub</span>
+                                        </a>
+                                        
+                                        <button 
+                                            @click="installPlugin(plugin.id)"
+                                            class="inline-flex items-center px-3 py-1.5 border border-transparent rounded-md shadow-sm text-xs font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none transition-colors"
+                                            :disabled="processingPlugins[plugin.id]"
+                                        >
+                                            <template x-if="!processingPlugins[plugin.id]">
+                                                <i class="fas fa-download mr-1.5"></i>
+                                            </template>
+                                            <template x-if="processingPlugins[plugin.id]">
+                                                <i class="fas fa-circle-notch fa-spin mr-1.5"></i>
+                                            </template>
+                                            <span>安装/更新</span>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </template>
+                    </div>
+
+                    <!-- 分页控件 -->
+                    <div x-show="!loading && plugins && plugins.length > 0 && getTotalPages() > 1" class="mt-6 flex justify-center">
+                        <div class="flex items-center space-x-2">
+                            <button 
+                                @click="goToPage(currentPage - 1)" 
+                                :disabled="currentPage === 1"
+                                class="pagination-control" 
+                                :class="{ 'disabled': currentPage === 1 }"
+                            >
+                                <i class="fas fa-chevron-left"></i>
+                            </button>
+                            
+                            <template x-for="(page, index) in getPageNumbers()" :key="index">
+                                <div>
+                                    <template x-if="page === '...'">
+                                        <span class="px-2 py-1">...</span>
+                                    </template>
+                                    <template x-if="page !== '...'">
+                                        <button 
+                                            @click="goToPage(page)" 
+                                            class="pagination-control" 
+                                            :class="{ 'active': currentPage === page }"
+                                            x-text="page"
+                                        ></button>
+                                    </template>
+                                </div>
+                            </template>
+                            
+                            <button 
+                                @click="goToPage(currentPage + 1)" 
+                                :disabled="currentPage === getTotalPages()"
+                                class="pagination-control" 
+                                :class="{ 'disabled': currentPage === getTotalPages() }"
+                            >
+                                <i class="fas fa-chevron-right"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 通知 -->
+                <div 
+                    x-show="showNotification" 
+                    x-transition:enter="transition ease-out duration-300"
+                    x-transition:enter-start="opacity-0 transform scale-90"
+                    x-transition:enter-end="opacity-100 transform scale-100"
+                    x-transition:leave="transition ease-in duration-300"
+                    x-transition:leave-start="opacity-100 transform scale-100"
+                    x-transition:leave-end="opacity-0 transform scale-90"
+                    class="notification"
+                    :class="notificationType === 'success' ? 'bg-green-500' : 'bg-red-500'"
+                >
+                    <template x-if="notificationType === 'success'">
+                        <i class="fas fa-check-circle mr-2"></i>
+                    </template>
+                    <template x-if="notificationType === 'error'">
+                        <i class="fas fa-exclamation-circle mr-2"></i>
+                    </template>
+                    <span x-text="notificationMessage"></span>
+                </div>
+                
+                <!-- 插件详情模态窗口 -->
+                <div x-show="showPluginModal" x-transition.opacity class="modal-backdrop">
+                    <div class="modal-content" @click.away="closePluginModal()">
+                        <div class="modal-header">
+                            <h3 class="text-lg font-semibold text-gray-900 dark:text-white" x-text="currentPlugin ? (currentPlugin.name || currentPlugin.id) : '插件详情'"></h3>
+                            <button @click="closePluginModal()" class="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        </div>
+                        
+                        <div class="modal-body" x-show="currentPlugin">
+                            <div class="space-y-4">
+                                <!-- 基本信息 -->
+                                <div>
+                                    <h4 class="text-md font-medium text-gray-800 dark:text-gray-200 mb-2">基本信息</h4>
+                                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        <div>
+                                            <p class="text-sm text-gray-500 dark:text-gray-400">ID:</p>
+                                            <p class="text-sm text-gray-800 dark:text-gray-200" x-text="currentPlugin?.id"></p>
+                                        </div>
+                                        <div>
+                                            <p class="text-sm text-gray-500 dark:text-gray-400">最新版本:</p>
+                                            <p class="text-sm text-gray-800 dark:text-gray-200" x-text="currentPlugin?.latest_version || '未知'"></p>
+                                        </div>
+                                        <div>
+                                            <p class="text-sm text-gray-500 dark:text-gray-400">最后更新:</p>
+                                            <p class="text-sm text-gray-800 dark:text-gray-200" x-text="formatDate(currentPlugin?.last_update_time) || '未知'"></p>
+                                        </div>
+                                        <div>
+                                            <p class="text-sm text-gray-500 dark:text-gray-400">作者:</p>
+                                            <p class="text-sm text-gray-800 dark:text-gray-200">
+                                                <template x-for="(author, index) in currentPlugin?.authors || []" :key="index">
+                                                    <span>
+                                                        <template x-if="index > 0">
+                                                            <span>, </span>
+                                                        </template>
+                                                        <template x-if="author.link">
+                                                            <a :href="author.link" target="_blank" class="text-blue-500 hover:underline" x-text="author.name"></a>
+                                                        </template>
+                                                        <template x-if="!author.link">
+                                                            <span x-text="author.name"></span>
+                                                        </template>
+                                                    </span>
+                                                </template>
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <!-- 描述 -->
+                                <div x-show="currentPlugin?.description">
+                                    <h4 class="text-md font-medium text-gray-800 dark:text-gray-200 mb-2">描述</h4>
+                                    <div class="space-y-2">
+                                        <div x-show="currentPlugin?.description?.zh_cn">
+                                            <p class="text-sm text-gray-500 dark:text-gray-400">中文:</p>
+                                            <p class="text-sm text-gray-800 dark:text-gray-200" x-text="currentPlugin?.description?.zh_cn"></p>
+                                        </div>
+                                        <div x-show="currentPlugin?.description?.en_us">
+                                            <p class="text-sm text-gray-500 dark:text-gray-400">英文:</p>
+                                            <p class="text-sm text-gray-800 dark:text-gray-200" x-text="currentPlugin?.description?.en_us"></p>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <!-- 标签 -->
+                                <div x-show="currentPlugin?.labels && currentPlugin.labels.length">
+                                    <h4 class="text-md font-medium text-gray-800 dark:text-gray-200 mb-2">标签</h4>
+                                    <div class="flex flex-wrap gap-2">
+                                        <template x-for="label in currentPlugin?.labels || []" :key="label">
+                                            <span class="plugin-tag" :class="label.toLowerCase()" x-text="label"></span>
+                                        </template>
+                                    </div>
+                                </div>
+                                
+                                <!-- 依赖项 -->
+                                <div x-show="currentPlugin?.dependencies && Object.keys(currentPlugin.dependencies).length">
+                                    <h4 class="text-md font-medium text-gray-800 dark:text-gray-200 mb-2">依赖项</h4>
+                                    <div class="dependencies-list">
+                                        <template x-for="(version, name) in currentPlugin?.dependencies || {}" :key="name">
+                                            <div class="dependency-item">
+                                                <span x-text="name"></span>
+                                                <span class="text-gray-500 dark:text-gray-400" x-text="': ' + version"></span>
+                                            </div>
+                                        </template>
+                                    </div>
+                                </div>
+                                
+                                <!-- 链接 -->
+                                <div>
+                                    <h4 class="text-md font-medium text-gray-800 dark:text-gray-200 mb-2">链接</h4>
+                                    <div class="space-y-2">
+                                        <div x-show="currentPlugin?.id">
+                                            <a 
+                                                :href="'https://mcdreforged.com/zh-CN/plugin/' + (currentPlugin?.id || '')" 
+                                                target="_blank"
+                                                class="inline-flex items-center text-blue-600 dark:text-blue-400 hover:underline"
+                                            >
+                                                <i class="fas fa-external-link-alt mr-1.5"></i>
+                                                <span>MCDR 插件索引</span>
+                                            </a>
+                                        </div>
+                                        <div x-show="currentPlugin?.repository_url">
+                                            <a 
+                                                :href="currentPlugin?.repository_url" 
+                                                target="_blank"
+                                                class="inline-flex items-center text-blue-600 dark:text-blue-400 hover:underline"
+                                            >
+                                                <i class="fab fa-github mr-1.5"></i>
+                                                <span>GitHub 仓库</span>
+                                            </a>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="modal-footer">
+                            <button @click="closePluginModal()" class="inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm text-sm font-medium text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none">
+                                <span>关闭</span>
+                            </button>
+                            <button 
+                                x-show="currentPlugin"
+                                @click="installPlugin(currentPlugin?.id); closePluginModal()"
+                                class="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none"
+                                :disabled="currentPlugin && processingPlugins[currentPlugin.id]"
+                            >
+                                <template x-if="!currentPlugin || !processingPlugins[currentPlugin?.id]">
+                                    <i class="fas fa-download mr-1.5"></i>
+                                </template>
+                                <template x-if="currentPlugin && processingPlugins[currentPlugin?.id]">
+                                    <i class="fas fa-circle-notch fa-spin mr-1.5"></i>
+                                </template>
+                                <span>安装/更新</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 仓库页面模态窗口 -->
+                <div x-show="showRepoModal" x-transition.opacity class="modal-backdrop">
+                    <div class="modal-content" style="width: 90%; height: 90%; max-height: 90vh; max-width: 1200px;">
+                        <div class="modal-header">
+                            <h3 class="text-lg font-semibold text-gray-900 dark:text-white">插件仓库页面</h3>
+                            <div class="flex items-center space-x-2">
+                                <a 
+                                    :href="currentRepoUrl" 
+                                    target="_blank"
+                                    class="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300"
+                                    title="在新标签页中打开"
+                                >
+                                    <i class="fas fa-external-link-alt"></i>
+                                </a>
+                                <button 
+                                    @click="closeRepoModal()" 
+                                    class="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+                                >
+                                    <i class="fas fa-times"></i>
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <div class="w-full h-full bg-white dark:bg-gray-800 overflow-hidden" style="height: calc(90vh - 120px);">
+                            <iframe 
+                                :src="currentRepoUrl" 
+                                class="w-full h-full border-0" 
+                                sandbox="allow-same-origin allow-scripts allow-popups allow-forms"
+                                loading="lazy"
+                            ></iframe>
+                        </div>
+                        
+                        <div class="modal-footer">
+                            <button 
+                                @click="closeRepoModal()" 
+                                class="inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm text-sm font-medium text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none"
+                            >
+                                <span>关闭</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 页脚 -->
+                <footer class="mt-8 text-center text-gray-600 dark:text-gray-400 text-sm">
+                    <p>MCDR WebUI &copy; <span id="year"></span></p>
+                </footer>
+            </main>
+        </div>
+    </div>
+
+    <!-- 导入主脚本 -->
+    <script src="/js/main.js"></script>
+    
+    <!-- 页面预加载脚本 -->
+    <script src="/js/preloader.js"></script>
+    
+    <!-- 公告脚本 -->
+    <script src="/js/notice.js"></script>
+
+    <script>
+        // 设置当前年份
+        document.getElementById('year').textContent = new Date().getFullYear();
     </script>
 </body>
-</html>
+</html> 

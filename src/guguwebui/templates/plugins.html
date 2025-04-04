@@ -1,165 +1,1714 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="zh-CN" class="h-full" x-data="{ darkMode: localStorage.getItem('darkMode') === 'true', sidebarOpen: window.innerWidth >= 1024 }" :class="{ 'dark': darkMode }">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>本地插件</title>
-    <link rel="stylesheet" href="custom/overall.css">
-    <script src="custom/overall.js"></script>
-    <script src="js/overall.js"></script>
-    <link rel="stylesheet" href="css/plugins.css">
+    
+    <title>MCDR WebUI - 本地插件</title>
+    <!-- 主题预加载脚本 - 防止闪烁 -->
+    <script src="/js/theme-preload.js"></script>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Alpine.js -->
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <!-- 自定义CSS -->
+    <link rel="stylesheet" href="/css/main.css">
+    <!-- 自定义配置 -->
     <script>
-        function checkIfEmbedded() {
-            if (window.top == window.self) {
-                // 跳转到首页
-                window.location.href = "{{ index_path }}";
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        primary: {
+                            50: '#f0f9ff',
+                            100: '#e0f2fe',
+                            200: '#bae6fd',
+                            300: '#7dd3fc',
+                            400: '#38bdf8',
+                            500: '#0ea5e9',
+                            600: '#0284c7',
+                            700: '#0369a1',
+                            800: '#075985',
+                            900: '#0c4a6e',
+                        },
+                    },
+                    animation: {
+                        'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+                        'float': 'float 3s ease-in-out infinite',
+                    },
+                    keyframes: {
+                        float: {
+                            '0%, 100%': { transform: 'translateY(0)' },
+                            '50%': { transform: 'translateY(-5px)' },
+                        }
+                    }
+                },
+            },
+        }
+    </script>
+    <style>
+        /* 自定义CSS变量 */
+        :root {
+            --sidebar-width: 260px;
+            --header-height: 64px;
+            --card-bg-light: rgba(255, 255, 255, 0.9);
+            --card-bg-dark: rgba(17, 24, 39, 0.8);
+        }
+        
+        /* 卡片悬停效果 */
+        .card-hover {
+            transition: all 0.3s ease;
+        }
+        
+        .card-hover:hover {
+            transform: translateY(-5px) rotate3d(1, 1, 0, 3deg);
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+        }
+        
+        /* 自定义滚动条 */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        
+        ::-webkit-scrollbar-thumb {
+            background: #d1d5db;
+            border-radius: 4px;
+        }
+        
+        .dark ::-webkit-scrollbar-thumb {
+            background: #4b5563;
+        }
+        
+        /* 侧边栏固定宽度 */
+        .sidebar-width {
+            width: var(--sidebar-width);
+        }
+        
+        /* 主内容区域的左边距，与侧边栏宽度相同 */
+        .main-content {
+            transition: margin-left 0.3s ease;
+        }
+        
+        .main-content.sidebar-open {
+            margin-left: var(--sidebar-width);
+        }
+
+        /* 插件卡片样式 */
+        .plugin-card {
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .plugin-card:before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 4px;
+            height: 100%;
+            transition: all 0.3s ease;
+        }
+
+        .plugin-card.active:before {
+            background-color: #10B981;
+        }
+
+        .plugin-card.inactive:before {
+            background-color: #6B7280;
+        }
+
+        .plugin-card.unloaded:before {
+            background-color: #F59E0B;
+        }
+
+        .plugin-card.disabled:before {
+            background-color: #6B7280;
+        }
+
+        .plugin-card.error:before {
+            background-color: #EF4444;
+        }
+
+        /* 状态开关样式 */
+        .toggle-switch {
+            position: relative;
+            display: inline-block;
+            width: 44px;
+            height: 24px;
+        }
+
+        .toggle-switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .toggle-slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #cbd5e1;
+            transition: .4s;
+            border-radius: 24px;
+        }
+
+        .toggle-slider:before {
+            position: absolute;
+            content: "";
+            height: 18px;
+            width: 18px;
+            left: 3px;
+            bottom: 3px;
+            background-color: white;
+            transition: .4s;
+            border-radius: 50%;
+        }
+
+        .dark .toggle-slider {
+            background-color: #475569;
+        }
+
+        input:checked + .toggle-slider {
+            background-color: #3b82f6;
+        }
+
+        input:focus + .toggle-slider {
+            box-shadow: 0 0 1px #3b82f6;
+        }
+
+        input:checked + .toggle-slider:before {
+            transform: translateX(20px);
+        }
+
+        /* 通知样式 */
+        .notification {
+            position: fixed;
+            right: 20px;
+            bottom: 20px;
+            display: flex;
+            align-items: center;
+            padding: 1rem 1.5rem;
+            border-radius: 0.375rem;
+            color: white;
+            font-weight: 500;
+            z-index: 100;
+            max-width: 24rem;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+            font-size: 1rem;
+            transform: scale(1.05);
+            animation: notification-pulse 2s infinite;
+        }
+
+        @keyframes notification-pulse {
+            0% {
+                box-shadow: 0 0 0 0 rgba(66, 153, 225, 0.5);
+            }
+            70% {
+                box-shadow: 0 0 0 10px rgba(66, 153, 225, 0);
+            }
+            100% {
+                box-shadow: 0 0 0 0 rgba(66, 153, 225, 0);
             }
         }
 
-        // 当页面失去焦点时检测
-        window.onblur = checkIfEmbedded;
-        // 页面加载时检测
-        window.onload = checkIfEmbedded;
-        // 页面尺寸发生变化时
-        window.onresize = checkIfEmbedded;
-        // 页面滚动时
-        window.onscroll = checkIfEmbedded;
-        // 页面内容发生变化时
-        window.onhashchange = checkIfEmbedded;
-        // 页面内容被点击时
-        window.onclick = checkIfEmbedded;
-    </script>
+        /* 模态窗口样式 */
+        .modal-backdrop {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(0, 0, 0, 0.5);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 100;
+        }
+
+        .modal-content {
+            background-color: white;
+            border-radius: 0.5rem;
+            max-width: 90%;
+            width: 800px;
+            max-height: 90vh;
+            overflow: hidden;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+        }
+
+        .dark .modal-content {
+            background-color: #1f2937;
+            border: 1px solid #374151;
+        }
+
+        .modal-header {
+            padding: 1rem 1.5rem;
+            border-bottom: 1px solid #e5e7eb;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .dark .modal-header {
+            border-bottom-color: #374151;
+        }
+
+        .modal-body {
+            padding: 1.5rem;
+            overflow-y: auto;
+            max-height: calc(90vh - 130px);
+        }
+
+        .modal-footer {
+            padding: 1rem 1.5rem;
+            border-top: 1px solid #e5e7eb;
+            display: flex;
+            justify-content: flex-end;
+            gap: 0.5rem;
+        }
+
+        .dark .modal-footer {
+            border-top-color: #374151;
+        }
+
+        /* CodeMirror 高度 */
+        .CodeMirror {
+            height: 400px !important;
+        }
+
+        /* 配置文件列表样式 */
+        .config-file-list {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .config-file-item {
+            padding: 0.75rem 1rem;
+            border-radius: 0.375rem;
+            border: 1px solid #e5e7eb;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: all 0.2s;
+        }
+
+        .dark .config-file-item {
+            border-color: #374151;
+        }
+
+        .config-file-item:hover {
+            background-color: #f3f4f6;
+        }
+
+        .dark .config-file-item:hover {
+            background-color: #2d3748;
+        }
+
+        /* 编辑器容器样式 */
+        .editor-container {
+            border: 1px solid #e5e7eb;
+            border-radius: 0.375rem;
+            overflow: hidden;
+            height: 400px;
+        }
+
+        .dark .editor-container {
+            border-color: #374151;
+        }
+
+        /* HTML内容iframe样式 */
+        .html-iframe-container {
+            border: 1px solid #e5e7eb;
+            border-radius: 0.375rem;
+            overflow: hidden;
+            min-height: 400px;
+            width: 100%;
+        }
+
+        .dark .html-iframe-container {
+            border-color: #374151;
+        }
+
+        .html-iframe {
+            width: 100%;
+            min-height: 400px;
+            border: none;
+            background-color: white;
+        }
+
+        .dark .html-iframe {
+            background-color: #1f2937;
+        }
+
+        /* 编辑器标签页 */
+        .editor-tabs {
+            display: flex;
+            border-bottom: 1px solid #e5e7eb;
+            background-color: #f3f4f6;
+        }
+
+        .dark .editor-tabs {
+            border-bottom-color: #374151;
+            background-color: #374151;
+        }
+
+        .editor-tab {
+            padding: 0.5rem 1rem;
+            cursor: pointer;
+            border-right: 1px solid #e5e7eb;
+        }
+
+        .dark .editor-tab {
+            border-right-color: #4b5563;
+        }
+
+        .editor-tab.active {
+            background-color: white;
+            font-weight: 500;
+        }
+
+        .dark .editor-tab.active {
+            background-color: #1f2937;
+        }
+
+        /* CodeMirror 主题覆盖 */
+        .cm-editor {
+            height: 100%;
+        }
+
+        .dark .cm-editor {
+            background-color: #1f2937;
+            color: #e5e7eb;
+        }
+    </style>
+    <!-- CodeMirror -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/6.65.7/codemirror.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/6.65.7/codemirror.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/6.65.7/mode/yaml/yaml.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/6.65.7/mode/javascript/javascript.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/6.65.7/mode/properties/properties.min.js"></script>
 </head>
-<body id="plugins">
-    <script>
-        // 获取用户的主题偏好
-        const savedTheme = localStorage.getItem('guguwebui-theme') || 'auto';
+<body class="h-full bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100 transition-colors duration-300">
+    <div x-data="{ 
+        serverStatus: 'loading',
+        userName: '',
+        serverVersion: '',
+        serverPlayers: '0/0',
+        plugins: [],
+        loading: true,
+        searchQuery: '',
+        notificationMessage: '',
+        notificationType: 'success',
+        showNotification: false,
+        processingPlugins: {},
+        showConfigModal: false,
+        currentPlugin: null,
+        configFiles: [],
+        selectedFile: '',
+        configContent: '',
+        showEditor: false,
+        editorMode: 'code', // 'code' or 'form'
+        codeMirrorEditor: null,
+        configData: null,
+        configTranslations: {}, // 添加翻译数据存储
 
-        // 判断是否为自动模式，并根据系统的夜间模式设置调整主题
-        if (savedTheme === 'auto') {
-            const prefersDarkMode = window.matchMedia('(prefers-color-scheme: dark)').matches;
-            document.body.classList.add(prefersDarkMode ? 'dark' : 'light');
-        } else {
-            document.body.classList.add(savedTheme);
+        async checkLoginStatus() {
+            try {
+                const response = await fetch('/api/checkLogin');
+                const data = await response.json();
+                if (data.status === 'success') {
+                    this.userName = data.username;
+                }
+            } catch (error) {
+                console.error('Error checking login status:', error);
+            }
+        },
+        
+        async checkServerStatus() {
+            try {
+                this.serverStatus = 'loading';
+                const response = await fetch('/api/get_server_status');
+                const data = await response.json();
+                this.serverStatus = data.status || 'offline';
+                this.serverVersion = data.version || '';
+                this.serverPlayers = data.players || '0/0';
+            } catch (error) {
+                console.error('Error checking server status:', error);
+                this.serverStatus = 'error';
+            }
+        },
+
+        async loadPlugins() {
+            try {
+                this.loading = true;
+                const response = await fetch('/api/plugins?detail=true');
+                const data = await response.json();
+                this.plugins = data.plugins || [];
+                this.loading = false;
+                
+                // 确保每个插件的处理状态被正确初始化
+                if (this.plugins && this.plugins.length > 0) {
+                    this.plugins.forEach(plugin => {
+                        if (!this.processingPlugins.hasOwnProperty(plugin.id)) {
+                            this.processingPlugins[plugin.id] = false;
+                        }
+                    });
+                }
+            } catch (error) {
+                console.error('Error loading plugins:', error);
+                this.loading = false;
+                this.showNotificationMsg('加载插件列表失败', 'error');
+            }
+        },
+
+        async togglePlugin(pluginId, targetStatus) {
+            if (pluginId === 'guguwebui') {
+                this.showNotificationMsg('不能切换 WebUI 插件的状态', 'error');
+                return;
+            }
+
+            this.processingPlugins[pluginId] = true;
+            
+            try {
+                const response = await fetch('/api/toggle_plugin', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        plugin_id: pluginId,
+                        status: targetStatus
+                    })
+                });
+                
+                const result = await response.json();
+                
+                if (result.status === 'success') {
+                    // 更新插件状态
+                    await this.loadPlugins();
+                    this.showNotificationMsg(`${targetStatus ? '启用' : '禁用'}插件成功`, 'success');
+                } else {
+                    this.showNotificationMsg(`${targetStatus ? '启用' : '禁用'}插件失败: ${result.message || ''}`, 'error');
+                }
+            } catch (error) {
+                console.error(`Error toggling plugin ${pluginId}:`, error);
+                this.showNotificationMsg(`${targetStatus ? '启用' : '禁用'}插件失败`, 'error');
+            } finally {
+                this.processingPlugins[pluginId] = false;
+            }
+        },
+
+        async reloadPlugin(pluginId) {
+            if (pluginId === 'guguwebui') {
+                this.showNotificationMsg('不能重载 WebUI 插件', 'error');
+                return;
+            }
+
+            this.processingPlugins[pluginId] = true;
+            
+            try {
+                const response = await fetch('/api/reload_plugin', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        plugin_id: pluginId
+                    })
+                });
+                
+                const result = await response.json();
+                
+                if (result.status === 'success') {
+                    await this.loadPlugins();
+                    this.showNotificationMsg('重载插件成功', 'success');
+                } else {
+                    this.showNotificationMsg(`重载插件失败: ${result.message || ''}`, 'error');
+                }
+            } catch (error) {
+                console.error(`Error reloading plugin ${pluginId}:`, error);
+                this.showNotificationMsg('重载插件失败', 'error');
+            } finally {
+                this.processingPlugins[pluginId] = false;
+            }
+        },
+
+        async updatePlugin(pluginId) {
+            if (pluginId === 'guguwebui') {
+                this.showNotificationMsg('不能更新 WebUI 插件', 'error');
+                return;
+            }
+
+            this.processingPlugins[pluginId] = true;
+            
+            try {
+                const response = await fetch('/api/update_plugin', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        plugin_id: pluginId
+                    })
+                });
+                
+                const result = await response.json();
+                console.log('更新响应数据:', result);
+                
+                if (result.status === 'success') {
+                    await this.loadPlugins();
+                    this.showNotificationMsg('更新插件成功', 'success');
+                } else {
+                    this.showNotificationMsg(`更新插件失败: ${result.message || ''}`, 'error');
+                }
+            } catch (error) {
+                console.error(`Error updating plugin ${pluginId}:`, error);
+                this.showNotificationMsg('更新插件失败', 'error');
+            } finally {
+                this.processingPlugins[pluginId] = false;
+            }
+        },
+
+        getPluginStatus(plugin) {
+            if (plugin.status === true || plugin.status === 'loaded') return 'active';
+            if (plugin.status === false || plugin.status === 'disabled') return 'inactive';
+            if (plugin.status === 'unloaded') return 'unloaded';
+            return 'error';
+        },
+
+        filterPlugins() {
+            if (!this.searchQuery) return this.plugins;
+            
+            const query = this.searchQuery.toLowerCase();
+            return this.plugins.filter(plugin => 
+                plugin.id.toLowerCase().includes(query) ||
+                plugin.name.toLowerCase().includes(query) ||
+                (plugin.description && plugin.description.toLowerCase().includes(query)) ||
+                (plugin.author && plugin.author.toLowerCase().includes(query))
+            );
+        },
+
+        showNotificationMsg(message, type = 'success') {
+            this.notificationMessage = message;
+            this.notificationType = type;
+            this.showNotification = true;
+            
+            setTimeout(() => {
+                this.showNotification = false;
+            }, 5000);
+        },
+
+        async openConfigModal(plugin) {
+            this.currentPlugin = plugin;
+            this.configFiles = [];
+            this.selectedFile = '';
+            this.configContent = '';
+            this.showEditor = false;
+            this.showConfigModal = true;
+            
+            try {
+                const response = await fetch(`/api/list_config_files?plugin_id=${plugin.id}`);
+                const data = await response.json();
+                this.configFiles = data.files || [];
+            } catch (error) {
+                console.error('Error fetching config files:', error);
+                this.showNotificationMsg('获取配置文件列表失败', 'error');
+            }
+        },
+        
+        async openConfigFile(file, mode = 'code') {
+            this.selectedFile = file;
+            this.editorMode = mode;
+            this.showEditor = true;
+            this.configTranslations = {}; // 重置翻译数据
+            
+            // 清除已有的编辑器实例
+            if (this.codeMirrorEditor) {
+                this.codeMirrorEditor.toTextArea();
+                this.codeMirrorEditor = null;
+            }
+            
+            try {
+                if (mode === 'code') {
+                    // 以代码编辑器模式打开
+                    const response = await fetch(`/api/load_config_file?path=${file}`);
+                    this.configContent = await response.text();
+                    
+                    // 使用setTimeout确保DOM已更新
+                    setTimeout(() => {
+                        const fileExt = file.split('.').pop().toLowerCase();
+                        let editorMode = 'text/plain';
+                        
+                        if (fileExt === 'json') editorMode = 'application/json';
+                        else if (fileExt === 'yml' || fileExt === 'yaml') editorMode = 'text/x-yaml';
+                        else if (fileExt === 'properties') editorMode = 'text/x-properties';
+                        
+                        const editorElement = document.getElementById('config-editor');
+                        if (editorElement) {
+                            this.codeMirrorEditor = CodeMirror.fromTextArea(editorElement, {
+                                mode: editorMode,
+                                lineNumbers: true,
+                                theme: this.darkMode ? 'darcula' : 'default',
+                                lineWrapping: true,
+                                autoCloseBrackets: true,
+                                matchBrackets: true,
+                                indentUnit: 2,
+                                tabSize: 2
+                            });
+                        }
+                    }, 100);
+                } else {
+                    // 以表单模式打开
+                    const response = await fetch(`/api/load_config?path=${file}`);
+                    const data = await response.json();
+                    
+                    // 重置状态，完全替换数据以触发Alpine.js响应式更新
+                    this.configData = {};
+                    
+                    // 使用setTimeout确保DOM和Alpine.js的响应式系统有时间处理第一步的清空操作
+                    setTimeout(() => {
+                        try {
+                            // 检查是否是HTML类型响应
+                            if (data && data.type === 'html') {
+                                this.configData = data; // 直接使用返回数据，包含type和content字段
+                                
+                                // 使用另一个setTimeout确保DOM已更新并且存在iframe元素
+                                setTimeout(() => {
+                                    const iframe = document.getElementById('html-config-iframe');
+                                    if (iframe) {
+                                        // 写入HTML内容到iframe
+                                        const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
+                                        iframeDoc.open();
+                                        iframeDoc.write(data.content);
+                                        iframeDoc.close();
+                                        
+                                        // 调整iframe高度以适应内容
+                                        iframe.onload = function() {
+                                            try {
+                                                const height = iframeDoc.body.scrollHeight;
+                                                if (height > 400) {
+                                                    iframe.style.height = height + 'px';
+                                                }
+                                            } catch (err) {
+                                                console.warn('Unable to adjust iframe height:', err);
+                                            }
+                                        };
+                                    }
+                                }, 100);
+                            } 
+                            // 确保不是空数据
+                            else if (data && typeof data === 'object') {
+                                // 确保configData是一个空对象
+                                this.configData = {};
+                                
+                                // 创建一个深复制，然后确保每个层级都已初始化
+                                const processedData = JSON.parse(JSON.stringify(data));
+                                
+                                // 预处理嵌套对象，确保每个层级都是安全的
+                                Object.keys(processedData).forEach(key => {
+                                    if (typeof processedData[key] === 'object' && processedData[key] !== null && !Array.isArray(processedData[key])) {
+                                        Object.keys(processedData[key]).forEach(nestedKey => {
+                                            if (typeof processedData[key][nestedKey] === 'object' && processedData[key][nestedKey] !== null && !Array.isArray(processedData[key][nestedKey])) {
+                                                Object.keys(processedData[key][nestedKey]).forEach(thirdKey => {
+                                                    if (typeof processedData[key][nestedKey][thirdKey] === 'object' && processedData[key][nestedKey][thirdKey] !== null && !Array.isArray(processedData[key][nestedKey][thirdKey])) {
+                                                        // 确保第四层对象存在
+                                                        processedData[key][nestedKey][thirdKey] = processedData[key][nestedKey][thirdKey] || {};
+                                                    }
+                                                });
+                                                // 确保第三层对象存在
+                                                processedData[key][nestedKey] = processedData[key][nestedKey] || {};
+                                            }
+                                        });
+                                        // 确保第二层对象存在
+                                        processedData[key] = processedData[key] || {};
+                                    }
+                                });
+                                
+                                // 设置处理后的数据
+                                this.configData = processedData;
+                                
+                                // 在加载配置数据后，请求翻译数据
+                                setTimeout(async () => {
+                                    try {
+                                        // console.log(`正在请求翻译数据: /api/load_config?path=${file}&translation=true`);
+                                        const translationResponse = await fetch(`/api/load_config?path=${file}&translation=true`);
+                                        const translationData = await translationResponse.json();
+                                        if (translationData && typeof translationData === 'object') {
+                                            // console.log('收到翻译数据:', translationData);
+                                            this.configTranslations = translationData;
+                                            
+                                            // 检查配置数据中的嵌套结构，记录所有键
+                                            const nestedKeys = [];
+                                            if (this.configData) {
+                                                Object.keys(this.configData).forEach(key => {
+                                                    if (typeof this.configData[key] === 'object' && this.configData[key] !== null && !Array.isArray(this.configData[key])) {
+                                                        Object.keys(this.configData[key]).forEach(nestedKey => {
+                                                            nestedKeys.push(nestedKey);
+                                                        });
+                                                    }
+                                                });
+                                            }
+                                            if (nestedKeys.length > 0) {
+                                                // console.log('嵌套键列表:', nestedKeys);
+                                                // console.log('匹配到的直接翻译:', nestedKeys.filter(key => this.configTranslations[key]).map(key => ({[key]: this.configTranslations[key]})));
+                                            }
+                                            
+                                            // 添加一个小延迟，确保翻译应用后UI已更新
+                                            setTimeout(() => {
+                                                // console.log('翻译数据已应用到表单');
+                                                // 这里可以执行表单初始化完成后的回调
+                                            }, 200);
+                                        } else {
+                                            console.warn('未收到有效的翻译数据');
+                                        }
+                                    } catch (err) {
+                                        console.warn('Error loading translations:', err);
+                                    }
+                                }, 100);
+                            } else {
+                                this.configData = {};
+                                console.warn('Empty or invalid config data received');
+                            }
+                        } catch (err) {
+                            console.error('Error processing config data:', err);
+                            this.configData = {};
+                        }
+                    }, 100);
+                }
+            } catch (error) {
+                console.error('Error loading config file:', error);
+                this.showNotificationMsg('加载配置文件失败', 'error');
+                // 确保在发生错误时也重置数据
+                this.configData = {};
+            }
+        },
+        
+        async saveConfigFile() {
+            try {
+                if (this.editorMode === 'code') {
+                    // 获取CodeMirror的内容
+                    const content = this.codeMirrorEditor.getValue();
+                    
+                    const response = await fetch('/api/save_config_file', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            action: this.selectedFile,
+                            content: content
+                        })
+                    });
+                    
+                    const result = await response.json();
+                    
+                    if (result.status === 'success') {
+                        this.showNotificationMsg('配置文件保存成功', 'success');
+                        // 关闭编辑器
+                        this.showEditor = false;
+                        this.selectedFile = '';
+                    } else {
+                        this.showNotificationMsg(`保存失败: ${result.message || ''}`, 'error');
+                    }
+                } else {
+                    // 如果是HTML类型，则不需要保存
+                    if (this.configData && this.configData.type === 'html') {
+                        this.showNotificationMsg('HTML界面不需要保存', 'success');
+                        return;
+                    }
+                    
+                    // 表单模式保存
+                    const response = await fetch('/api/save_config', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            file_path: this.selectedFile,
+                            config_data: this.configData
+                        })
+                    });
+                    
+                    const result = await response.json();
+                    
+                    if (result.status === 'success') {
+                        this.showNotificationMsg('配置文件保存成功', 'success');
+                        // 关闭编辑器
+                        this.showEditor = false;
+                        this.selectedFile = '';
+                    } else {
+                        this.showNotificationMsg(`保存失败: ${result.message || ''}`, 'error');
+                    }
+                }
+            } catch (error) {
+                console.error('Error saving config file:', error);
+                this.showNotificationMsg('保存配置文件失败', 'error');
+            }
+        },
+        
+        closeConfigModal() {
+            this.showConfigModal = false;
+            if (this.codeMirrorEditor) {
+                // 确保在关闭模态窗口时释放CodeMirror实例
+                this.codeMirrorEditor.toTextArea();
+                this.codeMirrorEditor = null;
+            }
+        },
+        
+        closeEditor() {
+            this.showEditor = false;
+            this.selectedFile = '';
+            if (this.codeMirrorEditor) {
+                // 确保在关闭编辑器时释放CodeMirror实例
+                this.codeMirrorEditor.toTextArea();
+                this.codeMirrorEditor = null;
+            }
+        },
+
+        // 添加重新加载当前文件的方法
+        async reloadCurrentFile(mode) {
+            if (this.selectedFile) {
+                await this.openConfigFile(this.selectedFile, mode);
+            }
         }
-    </script>
-    <div class="about-list">
-        <h2>插件列表<span class="tip">可以在此处进行本地插件的通用化配置，注意，由于是通用化配置，所以不可能支持所有的配置！</span></h2>
-        <div>
-            <a class="btn" href="https://mcdreforged.com/zh-CN/plugin/" target="_blank">插件仓库</a>
-            <a class="btn" href="#" onclick="loadPlugins();return false;">刷新插件列表</a>
-        </div>
-    </div>
-    <div id="plugin-list"></div>
-
-    <div id="pagination"></div>
-
-    <h2>配置列表<span class="tip">请点击上方插件列表的“插件配置”按钮加载文件列表</span></h2>
-    <div id="config" class="modal">
-
-    </div>
-
-    <pre id="JSON"></pre>
-
-    <div id="config-popup">
-        <div class="popup-controls">
-            <button class="btn cancel">返回</button>       
-            <button class="btn" id="save-config">保存配置</button>
-        </div>
-        <div id="popup-content" class="config"></div>
-    </div>
-
-    <!-- 代码编辑器 -->
-    <div id="overlay"></div>
-    <div id="editor-popup">
-        <div class="popup-controls">
-            <button class="btn cancel">返回</button>
-            <select class="btn" style="width: auto;" id="editor-theme-select">
-                <option value="monokai">Monokai</option>
-                <option value="chrome">Chrome</option>
-                <option value="clouds">Clouds</option>
-                <option value="crimson_editor">Crimson Editor</option>
-                <option value="dawn">Dawn</option>
-                <option value="eclipse">Eclipse</option>
-                <option value="solarized_light">Solarized Light</option>
-                <option value="github">GitHub</option>
-                <option value="cobalt">Cobalt</option>
-                <option value="twilight">Twilight</option>
-                <option value="dracula">Dracula</option>
-                <option value="ambiance">Ambiance</option>
-                <option value="chaos">Chaos</option>
-                <option value="clouds_midnight">Clouds Midnight</option>
-                <option value="cobalt">Cobalt</option>
-                <option value="idle_fingers">Idle Fingers</option>
-                <option value="kr_theme">KR Theme</option>
-                <option value="merbivore">Merbivore</option>
-                <option value="merbivore_soft">Merbivore Soft</option>
-                <option value="mono_industrial">Mono Industrial</option>
-                <option value="pastel_on_dark">Pastel on Dark</option>
-                <option value="solarized_dark">Solarized Dark</option>
-                <option value="terminal">Terminal</option>
-                <option value="tomorrow">Tomorrow</option>
-                <option value="tomorrow_night">Tomorrow Night</option>
-                <option value="tomorrow_night_blue">Tomorrow Night Blue</option>
-            </select>              
-            <button class="btn" id="save-file" title="CTRL+S">保存提交</button>
-        </div>
-        <div id="editor">/* 在这里输入代码 */</div>
-    </div>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.4.12/ace.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.4.12/ext-language_tools.js"></script>
-    <script>
-        // 编辑器
-        const editor = ace.edit("editor");
-        const overlay = document.getElementById("overlay");
-        const editorPopup = document.getElementById("editor-popup");
-        let current_path = '';
-        const localStorageKey = (current_path) => `editor_content_${current_path}`;
-
-        // 读取本地存储中的主题
-        const editor_theme = localStorage.getItem('editor_theme');
-        if (editor_theme) {
-            editor.setTheme("ace/theme/" + editor_theme);
-        } else {
-            editor.setTheme("ace/theme/monokai"); // 默认主题
-        }
-
-        editor.setOptions({
-            enableBasicAutocompletion: true,
-            enableLiveAutocompletion: true,
-            fontSize: "14px",
-            useSoftTabs: true,
-        });
-
-        // 主题选择事件
-        document.getElementById("editor-theme-select").addEventListener("change", function() {
-            const selectedTheme = this.value;
-            editor.setTheme("ace/theme/" + selectedTheme);
-            localStorage.setItem('editor_theme', selectedTheme); // 缓存主题到本地
-        });
-
-        // 事件监听
-        document.getElementById("save-file").addEventListener("click", () => saveToServer());
-        document.querySelectorAll(".cancel").forEach(function(element) {
-            element.addEventListener("click", function() {
-                localStorage.removeItem(localStorageKey(current_path));
-                closePopup();
-            });
-        });
-
-        // 输入时实时保存到本地存储
-        editor.on("input", () => {
-            localStorage.setItem(localStorageKey(current_path), editor.getValue());
-        });
-    </script>
-
-    <script>
-        const itemsPerPage = 7;
-        let currentPage = 1;
-    </script>
-    <script src="js/plugins.js"></script>
-    <script>
+    }" 
+    x-init="
+        checkLoginStatus();
+        checkServerStatus();
         loadPlugins();
-    </script>
+        
+        // 初始化处理中插件状态
+        processingPlugins = {};
+        
+        // 每60秒自动刷新服务器状态
+        setInterval(() => checkServerStatus(), 60000);
+        
+        // 保存主题设置到本地存储
+        $watch('darkMode', value => {
+            localStorage.setItem('darkMode', value);
+        });
+    ">
+        <!-- 侧边栏 -->
+        <div id="sidebar" :class="{'translate-x-0': sidebarOpen, '-translate-x-full': !sidebarOpen}" class="sidebar-width fixed top-0 left-0 bottom-0 z-30 transform transition-transform duration-300 ease-in-out bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 shadow-lg overflow-y-auto">
+            <div class="p-4 flex flex-col h-full">
+                <!-- Logo -->
+                <div class="flex items-center justify-center mb-8 mt-2">
+                    <div class="w-12 h-12 rounded-full bg-gradient-to-r from-blue-400 to-purple-500 flex items-center justify-center mr-3 shadow-lg">
+                        <i class="fas fa-server text-white text-xl"></i>
+                    </div>
+                    <div>
+                        <h1 class="text-xl font-bold text-gray-800 dark:text-white">MCDR WebUI</h1>
+                        <p class="text-xs text-gray-500 dark:text-gray-400">服务器管理平台</p>
+                    </div>
+                </div>
+                
+                <!-- 导航菜单 -->
+                <div class="flex-1 overflow-y-auto">
+                    <nav class="space-y-1">
+                        <a href="/index" class="flex items-center px-4 py-3 text-sm font-medium rounded-lg text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
+                            <i class="fas fa-home w-6 text-center"></i>
+                            <span class="ml-3">仪表盘</span>
+                        </a>
+                        
+                        <a href="/mcdr" class="flex items-center px-4 py-3 text-sm font-medium rounded-lg text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
+                            <i class="fas fa-cogs w-6 text-center"></i>
+                            <span class="ml-3">MCDR 配置</span>
+                        </a>
+                        
+                        <a href="/mc" class="flex items-center px-4 py-3 text-sm font-medium rounded-lg text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
+                            <i class="fas fa-gamepad w-6 text-center"></i>
+                            <span class="ml-3">MC 服务器配置</span>
+                        </a>
+                        
+                        <a href="/plugins" class="flex items-center px-4 py-3 text-sm font-medium rounded-lg bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-200">
+                            <i class="fas fa-puzzle-piece w-6 text-center"></i>
+                            <span class="ml-3">本地插件</span>
+                        </a>
+                        
+                        <a href="/online-plugins" class="flex items-center px-4 py-3 text-sm font-medium rounded-lg text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
+                            <i class="fas fa-cloud-download-alt w-6 text-center"></i>
+                            <span class="ml-3">在线插件</span>
+                        </a>
+
+                        <a href="/terminal" class="flex items-center px-4 py-3 text-sm font-medium rounded-lg text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
+                            <i class="fas fa-terminal w-6 text-center"></i>
+                            <span class="ml-3">终端日志</span>
+                        </a>
+                        
+                        <a href="/gugubot" class="flex items-center px-4 py-3 text-sm font-medium rounded-lg text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
+                            <i class="fas fa-robot w-6 text-center"></i>
+                            <span class="ml-3">GUGUBot 管理</span>
+                        </a>
+                        
+                        <a href="/cq" class="flex items-center px-4 py-3 text-sm font-medium rounded-lg text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
+                            <i class="fas fa-comments w-6 text-center"></i>
+                            <span class="ml-3">CQ-QQ-API</span>
+                        </a>
+                        
+                        <a href="/fabric" class="flex items-center px-4 py-3 text-sm font-medium rounded-lg text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
+                            <i class="fas fa-cube w-6 text-center"></i>
+                            <span class="ml-3">Fabric 管理</span>
+                        </a>
+                    </nav>
+                </div>
+                
+                <!-- 底部功能区 -->
+                <div class="pt-4 mt-6 border-t border-gray-200 dark:border-gray-700">
+                    <a href="/settings" class="flex items-center px-4 py-3 text-sm font-medium rounded-lg text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
+                        <i class="fas fa-cog w-6 text-center"></i>
+                        <span class="ml-3">Web设置</span>
+                    </a>
+                    
+                    <a href="/about" class="flex items-center px-4 py-3 text-sm font-medium rounded-lg text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
+                        <i class="fas fa-info-circle w-6 text-center"></i>
+                        <span class="ml-3">关于</span>
+                    </a>
+                    
+                    <a href="/logout" class="flex items-center px-4 py-3 text-sm font-medium rounded-lg text-red-700 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors mt-2">
+                        <i class="fas fa-sign-out-alt w-6 text-center"></i>
+                        <span class="ml-3">退出登录</span>
+                    </a>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 主内容区 -->
+        <div id="main-content" :class="{'sidebar-open': sidebarOpen}" class="main-content min-h-screen transition-all duration-300">
+            <!-- 顶部导航栏 -->
+            <header id="header" class="bg-white dark:bg-gray-800 shadow-sm border-b border-gray-200 dark:border-gray-700 h-16 fixed top-0 right-0 left-0 z-20" :class="{'left-0': !sidebarOpen, 'left-[260px]': sidebarOpen}">
+                <div class="h-full px-4 sm:px-6 flex items-center justify-between">
+                    <!-- 左侧部分 -->
+                    <div class="flex items-center">
+                        <!-- 移动端菜单按钮 -->
+                        <button @click="sidebarOpen = !sidebarOpen" class="inline-flex items-center justify-center p-2 rounded-md text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 focus:outline-none transition-colors">
+                            <i :class="sidebarOpen ? 'fa-times' : 'fa-bars'" class="fas"></i>
+                        </button>
+                        
+                        <!-- 页面标题 -->
+                        <h1 class="ml-4 text-xl font-semibold text-gray-800 dark:text-white">本地插件管理</h1>
+                    </div>
+                    
+                    <!-- 右侧部分 -->
+                    <div class="flex items-center space-x-4">
+                        <!-- 公告 -->
+                        <div class="nav-notice hidden md:flex items-center bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-300 px-3 py-1 rounded-full text-xs font-medium mr-2">
+                            <span class="nav-notice-text"><i class="fas fa-circle-notch fa-spin mr-1.5"></i> 加载公告中...</span>
+                        </div>
+                    
+                        <!-- 服务器状态 -->
+                        <div class="hidden sm:flex items-center">
+                            <div class="px-3 py-1 rounded-full text-xs font-medium flex items-center" :class="{
+                                'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300': serverStatus === 'online',
+                                'bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300': serverStatus === 'offline',
+                                'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300': serverStatus === 'error',
+                                'bg-gray-100 dark:bg-gray-900/30 text-gray-800 dark:text-gray-300': serverStatus === 'loading'
+                            }">
+                                <span x-show="serverStatus === 'online'" class="flex items-center">
+                                    <i class="fas fa-circle mr-1 text-xs"></i>
+                                    <span>在线</span>
+                                </span>
+                                <span x-show="serverStatus === 'offline'" class="flex items-center">
+                                    <i class="fas fa-circle mr-1 text-xs"></i>
+                                    <span>离线</span>
+                                </span>
+                                <span x-show="serverStatus === 'error'" class="flex items-center">
+                                    <i class="fas fa-exclamation-triangle mr-1"></i>
+                                    <span>错误</span>
+                                </span>
+                                <span x-show="serverStatus === 'loading'" class="flex items-center">
+                                    <i class="fas fa-circle-notch fa-spin mr-1 text-xs"></i>
+                                    <span>加载中</span>
+                                </span>
+                            </div>
+                        </div>
+                        
+                        <!-- 主题切换 -->
+                        <button @click="darkMode = !darkMode; localStorage.setItem('darkMode', darkMode)" class="inline-flex items-center justify-center p-2 rounded-md text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 focus:outline-none transition-colors">
+                            <i class="fas" :class="darkMode ? 'fa-sun' : 'fa-moon'"></i>
+                        </button>
+                        
+                        <!-- 用户信息 -->
+                        <div class="flex items-center">
+                            <div class="w-8 h-8 rounded-full bg-blue-500 flex items-center justify-center text-white user-avatar overflow-hidden">
+                                <i class="fas fa-user"></i>
+                            </div>
+                            <span class="ml-2 text-sm font-medium text-gray-700 dark:text-gray-300 js-username" x-text="userName || '用户'"></span>
+                        </div>
+                    </div>
+                </div>
+            </header>
+            
+            <!-- 主内容 -->
+            <main class="pt-24 px-4 sm:px-6 md:px-8 pb-8">
+                <div class="bg-white dark:bg-gray-800 shadow-sm rounded-lg p-6 border border-gray-200 dark:border-gray-700">
+                    <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
+                        <h2 class="text-xl font-bold text-gray-800 dark:text-white">已安装插件</h2>
+                        
+                        <!-- 搜索栏 -->
+                        <div class="relative w-full md:w-64">
+                            <input 
+                                type="text" 
+                                class="w-full pl-10 pr-4 py-2 rounded-lg border dark:border-gray-700 bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white"
+                                placeholder="搜索插件..."
+                                x-model="searchQuery"
+                            >
+                            <i class="fas fa-search absolute left-3 top-3 text-gray-400"></i>
+                            <button 
+                                x-show="searchQuery" 
+                                @click="searchQuery = ''"
+                                class="absolute right-3 top-3 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                            >
+                                <i class="fas fa-times"></i>
+                            </button>
+                        </div>
+
+                        <!-- 刷新按钮 -->
+                        <button 
+                            @click="loadPlugins" 
+                            class="inline-flex items-center justify-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
+                            :disabled="loading"
+                        >
+                            <template x-if="!loading">
+                                <i class="fas fa-sync-alt mr-2"></i>
+                            </template>
+                            <template x-if="loading">
+                                <i class="fas fa-circle-notch fa-spin mr-2"></i>
+                            </template>
+                            <span x-text="loading ? '加载中...' : '刷新插件'"></span>
+                        </button>
+                    </div>
+
+                    <!-- 加载状态 -->
+                    <div x-show="loading" class="flex justify-center items-center py-12">
+                        <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
+                        <span class="ml-3 text-gray-600 dark:text-gray-400">加载插件中...</span>
+                    </div>
+
+                    <!-- 插件列表 -->
+                    <div x-show="!loading && filterPlugins().length === 0" class="text-center py-12">
+                        <i class="fas fa-puzzle-piece text-4xl text-gray-400 mb-4"></i>
+                        <p class="text-gray-500 dark:text-gray-400">未找到符合条件的插件</p>
+                    </div>
+
+                    <div x-show="!loading && filterPlugins().length > 0" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        <template x-for="plugin in filterPlugins()" :key="plugin.id">
+                            <div class="plugin-card bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-sm overflow-hidden"
+                                :class="getPluginStatus(plugin)">
+                                <div class="p-5">
+                                    <div class="flex items-start justify-between">
+                                        <div class="flex-1">
+                                            <h3 class="text-lg font-semibold text-gray-900 dark:text-white" x-text="plugin.name || plugin.id"></h3>
+                                            <p class="text-sm text-gray-500 dark:text-gray-400" x-text="'ID: ' + plugin.id"></p>
+                                        </div>
+                                        <div x-show="plugin.id !== 'guguwebui'">
+                                            <label class="toggle-switch">
+                                                <input 
+                                                    type="checkbox" 
+                                                    :checked="plugin.status === true || plugin.status === 'loaded'"
+                                                    @change="togglePlugin(plugin.id, !(plugin.status === true || plugin.status === 'loaded'))"
+                                                    :disabled="processingPlugins[plugin.id] || plugin.id === 'guguwebui'"
+                                                >
+                                                <span class="toggle-slider"></span>
+                                            </label>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="mt-3">
+                                        <p class="text-sm text-gray-600 dark:text-gray-300" x-text="plugin.description || '暂无描述'"></p>
+                                    </div>
+                                    
+                                    <div class="mt-4 flex flex-wrap gap-2">
+                                        <span class="text-xs px-2 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-200 rounded" x-text="'v' + (plugin.version || '未知')"></span>
+                                        <span x-show="plugin.author" class="text-xs px-2 py-1 bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-200 rounded" x-text="'作者: ' + plugin.author"></span>
+                                        <a x-show="plugin.github" :href="plugin.github" target="_blank" class="text-xs px-2 py-1 bg-gray-100 hover:bg-gray-200 dark:bg-gray-700/50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-200 rounded inline-flex items-center">
+                                            <i class="fab fa-github mr-1"></i>
+                                            <span>GitHub</span>
+                                        </a>
+                                        <span x-show="plugin.status === true || plugin.status === 'loaded'" class="text-xs px-2 py-1 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-200 rounded">
+                                            <i class="fas fa-check-circle mr-1"></i>
+                                            <span>已加载</span>
+                                        </span>
+                                        <span x-show="plugin.status === false || plugin.status === 'disabled'" class="text-xs px-2 py-1 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 rounded">
+                                            <i class="fas fa-pause-circle mr-1"></i>
+                                            <span>已禁用</span>
+                                        </span>
+                                        <span x-show="plugin.status === 'unloaded'" class="text-xs px-2 py-1 bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-200 rounded">
+                                            <i class="fas fa-exclamation-circle mr-1"></i>
+                                            <span>未加载</span>
+                                        </span>
+                                    </div>
+                                    
+                                    <div class="mt-5 flex justify-end space-x-3">
+                                        <button 
+                                            x-show="plugin.id !== 'guguwebui' && plugin.config_file === true"
+                                            @click="openConfigModal(plugin)"
+                                            class="inline-flex items-center justify-center px-3 py-1.5 border border-transparent rounded-md shadow-sm text-xs font-medium text-white bg-purple-600 hover:bg-purple-700 focus:outline-none transition-colors"
+                                        >
+                                            <i class="fas fa-cog mr-1.5"></i>
+                                            <span>配置</span>
+                                        </button>
+                                        
+                                        <button 
+                                            x-show="plugin.id !== 'guguwebui'"
+                                            @click="reloadPlugin(plugin.id)"
+                                            class="inline-flex items-center justify-center px-3 py-1.5 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm text-xs font-medium text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none transition-colors"
+                                            :disabled="processingPlugins[plugin.id]"
+                                        >
+                                            <template x-if="!processingPlugins[plugin.id]">
+                                                <i class="fas fa-sync-alt mr-1.5"></i>
+                                            </template>
+                                            <template x-if="processingPlugins[plugin.id]">
+                                                <i class="fas fa-circle-notch fa-spin mr-1.5"></i>
+                                            </template>
+                                            <span>重载</span>
+                                        </button>
+                                        
+                                        <button 
+                                            x-show="plugin.id !== 'guguwebui'"
+                                            @click="updatePlugin(plugin.id)"
+                                            class="inline-flex items-center justify-center px-3 py-1.5 border border-transparent rounded-md shadow-sm text-xs font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none transition-colors"
+                                            :disabled="processingPlugins[plugin.id]"
+                                        >
+                                            <template x-if="!processingPlugins[plugin.id]">
+                                                <i class="fas fa-arrow-circle-up mr-1.5"></i>
+                                            </template>
+                                            <template x-if="processingPlugins[plugin.id]">
+                                                <i class="fas fa-circle-notch fa-spin mr-1.5"></i>
+                                            </template>
+                                            <span>更新</span>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </template>
+                    </div>
+                </div>
+                
+                <!-- 通知 -->
+                <div 
+                    x-show="showNotification" 
+                    x-transition:enter="transition ease-out duration-300"
+                    x-transition:enter-start="opacity-0 transform scale-90"
+                    x-transition:enter-end="opacity-100 transform scale-100"
+                    x-transition:leave="transition ease-in duration-300"
+                    x-transition:leave-start="opacity-100 transform scale-100"
+                    x-transition:leave-end="opacity-0 transform scale-90"
+                    class="notification"
+                    :class="notificationType === 'success' ? 'bg-green-500' : 'bg-red-500'"
+                >
+                    <template x-if="notificationType === 'success'">
+                        <i class="fas fa-check-circle mr-2"></i>
+                    </template>
+                    <template x-if="notificationType === 'error'">
+                        <i class="fas fa-exclamation-circle mr-2"></i>
+                    </template>
+                    <span x-text="notificationMessage"></span>
+                </div>
+                
+                <!-- 配置文件模态窗口 -->
+                <div x-show="showConfigModal" x-transition.opacity class="modal-backdrop">
+                    <div class="modal-content" @click.away="closeConfigModal()">
+                        <div class="modal-header">
+                            <h3 class="text-lg font-semibold text-gray-900 dark:text-white" x-text="currentPlugin ? '配置 - ' + (currentPlugin.name || currentPlugin.id) : '插件配置'"></h3>
+                            <button @click="closeConfigModal()" class="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        </div>
+                        
+                        <div class="modal-body">
+                            <!-- 配置文件列表 -->
+                            <div x-show="!showEditor">
+                                <h4 class="text-md font-medium text-gray-800 dark:text-gray-200 mb-4">可用配置文件</h4>
+                                
+                                <div x-show="configFiles.length === 0" class="text-center py-10 text-gray-500 dark:text-gray-400">
+                                    <i class="fas fa-file-alt text-4xl mb-3"></i>
+                                    <p>未找到配置文件</p>
+                                </div>
+                                
+                                <div x-show="configFiles.length > 0" class="config-file-list">
+                                    <template x-for="file in configFiles" :key="file">
+                                        <div class="config-file-item">
+                                            <div>
+                                                <span class="text-gray-900 dark:text-gray-100 font-medium" x-text="file.split('/').pop()"></span>
+                                                <span class="text-gray-500 dark:text-gray-400 text-sm ml-2" x-text="file"></span>
+                                            </div>
+                                            <div class="flex gap-2">
+                                                <button @click="openConfigFile(file, 'form')" class="inline-flex items-center px-3 py-1.5 bg-purple-100 hover:bg-purple-200 dark:bg-purple-900/30 dark:hover:bg-purple-800/40 text-purple-700 dark:text-purple-300 rounded-md text-sm">
+                                                    <i class="fas fa-list-alt mr-1.5"></i>
+                                                    <span>表单模式</span>
+                                                </button>
+                                                <button @click="openConfigFile(file, 'code')" class="inline-flex items-center px-3 py-1.5 bg-blue-100 hover:bg-blue-200 dark:bg-blue-900/30 dark:hover:bg-blue-800/40 text-blue-700 dark:text-blue-300 rounded-md text-sm">
+                                                    <i class="fas fa-code mr-1.5"></i>
+                                                    <span>代码模式</span>
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </template>
+                                </div>
+                            </div>
+                            
+                            <!-- 编辑器界面 -->
+                            <div x-show="showEditor">
+                                <div class="flex justify-between items-center mb-4">
+                                    <h4 class="text-md font-medium text-gray-800 dark:text-gray-200">
+                                        编辑 <span class="text-blue-600 dark:text-blue-400" x-text="selectedFile.split('/').pop()"></span>
+                                    </h4>
+                                    <button @click="closeEditor()" class="inline-flex items-center text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200">
+                                        <i class="fas fa-arrow-left mr-1.5"></i>
+                                        <span>返回列表</span>
+                                    </button>
+                                </div>
+                                
+                                <div class="editor-tabs">
+                                    <div class="editor-tab" :class="{ 'active': editorMode === 'code' }" @click="editorMode = 'code'; reloadCurrentFile('code')">
+                                        <i class="fas fa-code mr-1.5"></i>
+                                        <span>代码视图</span>
+                                    </div>
+                                    <div class="editor-tab" :class="{ 'active': editorMode === 'form' }" @click="editorMode = 'form'; reloadCurrentFile('form')">
+                                        <i class="fas fa-list-alt mr-1.5"></i>
+                                        <span>表单视图</span>
+                                    </div>
+                                </div>
+                                
+                                <!-- 代码编辑器 -->
+                                <div x-show="editorMode === 'code'" class="editor-container">
+                                    <textarea id="config-editor" x-model="configContent"></textarea>
+                                </div>
+                                
+                                <!-- 表单视图 -->
+                                <div x-show="editorMode === 'form'" class="mt-4">
+                                    <!-- HTML内容渲染区域 -->
+                                    <div x-show="configData && configData.type === 'html'" class="config-html-content">
+                                        <div class="html-iframe-container">
+                                            <iframe id="html-config-iframe" class="html-iframe" x-ref="htmlIframe" sandbox="allow-scripts allow-forms allow-same-origin"></iframe>
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- 标准表单渲染区域 -->
+                                    <div x-show="!configData || configData.type !== 'html'">
+                                        <div x-show="!configData || Object.keys(configData).length === 0" class="text-center py-10 text-gray-500 dark:text-gray-400">
+                                            <i class="fas fa-exclamation-circle text-4xl mb-3"></i>
+                                            <p>无法以表单方式编辑此文件或文件为空</p>
+                                            <p class="text-sm mt-2">请尝试使用代码视图进行编辑</p>
+                                        </div>
+                                        
+                                        <!-- 动态表单内容 - 支持深层嵌套对象 -->
+                                        <div x-show="configData && Object.keys(configData).length > 0 && configData.type !== 'html'" class="space-y-4">
+                                            <template x-for="(value, key) in configData || {}" :key="key">
+                                                <div class="form-group">
+                                                    <label class="block text-sm font-medium mb-1 config-label">
+                                                        <!-- 如果有翻译且是数组 (标题+副标题) -->
+                                                        <template x-if="configTranslations[key] && Array.isArray(configTranslations[key]) && configTranslations[key].length > 0">
+                                                            <div>
+                                                                <span class="config-label-title" x-text="configTranslations[key][0] || key"></span>
+                                                                <span x-show="configTranslations[key].length > 1" class="config-label-subtitle" x-text="configTranslations[key][1]"></span>
+                                                            </div>
+                                                        </template>
+                                                        <!-- 如果有翻译且是字符串 (只有标题) -->
+                                                        <template x-if="configTranslations[key] && !Array.isArray(configTranslations[key])">
+                                                            <span class="config-label-title" x-text="configTranslations[key]"></span>
+                                                        </template>
+                                                        <!-- 没有翻译时显示原键名 -->
+                                                        <template x-if="!configTranslations[key]">
+                                                            <span class="config-label-title" x-text="key"></span>
+                                                        </template>
+                                                    </label>
+                                                    
+                                                    <!-- 根据值类型渲染不同控件 -->
+                                                    <template x-if="typeof value === 'boolean'">
+                                                        <label class="toggle-switch">
+                                                            <input type="checkbox" x-model="configData[key]">
+                                                            <span class="toggle-slider"></span>
+                                                        </label>
+                                                    </template>
+                                                    
+                                                    <template x-if="typeof value === 'number'">
+                                                        <input type="number" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100" x-model.number="configData[key]">
+                                                    </template>
+                                                    
+                                                    <template x-if="typeof value === 'string'">
+                                                        <input type="text" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100" x-model="configData[key]">
+                                                    </template>
+                                                    
+                                                    <!-- 处理嵌套对象 -->
+                                                    <template x-if="typeof value === 'object' && value !== null && !Array.isArray(value)">
+                                                        <div class="mt-2 pl-4 border-l-2 border-gray-300 dark:border-gray-600 space-y-3">
+                                                            <template x-for="(nestedValue, nestedKey) in value" :key="nestedKey">
+                                                                <div class="form-group">
+                                                                    <label class="block text-sm font-medium mb-1 config-label">
+                                                                        <!-- 尝试使用嵌套路径查找翻译，如果找不到，尝试直接使用属性名 -->
+                                                                        <template x-if="configTranslations[key + '.' + nestedKey] && Array.isArray(configTranslations[key + '.' + nestedKey])">
+                                                                            <div>
+                                                                                <span class="config-label-title" x-text="configTranslations[key + '.' + nestedKey][0] || nestedKey"></span>
+                                                                                <span x-show="configTranslations[key + '.' + nestedKey].length > 1" class="config-label-subtitle" x-text="configTranslations[key + '.' + nestedKey][1]"></span>
+                                                                            </div>
+                                                                        </template>
+                                                                        <template x-if="configTranslations[key + '.' + nestedKey] && !Array.isArray(configTranslations[key + '.' + nestedKey])">
+                                                                            <span class="config-label-title" x-text="configTranslations[key + '.' + nestedKey]"></span>
+                                                                        </template>
+                                                                        
+                                                                        <!-- 尝试直接使用属性名查找翻译（如果嵌套路径没有找到） -->
+                                                                        <template x-if="!configTranslations[key + '.' + nestedKey] && configTranslations[nestedKey] && Array.isArray(configTranslations[nestedKey])">
+                                                                            <div>
+                                                                                <span class="config-label-title" x-text="configTranslations[nestedKey][0] || nestedKey"></span>
+                                                                                <span x-show="configTranslations[nestedKey].length > 1" class="config-label-subtitle" x-text="configTranslations[nestedKey][1]"></span>
+                                                                            </div>
+                                                                        </template>
+                                                                        <template x-if="!configTranslations[key + '.' + nestedKey] && configTranslations[nestedKey] && !Array.isArray(configTranslations[nestedKey])">
+                                                                            <span class="config-label-title" x-text="configTranslations[nestedKey]"></span>
+                                                                        </template>
+                                                                        
+                                                                        <!-- 如果没有找到任何翻译 -->
+                                                                        <template x-if="!configTranslations[key + '.' + nestedKey] && !configTranslations[nestedKey]">
+                                                                            <span class="config-label-title" x-text="nestedKey"></span>
+                                                                        </template>
+                                                                    </label>
+                                                                    
+                                                                    <!-- 处理嵌套对象中的值类型 -->
+                                                                    <template x-if="typeof nestedValue === 'boolean'">
+                                                                        <label class="toggle-switch">
+                                                                            <input type="checkbox" x-model="configData[key] && configData[key][nestedKey]">
+                                                                            <span class="toggle-slider"></span>
+                                                                        </label>
+                                                                    </template>
+                                                                    
+                                                                    <template x-if="typeof nestedValue === 'number'">
+                                                                        <input type="number" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100" x-model.number="configData[key] ? configData[key][nestedKey] : 0">
+                                                                    </template>
+                                                                    
+                                                                    <template x-if="typeof nestedValue === 'string'">
+                                                                        <input type="text" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100" x-model="configData[key] ? configData[key][nestedKey] : ''">
+                                                                    </template>
+                                                                    
+                                                                    <!-- 处理嵌套对象中的数组 -->
+                                                                    <template x-if="Array.isArray(nestedValue)">
+                                                                        <div class="mt-2 space-y-2">
+                                                                            <div class="mb-2 flex gap-2 flex-wrap">
+                                                                                <template x-for="(item, index) in nestedValue || []" :key="index">
+                                                                                    <div class="inline-flex items-center bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-200 rounded-full px-3 py-1 text-sm">
+                                                                                        <span x-text="item"></span>
+                                                                                        <button @click="configData && configData[key] && Array.isArray(configData[key][nestedKey]) && configData[key][nestedKey].splice(index, 1)" class="ml-1.5 text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300">
+                                                                                            <i class="fas fa-times"></i>
+                                                                                        </button>
+                                                                                    </div>
+                                                                                </template>
+                                                                            </div>
+                                                                            <div class="flex gap-2">
+                                                                                <input 
+                                                                                    type="text" 
+                                                                                    placeholder="添加新项..." 
+                                                                                    :id="'nested-array-input-' + (key ? key.replace(/\./g, '-') : '') + '-' + (nestedKey ? nestedKey.replace(/\./g, '-') : '')" 
+                                                                                    class="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100">
+                                                                                <button 
+                                                                                    @click="
+                                                                                        if (!configData || !key || !nestedKey) return;
+                                                                                        const inputId = 'nested-array-input-' + key.replace(/\./g, '-') + '-' + nestedKey.replace(/\./g, '-');
+                                                                                        const inputEl = document.getElementById(inputId);
+                                                                                        if (inputEl && inputEl.value) {
+                                                                                            if (!configData[key]) configData[key] = {};
+                                                                                            if (!Array.isArray(configData[key][nestedKey])) {
+                                                                                                configData[key][nestedKey] = [];
+                                                                                            }
+                                                                                            configData[key][nestedKey].push(inputEl.value);
+                                                                                            inputEl.value = '';
+                                                                                        }
+                                                                                    " 
+                                                                                    class="inline-flex items-center px-3 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none">
+                                                                                    <i class="fas fa-plus"></i>
+                                                                                </button>
+                                                                            </div>
+                                                                        </div>
+                                                                    </template>
+
+                                                                    <!-- 处理第三层嵌套对象 -->
+                                                                    <template x-if="typeof nestedValue === 'object' && nestedValue !== null && !Array.isArray(nestedValue)">
+                                                                        <div class="mt-2 pl-4 border-l-2 border-gray-300 dark:border-gray-600 space-y-3">
+                                                                            <template x-for="(thirdValue, thirdKey) in nestedValue" :key="thirdKey">
+                                                                                <div class="form-group">
+                                                                                    <label class="block text-sm font-medium mb-1 config-label">
+                                                                                        <!-- 尝试使用嵌套路径查找翻译 -->
+                                                                                        <template x-if="configTranslations[key + '.' + nestedKey + '.' + thirdKey] && Array.isArray(configTranslations[key + '.' + nestedKey + '.' + thirdKey])">
+                                                                                            <div>
+                                                                                                <span class="config-label-title" x-text="configTranslations[key + '.' + nestedKey + '.' + thirdKey][0] || thirdKey"></span>
+                                                                                                <span x-show="configTranslations[key + '.' + nestedKey + '.' + thirdKey].length > 1" class="config-label-subtitle" x-text="configTranslations[key + '.' + nestedKey + '.' + thirdKey][1]"></span>
+                                                                                            </div>
+                                                                                        </template>
+                                                                                        <template x-if="configTranslations[key + '.' + nestedKey + '.' + thirdKey] && !Array.isArray(configTranslations[key + '.' + nestedKey + '.' + thirdKey])">
+                                                                                            <span class="config-label-title" x-text="configTranslations[key + '.' + nestedKey + '.' + thirdKey]"></span>
+                                                                                        </template>
+                                                                                        
+                                                                                        <!-- 尝试直接使用属性名查找翻译 -->
+                                                                                        <template x-if="!configTranslations[key + '.' + nestedKey + '.' + thirdKey] && configTranslations[thirdKey] && Array.isArray(configTranslations[thirdKey])">
+                                                                                            <div>
+                                                                                                <span class="config-label-title" x-text="configTranslations[thirdKey][0] || thirdKey"></span>
+                                                                                                <span x-show="configTranslations[thirdKey].length > 1" class="config-label-subtitle" x-text="configTranslations[thirdKey][1]"></span>
+                                                                                            </div>
+                                                                                        </template>
+                                                                                        <template x-if="!configTranslations[key + '.' + nestedKey + '.' + thirdKey] && configTranslations[thirdKey] && !Array.isArray(configTranslations[thirdKey])">
+                                                                                            <span class="config-label-title" x-text="configTranslations[thirdKey]"></span>
+                                                                                        </template>
+                                                                                        
+                                                                                        <!-- 如果没有找到任何翻译 -->
+                                                                                        <template x-if="!configTranslations[key + '.' + nestedKey + '.' + thirdKey] && !configTranslations[thirdKey]">
+                                                                                            <span class="config-label-title" x-text="thirdKey"></span>
+                                                                                        </template>
+                                                                                    </label>
+                                                                                    
+                                                                                    <!-- 处理第三层对象中的值类型 -->
+                                                                                    <template x-if="typeof thirdValue === 'boolean'">
+                                                                                        <label class="toggle-switch">
+                                                                                            <input type="checkbox" x-model="configData[key] && configData[key][nestedKey] ? configData[key][nestedKey][thirdKey] : false">
+                                                                                            <span class="toggle-slider"></span>
+                                                                                        </label>
+                                                                                    </template>
+                                                                                    
+                                                                                    <template x-if="typeof thirdValue === 'number'">
+                                                                                        <input type="number" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100" x-model.number="configData[key] && configData[key][nestedKey] ? configData[key][nestedKey][thirdKey] : 0">
+                                                                                    </template>
+                                                                                    
+                                                                                    <template x-if="typeof thirdValue === 'string'">
+                                                                                        <input type="text" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100" x-model="configData[key] && configData[key][nestedKey] ? configData[key][nestedKey][thirdKey] : ''">
+                                                                                    </template>
+                                                                                    
+                                                                                    <!-- 处理第三层嵌套中的数组 -->
+                                                                                    <template x-if="Array.isArray(thirdValue)">
+                                                                                        <div class="mt-2 space-y-2">
+                                                                                            <div class="mb-2 flex gap-2 flex-wrap">
+                                                                                                <template x-for="(item, index) in thirdValue || []" :key="index">
+                                                                                                    <div class="inline-flex items-center bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-200 rounded-full px-3 py-1 text-sm">
+                                                                                                        <span x-text="item"></span>
+                                                                                                        <button @click="configData && configData[key] && configData[key][nestedKey] && Array.isArray(configData[key][nestedKey][thirdKey]) && configData[key][nestedKey][thirdKey].splice(index, 1)" class="ml-1.5 text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300">
+                                                                                                            <i class="fas fa-times"></i>
+                                                                                                        </button>
+                                                                                                    </div>
+                                                                                                </template>
+                                                                                            </div>
+                                                                                            <div class="flex gap-2">
+                                                                                                <input 
+                                                                                                    type="text" 
+                                                                                                    placeholder="添加新项..." 
+                                                                                                    :id="'third-array-input-' + (key ? key.replace(/\./g, '-') : '') + '-' + (nestedKey ? nestedKey.replace(/\./g, '-') : '') + '-' + (thirdKey ? thirdKey.replace(/\./g, '-') : '')" 
+                                                                                                    class="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100">
+                                                                                                <button 
+                                                                                                    @click="
+                                                                                                        if (!configData || !key || !nestedKey || !thirdKey) return;
+                                                                                                        const inputId = 'third-array-input-' + key.replace(/\./g, '-') + '-' + nestedKey.replace(/\./g, '-') + '-' + thirdKey.replace(/\./g, '-');
+                                                                                                        const inputEl = document.getElementById(inputId);
+                                                                                                        if (inputEl && inputEl.value) {
+                                                                                                            if (!configData[key]) configData[key] = {};
+                                                                                                            if (!configData[key][nestedKey]) configData[key][nestedKey] = {};
+                                                                                                            if (!configData[key][nestedKey][thirdKey]) {
+                                                                                                                configData[key][nestedKey][thirdKey] = [];
+                                                                                                            }
+                                                                                                            configData[key][nestedKey][thirdKey].push(inputEl.value);
+                                                                                                            inputEl.value = '';
+                                                                                                        }
+                                                                                                    " 
+                                                                                                    class="inline-flex items-center px-3 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none">
+                                                                                                    <i class="fas fa-plus"></i>
+                                                                                                </button>
+                                                                                            </div>
+                                                                                        </div>
+                                                                                    </template>
+
+                                                                                    <!-- 处理第四层嵌套对象 -->
+                                                                                    <template x-if="typeof thirdValue === 'object' && thirdValue !== null && !Array.isArray(thirdValue)">
+                                                                                        <div class="mt-2 pl-4 border-l-2 border-gray-300 dark:border-gray-600 space-y-3">
+                                                                                            <template x-for="(fourthValue, fourthKey) in thirdValue" :key="fourthKey">
+                                                                                                <div class="form-group">
+                                                                                                    <label class="block text-sm font-medium mb-1 config-label">
+                                                                                                        <!-- 尝试使用嵌套路径查找翻译 -->
+                                                                                                        <template x-if="configTranslations[key + '.' + nestedKey + '.' + thirdKey + '.' + fourthKey] && Array.isArray(configTranslations[key + '.' + nestedKey + '.' + thirdKey + '.' + fourthKey])">
+                                                                                                            <div>
+                                                                                                                <span class="config-label-title" x-text="configTranslations[key + '.' + nestedKey + '.' + thirdKey + '.' + fourthKey][0] || fourthKey"></span>
+                                                                                                                <span x-show="configTranslations[key + '.' + nestedKey + '.' + thirdKey + '.' + fourthKey].length > 1" class="config-label-subtitle" x-text="configTranslations[key + '.' + nestedKey + '.' + thirdKey + '.' + fourthKey][1]"></span>
+                                                                                                            </div>
+                                                                                                        </template>
+                                                                                                        <template x-if="configTranslations[key + '.' + nestedKey + '.' + thirdKey + '.' + fourthKey] && !Array.isArray(configTranslations[key + '.' + nestedKey + '.' + thirdKey + '.' + fourthKey])">
+                                                                                                            <span class="config-label-title" x-text="configTranslations[key + '.' + nestedKey + '.' + thirdKey + '.' + fourthKey]"></span>
+                                                                                                        </template>
+                                                                                                        
+                                                                                                        <!-- 尝试直接使用属性名查找翻译 -->
+                                                                                                        <template x-if="!configTranslations[key + '.' + nestedKey + '.' + thirdKey + '.' + fourthKey] && configTranslations[fourthKey] && Array.isArray(configTranslations[fourthKey])">
+                                                                                                            <div>
+                                                                                                                <span class="config-label-title" x-text="configTranslations[fourthKey][0] || fourthKey"></span>
+                                                                                                                <span x-show="configTranslations[fourthKey].length > 1" class="config-label-subtitle" x-text="configTranslations[fourthKey][1]"></span>
+                                                                                                            </div>
+                                                                                                        </template>
+                                                                                                        <template x-if="!configTranslations[key + '.' + nestedKey + '.' + thirdKey + '.' + fourthKey] && configTranslations[fourthKey] && !Array.isArray(configTranslations[fourthKey])">
+                                                                                                            <span class="config-label-title" x-text="configTranslations[fourthKey]"></span>
+                                                                                                        </template>
+                                                                                                        
+                                                                                                        <!-- 如果没有找到任何翻译 -->
+                                                                                                        <template x-if="!configTranslations[key + '.' + nestedKey + '.' + thirdKey + '.' + fourthKey] && !configTranslations[fourthKey]">
+                                                                                                            <span class="config-label-title" x-text="fourthKey"></span>
+                                                                                                        </template>
+                                                                                                    </label>
+                                                                                                    
+                                                                                                    <!-- 处理第四层对象中的值类型 -->
+                                                                                                    <template x-if="typeof fourthValue === 'boolean'">
+                                                                                                        <label class="toggle-switch">
+                                                                                                            <input type="checkbox" x-model="configData[key] && configData[key][nestedKey] && configData[key][nestedKey][thirdKey] ? configData[key][nestedKey][thirdKey][fourthKey] : false">
+                                                                                                            <span class="toggle-slider"></span>
+                                                                                                        </label>
+                                                                                                    </template>
+                                                                                                    
+                                                                                                    <template x-if="typeof fourthValue === 'number'">
+                                                                                                        <input type="number" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100" x-model.number="configData[key] && configData[key][nestedKey] && configData[key][nestedKey][thirdKey] ? configData[key][nestedKey][thirdKey][fourthKey] : 0">
+                                                                                                    </template>
+                                                                                                    
+                                                                                                    <template x-if="typeof fourthValue === 'string'">
+                                                                                                        <input type="text" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100" x-model="configData[key] && configData[key][nestedKey] && configData[key][nestedKey][thirdKey] ? configData[key][nestedKey][thirdKey][fourthKey] : ''">
+                                                                                                    </template>
+                                                                                                    
+                                                                                                    <!-- 处理第四层嵌套中的数组 -->
+                                                                                                    <template x-if="Array.isArray(fourthValue)">
+                                                                                                        <div class="mt-2 space-y-2">
+                                                                                                            <div class="mb-2 flex gap-2 flex-wrap">
+                                                                                                                <template x-for="(item, index) in fourthValue || []" :key="index">
+                                                                                                                    <div class="inline-flex items-center bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-200 rounded-full px-3 py-1 text-sm">
+                                                                                                                        <span x-text="item"></span>
+                                                                                                                        <button @click="configData && configData[key] && configData[key][nestedKey] && configData[key][nestedKey][thirdKey] && Array.isArray(configData[key][nestedKey][thirdKey][fourthKey]) && configData[key][nestedKey][thirdKey][fourthKey].splice(index, 1)" class="ml-1.5 text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300">
+                                                                                                                            <i class="fas fa-times"></i>
+                                                                                                                        </button>
+                                                                                                                    </div>
+                                                                                                                </template>
+                                                                                                            </div>
+                                                                                                            <div class="flex gap-2">
+                                                                                                                <input 
+                                                                                                                    type="text" 
+                                                                                                                    placeholder="添加新项..." 
+                                                                                                                    :id="'fourth-array-input-' + (key ? key.replace(/\./g, '-') : '') + '-' + (nestedKey ? nestedKey.replace(/\./g, '-') : '') + '-' + (thirdKey ? thirdKey.replace(/\./g, '-') : '') + '-' + (fourthKey ? fourthKey.replace(/\./g, '-') : '')" 
+                                                                                                                    class="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100">
+                                                                                                                <button 
+                                                                                                                    @click="
+                                                                                                                        if (!configData || !key || !nestedKey || !thirdKey || !fourthKey) return;
+                                                                                                                        const inputId = 'fourth-array-input-' + key.replace(/\./g, '-') + '-' + nestedKey.replace(/\./g, '-') + '-' + thirdKey.replace(/\./g, '-') + '-' + fourthKey.replace(/\./g, '-');
+                                                                                                                        const inputEl = document.getElementById(inputId);
+                                                                                                                        if (inputEl && inputEl.value) {
+                                                                                                                            if (!configData[key]) configData[key] = {};
+                                                                                                                            if (!configData[key][nestedKey]) configData[key][nestedKey] = {};
+                                                                                                                            if (!configData[key][nestedKey][thirdKey]) configData[key][nestedKey][thirdKey] = {};
+                                                                                                                            if (!configData[key][nestedKey][thirdKey][fourthKey]) {
+                                                                                                                                configData[key][nestedKey][thirdKey][fourthKey] = [];
+                                                                                                                            }
+                                                                                                                            configData[key][nestedKey][thirdKey][fourthKey].push(inputEl.value);
+                                                                                                                            inputEl.value = '';
+                                                                                                                        }
+                                                                                                                    " 
+                                                                                                                    class="inline-flex items-center px-3 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none">
+                                                                                                                    <i class="fas fa-plus"></i>
+                                                                                                                </button>
+                                                                                                            </div>
+                                                                                                        </div>
+                                                                                                    </template>
+                                                                                                </div>
+                                                                                            </template>
+                                                                                        </div>
+                                                                                    </template>
+                                                                                </div>
+                                                                            </template>
+                                                                        </div>
+                                                                    </template>
+                                                                </div>
+                                                            </template>
+                                                        </div>
+                                                    </template>
+                                                    
+                                                    <!-- 处理顶层数组 -->
+                                                    <template x-if="Array.isArray(value)">
+                                                        <div class="mt-2 space-y-2">
+                                                            <div class="mb-2 flex gap-2 flex-wrap">
+                                                                <template x-for="(item, index) in value || []" :key="index">
+                                                                    <div class="inline-flex items-center bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-200 rounded-full px-3 py-1 text-sm">
+                                                                        <span x-text="item"></span>
+                                                                        <button @click="configData && Array.isArray(configData[key]) && configData[key].splice(index, 1)" class="ml-1.5 text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300">
+                                                                            <i class="fas fa-times"></i>
+                                                                        </button>
+                                                                    </div>
+                                                                </template>
+                                                            </div>
+                                                            <div class="flex gap-2">
+                                                                <input 
+                                                                    type="text" 
+                                                                    placeholder="添加新项..." 
+                                                                    :id="'array-input-' + (key ? key.replace(/\./g, '-') : '')" 
+                                                                    class="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100">
+                                                                <button 
+                                                                    @click="
+                                                                        if (!configData || !key) return;
+                                                                        const inputId = 'array-input-' + key.replace(/\./g, '-');
+                                                                        const inputEl = document.getElementById(inputId);
+                                                                        if (inputEl && inputEl.value) {
+                                                                            if (!Array.isArray(configData[key])) {
+                                                                                configData[key] = [];
+                                                                            }
+                                                                            configData[key].push(inputEl.value);
+                                                                            inputEl.value = '';
+                                                                        }
+                                                                    " 
+                                                                    class="inline-flex items-center px-3 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none">
+                                                                    <i class="fas fa-plus"></i>
+                                                                </button>
+                                                            </div>
+                                                        </div>
+                                                    </template>
+                                                </div>
+                                            </template>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="modal-footer">
+                            <button @click="closeConfigModal()" class="inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm text-sm font-medium text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none">
+                                <span>关闭</span>
+                            </button>
+                            <button 
+                                x-show="showEditor"
+                                @click="saveConfigFile()"
+                                class="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none"
+                            >
+                                <i class="fas fa-save mr-1.5"></i>
+                                <span>保存</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 页脚 -->
+            <footer class="mt-8 text-center text-gray-600 dark:text-gray-400 text-sm">
+                <p>MCDR WebUI &copy; <span id="year"></span></p>
+            </footer>
+        </main>
+    </div>
+</div>
+
+<!-- 导入主脚本 -->
+<script src="/js/main.js"></script>
+
+<!-- 页面预加载脚本 -->
+<script src="/js/preloader.js"></script>
+
+<!-- 公告脚本 -->
+<script src="/js/notice.js"></script>
+
+<script>
+    // 设置当前年份
+    document.getElementById('year').textContent = new Date().getFullYear();
+</script>
 </body>
-</html>
+</html> 

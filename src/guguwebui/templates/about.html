@@ -1,128 +1,406 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="zh-CN" class="h-full" x-data="{ darkMode: localStorage.getItem('darkMode') === 'true', sidebarOpen: window.innerWidth >= 1024 }" :class="{ 'dark': darkMode }">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>关于</title>
-    <link rel="stylesheet" href="custom/overall.css">
-    <script src="custom/overall.js"></script>
-    <script src="js/overall.js"></script>
-    <link rel="stylesheet" href="css/about.css">
-    <style>
-        * {
-            padding: 0;
-            margin: 0;
-            color: #2b2b2b;
-            font-weight: 500;
-        }
-    </style>
+    
+    <title>MCDR WebUI - 关于</title>
+    <!-- 主题预加载脚本 - 防止闪烁 -->
+    <script src="/js/theme-preload.js"></script>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Alpine.js -->
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <!-- 自定义CSS -->
+    <link rel="stylesheet" href="/css/main.css">
+    <!-- Tailwind配置 -->
     <script>
-        function checkIfEmbedded() {
-            if (window.top == window.self) {
-                // 跳转到首页
-                window.location.href = "{{ index_path }}";
-            }
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        primary: {
+                            50: '#f0f9ff',
+                            100: '#e0f2fe',
+                            200: '#bae6fd',
+                            300: '#7dd3fc',
+                            400: '#38bdf8',
+                            500: '#0ea5e9',
+                            600: '#0284c7',
+                            700: '#0369a1',
+                            800: '#075985',
+                            900: '#0c4a6e',
+                        },
+                    },
+                    animation: {
+                        'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+                        'float': 'float 3s ease-in-out infinite',
+                    },
+                    keyframes: {
+                        float: {
+                            '0%, 100%': { transform: 'translateY(0)' },
+                            '50%': { transform: 'translateY(-5px)' },
+                        }
+                    }
+                },
+            },
         }
-
-        // 当页面失去焦点时检测
-        window.onblur = checkIfEmbedded;
-        // 页面加载时检测
-        window.onload = checkIfEmbedded;
-        // 页面尺寸发生变化时
-        window.onresize = checkIfEmbedded;
-        // 页面滚动时
-        window.onscroll = checkIfEmbedded;
-        // 页面内容发生变化时
-        window.onhashchange = checkIfEmbedded;
-        // 页面内容被点击时
-        window.onclick = checkIfEmbedded;
     </script>
 </head>
-<body id="about">
-    <script>
-        // 获取用户的主题偏好
-        const savedTheme = localStorage.getItem('guguwebui-theme') || 'auto';
+<body class="h-full bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100 transition-colors duration-300">
+    <div x-data="appData()" x-init="init()">
+        <!-- 侧边栏 -->
+        <div id="sidebar" :class="{'translate-x-0': sidebarOpen, '-translate-x-full': !sidebarOpen}" class="sidebar-width fixed top-0 left-0 bottom-0 z-30 transform transition-transform duration-300 ease-in-out bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 shadow-lg overflow-y-auto">
+            <div class="p-4 flex flex-col h-full">
+                <!-- Logo -->
+                <div class="flex items-center justify-center mb-8 mt-2">
+                    <div class="w-12 h-12 rounded-full bg-gradient-to-r from-blue-400 to-purple-500 flex items-center justify-center mr-3 shadow-lg">
+                        <i class="fas fa-server text-white text-xl"></i>
+                    </div>
+                    <div>
+                        <h1 class="text-xl font-bold text-gray-800 dark:text-white">MCDR WebUI</h1>
+                        <p class="text-xs text-gray-500 dark:text-gray-400">服务器管理平台</p>
+                    </div>
+                </div>
+                
+                <!-- 导航菜单 -->
+                <div class="flex-1 overflow-y-auto">
+                    <nav class="space-y-1">
+                        <a href="/index" class="flex items-center px-4 py-3 text-sm font-medium rounded-lg text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
+                            <i class="fas fa-home w-6 text-center"></i>
+                            <span class="ml-3">仪表盘</span>
+                        </a>
+                        
+                        <a href="/mcdr" class="flex items-center px-4 py-3 text-sm font-medium rounded-lg text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
+                            <i class="fas fa-cogs w-6 text-center"></i>
+                            <span class="ml-3">MCDR 配置</span>
+                        </a>
+                        
+                        <a href="/mc" class="flex items-center px-4 py-3 text-sm font-medium rounded-lg text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
+                            <i class="fas fa-gamepad w-6 text-center"></i>
+                            <span class="ml-3">MC 服务器配置</span>
+                        </a>
+                        
+                        <a href="/plugins" class="flex items-center px-4 py-3 text-sm font-medium rounded-lg text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
+                            <i class="fas fa-puzzle-piece w-6 text-center"></i>
+                            <span class="ml-3">本地插件</span>
+                        </a>
+                        
+                        <a href="/online-plugins" class="flex items-center px-4 py-3 text-sm font-medium rounded-lg text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
+                            <i class="fas fa-cloud-download-alt w-6 text-center"></i>
+                            <span class="ml-3">在线插件</span>
+                        </a>
 
-        // 判断是否为自动模式，并根据系统的夜间模式设置调整主题
-        if (savedTheme === 'auto') {
-            const prefersDarkMode = window.matchMedia('(prefers-color-scheme: dark)').matches;
-            document.body.classList.add(prefersDarkMode ? 'dark' : 'light');
-        } else {
-            document.body.classList.add(savedTheme);
+                        <a href="/terminal" class="flex items-center px-4 py-3 text-sm font-medium rounded-lg text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
+                            <i class="fas fa-terminal w-6 text-center"></i>
+                            <span class="ml-3">终端日志</span>
+                        </a>
+                        
+                        <a href="/gugubot" class="flex items-center px-4 py-3 text-sm font-medium rounded-lg text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
+                            <i class="fas fa-robot w-6 text-center"></i>
+                            <span class="ml-3">GUGUBot 管理</span>
+                        </a>
+                        
+                        <a href="/cq" class="flex items-center px-4 py-3 text-sm font-medium rounded-lg text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
+                            <i class="fas fa-comments w-6 text-center"></i>
+                            <span class="ml-3">CQ-QQ-API</span>
+                        </a>
+                        
+                        <a href="/fabric" class="flex items-center px-4 py-3 text-sm font-medium rounded-lg text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
+                            <i class="fas fa-cube w-6 text-center"></i>
+                            <span class="ml-3">Fabric 管理</span>
+                        </a>
+                    </nav>
+                </div>
+                
+                <!-- 底部功能区 -->
+                <div class="pt-4 mt-6 border-t border-gray-200 dark:border-gray-700">
+                    <a href="/settings" class="flex items-center px-4 py-3 text-sm font-medium rounded-lg text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
+                        <i class="fas fa-cog w-6 text-center"></i>
+                        <span class="ml-3">Web设置</span>
+                    </a>
+                    
+                    <a href="/about" class="flex items-center px-4 py-3 text-sm font-medium rounded-lg bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-200">
+                        <i class="fas fa-info-circle w-6 text-center"></i>
+                        <span class="ml-3">关于</span>
+                    </a>
+                    
+                    <a href="/logout" class="flex items-center px-4 py-3 text-sm font-medium rounded-lg text-red-700 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors mt-2">
+                        <i class="fas fa-sign-out-alt w-6 text-center"></i>
+                        <span class="ml-3">退出登录</span>
+                    </a>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 主内容区 -->
+        <div id="main-content" :class="{'sidebar-open': sidebarOpen}" class="main-content min-h-screen transition-all duration-300">
+            <!-- 顶部导航栏 -->
+            <header id="header" class="bg-white dark:bg-gray-800 shadow-sm border-b border-gray-200 dark:border-gray-700 h-16 fixed top-0 right-0 left-0 z-20" :class="{'left-0': !sidebarOpen, 'left-[260px]': sidebarOpen}">
+                <div class="h-full px-4 sm:px-6 flex items-center justify-between">
+                    <!-- 左侧部分 -->
+                    <div class="flex items-center">
+                        <!-- 移动端菜单按钮 -->
+                        <button @click="sidebarOpen = !sidebarOpen" class="inline-flex items-center justify-center p-2 rounded-md text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 focus:outline-none transition-colors">
+                            <i :class="sidebarOpen ? 'fa-times' : 'fa-bars'" class="fas"></i>
+                        </button>
+                        
+                        <!-- 页面标题 -->
+                        <h1 class="ml-4 text-xl font-semibold text-gray-800 dark:text-white">关于</h1>
+                    </div>
+                    
+                    <!-- 右侧部分 -->
+                    <div class="flex items-center space-x-4">
+                        <!-- 公告 -->
+                        <div class="nav-notice hidden md:flex items-center bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-300 px-3 py-1 rounded-full text-xs font-medium mr-2">
+                            <span class="nav-notice-text"><i class="fas fa-circle-notch fa-spin mr-1.5"></i> 加载公告中...</span>
+                        </div>
+                    
+                        <!-- 服务器状态 -->
+                        <div class="hidden sm:flex items-center">
+                            <div class="px-3 py-1 rounded-full text-xs font-medium flex items-center" :class="{
+                                'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300': serverStatus === 'online',
+                                'bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300': serverStatus === 'offline',
+                                'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300': serverStatus === 'error',
+                                'bg-gray-100 dark:bg-gray-900/30 text-gray-800 dark:text-gray-300': serverStatus === 'loading'
+                            }">
+                                <span x-show="serverStatus === 'online'" class="flex items-center">
+                                    <i class="fas fa-circle mr-1 text-xs"></i>
+                                    <span>在线</span>
+                                </span>
+                                <span x-show="serverStatus === 'offline'" class="flex items-center">
+                                    <i class="fas fa-circle mr-1 text-xs"></i>
+                                    <span>离线</span>
+                                </span>
+                                <span x-show="serverStatus === 'error'" class="flex items-center">
+                                    <i class="fas fa-exclamation-triangle mr-1"></i>
+                                    <span>错误</span>
+                                </span>
+                                <span x-show="serverStatus === 'loading'" class="flex items-center">
+                                    <i class="fas fa-circle-notch fa-spin mr-1 text-xs"></i>
+                                    <span>加载中</span>
+                                </span>
+                            </div>
+                        </div>
+                        
+                        <!-- 主题切换 -->
+                        <button @click="darkMode = !darkMode; localStorage.setItem('darkMode', darkMode)" class="inline-flex items-center justify-center p-2 rounded-md text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 focus:outline-none transition-colors">
+                            <i class="fas" :class="darkMode ? 'fa-sun' : 'fa-moon'"></i>
+                        </button>
+                        
+                        <!-- 用户信息 -->
+                        <div class="flex items-center">
+                            <div class="w-8 h-8 rounded-full bg-blue-500 flex items-center justify-center text-white user-avatar overflow-hidden">
+                                <i class="fas fa-user"></i>
+                            </div>
+                            <span class="ml-2 text-sm font-medium text-gray-700 dark:text-gray-300 js-username" x-text="userName || '用户'"></span>
+                        </div>
+                    </div>
+                </div>
+            </header>
+            
+            <!-- 主内容 -->
+            <main class="pt-24 px-4 sm:px-6 md:px-8 pb-8">
+                <div class="bg-white dark:bg-gray-800 shadow-sm rounded-lg p-6 border border-gray-200 dark:border-gray-700">
+                    <h2 class="title text-xl font-bold text-gray-800 dark:text-white mb-4 pb-2 border-b border-gray-200 dark:border-gray-700">关于</h2>
+                    <div class="about-list space-y-6">
+                        <div class="about-item bg-gray-50 dark:bg-gray-900/50 p-4 rounded-lg">
+                            <p class="mb-2"><span class="font-medium">GUGUbot:</span> <span>PFingan-MCDRQQ机器人插件，提供多项QQ机器人配置和功能，涵盖管理娱乐等多种功能，并且提供详尽的配置项以方便私人定制化。</span></p>
+                            <div class="flex flex-wrap gap-2">
+                                <a href="https://mcdreforged.com/zh-CN/plugin/gugubot" target="_blank" class="text-xs px-3 py-1.5 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded hover:bg-blue-200 dark:hover:bg-blue-800/30 transition">MCDR仓库</a>
+                                <a href="https://github.com/LoosePrince/PF-GUGUbot" target="_blank" class="text-xs px-3 py-1.5 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 rounded hover:bg-gray-200 dark:hover:bg-gray-700 transition">Github仓库</a>
+                                <a href="#about" id="gugubot-version" class="text-xs px-3 py-1.5 bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 rounded hover:bg-purple-200 dark:hover:bg-purple-800/30 transition">版本：获取中...</a>
+                            </div>
+                        </div>
+                        <div class="about-item bg-gray-50 dark:bg-gray-900/50 p-4 rounded-lg">
+                            <p class="mb-2"><span class="font-medium">cq_qq_api:</span> <span>基于CQ码的正向WebsocketQQ连接机器人，提供MCDR机器人插件接口，方便聊天类机器人的构建。</span></p>
+                            <div class="flex flex-wrap gap-2">
+                                <a href="https://mcdreforged.com/zh-CN/plugin/cq_qq_api" target="_blank" class="text-xs px-3 py-1.5 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded hover:bg-blue-200 dark:hover:bg-blue-800/30 transition">MCDR仓库</a>
+                                <a href="https://github.com/XueK66/PF-cq_qq_api" target="_blank" class="text-xs px-3 py-1.5 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 rounded hover:bg-gray-200 dark:hover:bg-gray-700 transition">Github仓库</a>
+                                <a href="#about" id="cq-qq-api-version" class="text-xs px-3 py-1.5 bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 rounded hover:bg-purple-200 dark:hover:bg-purple-800/30 transition">版本：获取中...</a>
+                            </div>
+                        </div>
+                        <div class="about-item bg-gray-50 dark:bg-gray-900/50 p-4 rounded-lg">
+                            <p class="mb-2"><span class="font-medium">Web:</span> <span>GUGUbot附属网页管理系统，提供插件管理，配置修改等</span></p>
+                            <div class="flex flex-wrap gap-2">
+                                <a href="https://mcdreforged.com/zh-CN/plugin/guguwebui" target="_blank" class="text-xs px-3 py-1.5 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded hover:bg-blue-200 dark:hover:bg-blue-800/30 transition">MCDR仓库</a>
+                                <a href="https://github.com/LoosePrince/PF-MCDR-WebUI" target="_blank" class="text-xs px-3 py-1.5 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 rounded hover:bg-gray-200 dark:hover:bg-gray-700 transition">Github仓库</a>
+                                <a href="#about" id="web-version" class="text-xs px-3 py-1.5 bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 rounded hover:bg-purple-200 dark:hover:bg-purple-800/30 transition">版本：获取中</a>
+                            </div>
+                        </div>
+                    </div>
+                    <h2 class="title text-xl font-bold text-gray-800 dark:text-white mt-8 mb-4 pb-2 border-b border-gray-200 dark:border-gray-700">贡献</h2>
+                    <div class="contribute space-y-6">
+                        <!-- 两列的表格 -->
+                        <div class="overflow-x-auto">
+                            <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                                <thead class="bg-gray-50 dark:bg-gray-800">
+                                    <tr>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">贡献项目</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">说明</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-800">
+                                    <tr>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white"><a href="https://mcdreforged.com/zh-CN/plugins" target="_blank" class="text-blue-600 dark:text-blue-400 hover:underline">MCDR仓库</a></td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">推广本插件、提供快速安装、信息获取</td>
+                                    </tr>
+                                    <tr>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white"><a href="https://github.com/Spark-Code-China/MC-Server-Info" target="_blank" class="text-blue-600 dark:text-blue-400 hover:underline">MC-Server-Info</a></td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">Python Minecraft 服务器信息查询</td>
+                                    </tr>
+                                    <tr>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white"><a href="https://codemirror.net/" target="_blank" class="text-blue-600 dark:text-blue-400 hover:underline">CodeMirror</a></td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">代码编辑器</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                        <div class="hr border-t border-gray-200 dark:border-gray-700 my-4"></div>
+                        <div class="overflow-x-auto">
+                            <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                                <thead class="bg-gray-50 dark:bg-gray-800">
+                                    <tr>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">贡献人</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">说明</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-800">
+                                    <tr>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white"><a href="https://github.com/LoosePrince" target="_blank" class="text-blue-600 dark:text-blue-400 hover:underline">树梢 (LoosePrince)</a></td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">功能设计、文档编写、Web设计、前端编写</td>
+                                    </tr>
+                                    <tr>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white"><a href="https://github.com/XueK66" target="_blank" class="text-blue-600 dark:text-blue-400 hover:underline">雪开 (XueK66)</a></td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">代码开发、维护、功能设计</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                        <div class="hr border-t border-gray-200 dark:border-gray-700 my-4"></div>
+                        <div class="overflow-x-auto">
+                            <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                                <thead class="bg-gray-50 dark:bg-gray-800">
+                                    <tr>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">特别鸣谢</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">说明</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-800">
+                                    <tr>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white"><a href="#about" class="text-blue-600 dark:text-blue-400 hover:underline">反馈者</a></td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">感谢你们的反馈~</td>
+                                    </tr>
+                                    <tr>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white"><a href="https://cursor.com/" target="_blank" class="text-blue-600 dark:text-blue-400 hover:underline">Cursor</a></td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">Cursor协助编写</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 页脚 -->
+                <footer class="mt-12 text-center text-sm text-gray-500 dark:text-gray-400">
+                    <p>MCDR WebUI &copy; <span id="year"></span></p>
+                </footer>
+            </main>
+        </div>
+    </div>
+
+    <!-- JavaScript -->
+    <script src="/js/main.js"></script>
+    <script>
+        function appData() {
+            return {
+                serverStatus: 'loading',
+                userName: '',
+                serverVersion: '',
+                serverPlayers: '0/0',
+                
+                // 初始化
+                init() {
+                    this.checkLoginStatus();
+                    this.checkServerStatus();
+                    this.getVersions();
+                    
+                    // 每60秒自动刷新服务器状态
+                    setInterval(() => this.checkServerStatus(), 60000);
+                    
+                    // 设置当前年份
+                    document.getElementById('year').textContent = new Date().getFullYear();
+                },
+                
+                // 检查登录状态
+                async checkLoginStatus() {
+                    try {
+                        const response = await fetch('/api/checkLogin');
+                        const data = await response.json();
+                        if (data.status === 'success') {
+                            this.userName = data.username;
+                        }
+                    } catch (error) {
+                        console.error('Error checking login status:', error);
+                    }
+                },
+                
+                // 检查服务器状态
+                async checkServerStatus() {
+                    try {
+                        this.serverStatus = 'loading';
+                        const response = await fetch('/api/get_server_status');
+                        const data = await response.json();
+                        this.serverStatus = data.status || 'offline';
+                        this.serverVersion = data.version || '';
+                        this.serverPlayers = data.players || '0/0';
+                    } catch (error) {
+                        console.error('Error checking server status:', error);
+                        this.serverStatus = 'error';
+                    }
+                },
+                
+                // 获取插件版本
+                async getVersions() {
+                    try {
+                        const response = await fetch('/api/gugubot_plugins');
+                        const data = await response.json();
+                        
+                        const gugubotVersion = document.getElementById('gugubot-version');
+                        const cqQqApiVersion = document.getElementById('cq-qq-api-version');
+                        const webVersion = document.getElementById('web-version');
+                        
+                        if (data.gugubot_plugins) {
+                            const gugubot = data.gugubot_plugins.find(p => p.id === 'gugubot');
+                            const cq_qq_api = data.gugubot_plugins.find(p => p.id === 'cq_qq_api');
+                            const guguwebui = data.gugubot_plugins.find(p => p.id === 'guguwebui');
+                            
+                            if (gugubot) {
+                                gugubotVersion.textContent = `版本：${gugubot.version || '未知'}`;
+                            }
+                            
+                            if (cq_qq_api) {
+                                cqQqApiVersion.textContent = `版本：${cq_qq_api.version || '未知'}`;
+                            }
+                            
+                            if (guguwebui) {
+                                webVersion.textContent = `版本：${guguwebui.version || '未知'}`;
+                            }
+                        }
+                    } catch (error) {
+                        console.error('Error fetching plugin versions:', error);
+                    }
+                }
+            };
         }
     </script>
-    <h2 class="title">关于</h2>
-    <div class="about-list">
-        <div class="about-item">
-            <p>GUGUbot: <span>PFingan-MCDRQQ机器人插件，提供多项QQ机器人配置和功能，涵盖管理娱乐等多种功能，并且提供详尽的配置项以方便私人定制化。</span></p>
-            <a href="https://mcdreforged.com/zh-CN/plugin/gugubot" target="_blank">MCDR仓库</a>
-            <a href="https://github.com/LoosePrince/PF-GUGUbot" target="_blank">Github仓库</a>
-            <a href="#about" id="gugubot-version">版本：获取中...</a>
-        </div>
-        <div class="about-item">
-            <p>cq_qq_api: <span>基于CQ码的正向WebsocketQQ连接机器人，提供MCDR机器人插件接口，方便聊天类机器人的构建。</span></p>
-            <a href="https://mcdreforged.com/zh-CN/plugin/cq_qq_api" target="_blank">MCDR仓库</a>
-            <a href="https://github.com/XueK66/PF-cq_qq_api" target="_blank">Github仓库</a>
-            <a href="#about" id="cq-qq-api-version">版本：获取中...</a>
-        </div>
-        <div class="about-item">
-            <p>Web: <span>GUGUbot附属网页管理系统，提供插件管理，配置修改等</span></p>
-            <a href="https://mcdreforged.com/zh-CN/plugin/guguwebui" target="_blank">MCDR仓库</a>
-            <a href="https://github.com/LoosePrince/PF-MCDR-WebUI" target="_blank">Github仓库</a>
-            <a href="#about" id="web-version">版本：获取中</a>
-        </div>
-    </div>
-    <h2 class="title">贡献</h2>
-    <div class="contribute">
-        <!-- 两列的表格 -->
-        <table>
-            <tr>
-                <th>贡献项目</th>
-                <th>说明</th>
-            </tr>
-            <tr>
-                <td><a href="https://mcdreforged.com/zh-CN/plugins" target="_blank">MCDR仓库</a></td>
-                <td>推广本插件、提供快速安装、信息获取</td>
-            </tr>
-            <tr>
-                <td><a href="https://ace.c9.io/" target="_blank">Ace Editor</a></td>
-                <td>在线编辑器</td>
-            </tr>
-            <tr>
-                <td><a href="https://github.com/Spark-Code-China/MC-Server-Info" target="_blank">MC-Server-Info</a></td>
-                <td>Python Minecraft 服务器信息查询</td>
-            </tr>
-        </table>
-        <div class="hr"></div>
-        <table>
-            <tr>
-                <th>贡献人</th>
-                <th>说明</th>
-            </tr>
-            <tr>
-                <td><a href="https://github.com/LoosePrince" target="_blank">树梢 (LoosePrince)</a></td>
-                <td>功能设计、文档编写、Web设计、前端编写</td>
-            </tr>
-            <tr>
-                <td><a href="https://github.com/XueK66" target="_blank">雪开 (XueK66)</a></td>
-                <td>代码开发、维护、功能设计</td>
-            </tr>
-        </table>
-        <div class="hr"></div>
-        <table>
-            <tr>
-                <th>特别鸣谢</th>
-            </tr>
-            <tr>
-                <td><a href="#about">反馈者</a></td>
-                <td>感谢你们的反馈~</td>
-            </tr>
-            <tr>
-                <td><a href="https://chatgpt.com" target="_blank">ChatGPT</a></td>
-                <td>ChatGPT协助编写</td>
-            </tr>
-        </table>
-    </div>
-    <script src="js/about.js"></script>
+
+    <!-- 页面预加载脚本 -->
+    <script src="/js/preloader.js"></script>
+    
+    <!-- 公告脚本 -->
+    <script src="/js/notice.js"></script>
 </body>
-</html>
+</html> 

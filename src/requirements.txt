@@ -1,4 +1,4 @@
-fastapi
+fastapi>=0.68.0
 javaproperties
 mcdreforged>=2.3.0
 passlib
@@ -6,6 +6,10 @@ pydantic
 Requests
 ruamel.yaml
 starlette
-uvicorn
+uvicorn>=0.15.0
 itsdangerous
 jinja2
+argon2_cffi
+python-multipart
+typing-extensions
+aiohttp
