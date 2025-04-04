@@ -1,3 +1,7 @@
+#cursor
+.cursor/
+*.mdc
+
 # MCDR
 *.mcdr
 
