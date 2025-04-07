@@ -92,34 +92,22 @@ A:WebUI不打算使用任何插件前置，如果有好的方案我们会考虑�
 Q:PIM插件是什么？<br>
 A:PIM插件是WebUI的插件安装管理器，它可以帮助您安装、卸载、更新插件，并且可以查看插件信息。
 
-## 最近更新
-
-### 卸载插件功能
-- [x] **插件卸载:** 现在支持通过PIM插件安装器卸载本地插件，将同时删除插件文件。
-- [x] **用户界面:** 在插件管理页面添加了红色卸载按钮，方便卸载不需要的插件。
-- [x] **安全保护:** 系统会阻止卸载`guguwebui`插件，以防止WebUI因卸载自身而无法正常工作。
-- [x] **依赖检查:** 卸载前会检查依赖关系，避免破坏插件生态系统。
-- [x] **API文档:** 在`WebApi.md`中添加了卸载插件API的完整文档，供开发者参考。
-
-### 在线插件页面优化
-- [x] **本地插件检测:** 自动检测已安装的插件，并显示其安装状态和版本信息。
-- [x] **状态显示:** 对于已安装且为最新版本的插件，显示"已安装"标签，不再显示安装按钮。
-- [x] **智能按钮:** 根据插件状态自动切换显示"安装"或"更新"按钮。
-
 ## 示例图
 
 > 截图来源本地测试
 
-![image](https://github.com/user-attachments/assets/bc13de19-4820-4a36-863a-d582a5562669)
-![image](https://github.com/user-attachments/assets/07c5a028-aca8-44a4-bb9b-7905a34e4202)
-![image](https://github.com/user-attachments/assets/cb611ca7-76a3-4bf7-a8b6-3442fff1289f)
-![image](https://github.com/user-attachments/assets/65a57053-2c69-4055-9307-e4287efc21ae)
-![image](https://github.com/user-attachments/assets/2d56a5b6-b032-4c69-8f78-fd9badec4bc3)
-![image](https://github.com/user-attachments/assets/b7279f3e-cfd6-4b76-9e8d-cb2537a832fd)
-![image](https://github.com/user-attachments/assets/64abc5d6-0a46-493c-a44c-0df529a28c60)
-![image](https://github.com/user-attachments/assets/f881dece-af2e-40d4-bae6-dd9fe79339d1)
-![image](https://github.com/user-attachments/assets/e6f0d65d-4aa4-4c75-a55a-77b7ceff3f56)
-![image](https://github.com/user-attachments/assets/a73ec836-b3e1-4a0d-9502-bbbbe42e4006)
+登录页![image](https://github.com/user-attachments/assets/3439beb0-4325-406f-9443-9a6015edb2c6)
+仪表盘![image](https://github.com/user-attachments/assets/1ac6c44d-fec1-4d94-ade2-31eac56d8500)
+MCDR配置![image](https://github.com/user-attachments/assets/141c1416-33ca-4a62-83ef-574cd494ba70)
+MC服务器配置![image](https://github.com/user-attachments/assets/08b3bdd5-ba33-48f6-926c-96333df622d8)
+本地插件![image](https://github.com/user-attachments/assets/8f009195-6f05-4ef3-8910-7a6db4ac49b0)
+插件配置![image](https://github.com/user-attachments/assets/bf04660b-03a1-4b6e-ac82-03821c273989)
+插件仓库![image](https://github.com/user-attachments/assets/dd1a3998-799f-47a0-8101-90ddd8b56375)
+插件安装![image](https://github.com/user-attachments/assets/eb701e46-9e09-4b2d-b4f3-685b74792bb2)
+终端![image](https://github.com/user-attachments/assets/66b1db2c-ef36-4639-95ef-b685cc64692a)
+AI分析![image](https://github.com/user-attachments/assets/91276765-ec5b-47eb-8a85-d5faf6629fbb)
+设置![image](https://github.com/user-attachments/assets/03f32762-87bc-44ec-afa9-94c412740767)
+浅色模式![image](https://github.com/user-attachments/assets/7bc3388a-c8a2-4263-b1a3-4dea25b624cf)
 
 # TODO
 
