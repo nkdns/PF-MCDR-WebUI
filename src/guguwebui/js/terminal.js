@@ -727,6 +727,9 @@ document.addEventListener('alpine:init', () => {
                 this.refreshInterval = setInterval(() => this.fetchNewLogs(), 3000);
             }
             
+            // 每60秒自动刷新服务器状态
+            setInterval(() => this.checkServerStatus(), 60000);
+
             // 处理页面关闭前清理
             window.addEventListener('beforeunload', () => {
                 if (this.refreshInterval) {
