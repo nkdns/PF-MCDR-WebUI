@@ -107,11 +107,6 @@
                             <i class="fas fa-comments w-6 text-center"></i>
                             <span class="ml-3">CQ-QQ-API</span>
                         </a>
-                        
-                        <a href="/fabric" class="flex items-center px-4 py-3 text-sm font-medium rounded-lg text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
-                            <i class="fas fa-cube w-6 text-center"></i>
-                            <span class="ml-3">Fabric 管理</span>
-                        </a>
                     </nav>
                 </div>
                 
@@ -300,7 +295,7 @@
                 </div>
                 
                 <!-- DeepSeek配置 -->
-                <div class="bg-white dark:bg-gray-800 shadow-md rounded-lg p-6 mb-6">
+                <div class="bg-white dark:bg-gray-800 shadow-md rounded-lg p-6 mb-6 mt-6">
                     <h2 class="text-xl font-semibold mb-4 text-gray-800 dark:text-gray-200 flex items-center">
                         <i class="fas fa-robot mr-2"></i> DeepSeek AI 配置
                     </h2>
@@ -371,6 +366,105 @@
                     </div>
                 </div>
                 
+                <!-- MCDR插件目录配置 -->
+                <div class="bg-white dark:bg-gray-800 shadow-md rounded-lg p-6 mb-6">
+                    <h2 class="text-xl font-semibold mb-4 text-gray-800 dark:text-gray-200 flex items-center">
+                        <i class="fas fa-puzzle-piece mr-2"></i> MCDR插件目录配置
+                    </h2>
+                    
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2" for="mcdr_plugins_url">
+                                插件目录URL（如果你不懂，请不要更改）
+                            </label>
+                            <div class="relative">
+                                <input 
+                                    type="text" 
+                                    id="mcdr_plugins_url" 
+                                    x-model="mcdrPluginsUrl"
+                                    class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500" 
+                                    placeholder="https://api.mcdreforged.com/catalogue/everything_slim.json.xz"
+                                >
+                            </div>
+                            <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                                指定MCDR插件目录的URL地址，用于获取在线插件列表
+                            </p>
+                        </div>
+                        
+                        <div class="flex justify-end">
+                            <button 
+                                type="button" 
+                                @click="saveMcdrPluginsUrl"
+                                class="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:focus:ring-offset-gray-800 flex items-center"
+                            >
+                                <i class="fas fa-save mr-2"></i>
+                                保存插件目录配置
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- PIM独立安装配置 -->
+                <div class="bg-white dark:bg-gray-800 shadow-md rounded-lg p-6 mb-6">
+                    <h2 class="text-xl font-semibold mb-4 text-gray-800 dark:text-gray-200 flex items-center">
+                        <i class="fas fa-plug mr-2"></i> PIM独立插件配置
+                    </h2>
+                    
+                    <div class="space-y-4">
+                        <div class="p-4 bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
+                            <div class="flex items-center justify-between">
+                                <div>
+                                    <h3 class="text-lg font-medium text-gray-800 dark:text-gray-200">将PIM安装到独立插件</h3>
+                                    <p class="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                                        将WebUI的插件安装管理器（PIM）作为独立插件运行，以为其它插件提供安装支持，如果您不知道它是干什么的，请不要安装。
+                                    </p>
+                                </div>
+                                <div class="flex items-center">
+                                    <div 
+                                        x-show="pimStatus === 'installed'" 
+                                        class="text-sm text-green-500 dark:text-green-400 mr-3 flex items-center"
+                                    >
+                                        <i class="fas fa-check-circle mr-1.5"></i>
+                                        <span>已安装</span>
+                                    </div>
+                                    <div 
+                                        x-show="pimStatus === 'not_installed'" 
+                                        class="text-sm text-yellow-500 dark:text-yellow-400 mr-3 flex items-center"
+                                    >
+                                        <i class="fas fa-exclamation-circle mr-1.5"></i>
+                                        <span>未安装</span>
+                                    </div>
+                                    <button 
+                                        @click="installPimPlugin" 
+                                        class="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:focus:ring-offset-gray-800 flex items-center"
+                                        :disabled="pimStatus === 'installing' || pimStatus === 'installed'"
+                                        :class="(pimStatus === 'installing' || pimStatus === 'installed') ? 'opacity-50 cursor-not-allowed' : ''"
+                                    >
+                                        <template x-if="pimStatus === 'installing'">
+                                            <i class="fas fa-circle-notch fa-spin mr-2"></i>
+                                        </template>
+                                        <template x-if="pimStatus !== 'installing'">
+                                            <i class="fas fa-download mr-2"></i>
+                                        </template>
+                                        <span x-text="pimStatus === 'installed' ? '已安装' : (pimStatus === 'installing' ? '安装中...' : '安装')"></span>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div x-show="pimStatus === 'installed'" class="p-4 bg-blue-50 dark:bg-blue-900/20 text-blue-800 dark:text-blue-300 rounded-lg">
+                            <div class="flex">
+                                <div class="flex-shrink-0">
+                                    <i class="fas fa-info-circle"></i>
+                                </div>
+                                <div class="ml-3">
+                                    <p class="text-sm">PIM已作为独立插件安装。您可以在插件管理页面中查看和管理它。</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
                 <!-- 页脚 -->
                 <footer class="mt-12 text-center text-sm text-gray-500 dark:text-gray-400">
                     <p>MCDR WebUI &copy; <span id="year"></span></p>
@@ -403,12 +497,15 @@
                 deepseekModel: 'deepseek-chat',
                 isKeyValid: false,
                 keyValidated: false,
+                mcdrPluginsUrl: '',
+                pimStatus: 'checking',
                 
                 // 初始化
                 init() {
                     this.checkLoginStatus();
                     this.checkServerStatus();
                     this.getConfig();
+                    this.checkPimStatus();
                     
                     // 每60秒自动刷新服务器状态
                     setInterval(() => this.checkServerStatus(), 60000);
@@ -462,6 +559,8 @@
                             this.isKeyValid = true;
                             this.keyValidated = true;
                         }
+                        this.mcdrPluginsUrl = config.mcdr_plugins_url || '';
+                        this.pimStatus = config.pim_status || 'checking';
                         
                         // 更新后台切换开关状态
                         this.$nextTick(() => {
@@ -730,6 +829,77 @@
                         this.isKeyValid = false;
                         this.keyValidated = true;
                         this.showNotification(`验证出错: ${error.message}`, 'error');
+                    }
+                },
+                
+                // 保存MCDR插件目录配置
+                async saveMcdrPluginsUrl() {
+                    try {
+                        // 验证输入
+                        if (!this.mcdrPluginsUrl) {
+                            this.showNotification('插件目录URL不能为空', 'error');
+                            return;
+                        }
+                        
+                        const response = await fetch('/api/save_web_config', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify({
+                                action: 'config',
+                                mcdr_plugins_url: this.mcdrPluginsUrl
+                            })
+                        });
+                        
+                        const result = await response.json();
+                        if (result.status === 'success') {
+                            this.showNotification('MCDR插件目录配置保存成功', 'success');
+                        } else {
+                            this.showNotification('保存失败: ' + result.message, 'error');
+                        }
+                    } catch (error) {
+                        console.error('Error saving MCDR plugins URL:', error);
+                        this.showNotification('保存出错: ' + error.message, 'error');
+                    }
+                },
+                
+                // 检查PIM插件状态
+                async checkPimStatus() {
+                    try {
+                        const response = await fetch('/api/check_pim_status');
+                        const result = await response.json();
+                        
+                        if (result.status === 'success') {
+                            this.pimStatus = result.pim_status;
+                        } else {
+                            this.pimStatus = 'not_installed';
+                            console.error('Error checking PIM status:', result.message);
+                        }
+                    } catch (error) {
+                        this.pimStatus = 'not_installed';
+                        console.error('Error checking PIM status:', error);
+                    }
+                },
+                
+                // 安装PIM插件
+                async installPimPlugin() {
+                    try {
+                        this.pimStatus = 'installing';
+                        const response = await fetch('/api/install_pim_plugin');
+                        const result = await response.json();
+                        
+                        if (result.status === 'success') {
+                            this.showNotification('PIM插件安装成功', 'success');
+                            this.pimStatus = 'installed';
+                        } else {
+                            this.showNotification('安装失败: ' + result.message, 'error');
+                            await this.checkPimStatus(); // 重新检查状态
+                        }
+                    } catch (error) {
+                        console.error('Error installing PIM plugin:', error);
+                        this.showNotification('安装出错: ' + error.message, 'error');
+                        await this.checkPimStatus(); // 重新检查状态
                     }
                 }
             };

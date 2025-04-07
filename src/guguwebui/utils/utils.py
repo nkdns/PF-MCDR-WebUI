@@ -151,16 +151,27 @@ def get_plugins_info(server_interface, detail=False):
 
     # 获取插件版本数据
     def fetch_plugin_versions():
-        url = "https://looseprince.github.io/Plugin-Catalogue/plugins.json"
         try:
-            response = requests.get(url, timeout=5)
-            if response.status_code == 200:
-                plugins_data = response.json()
-                return {plugin["id"]: plugin["latest_version"] for plugin in plugins_data}
-            else:
-                return {}
-        except requests.RequestException as e:
-            print(f"Error fetching plugin versions: {e}")
+            # 创建PIMHelper实例来获取插件元数据
+            from guguwebui.utils.PIM import PIMHelper
+            
+            class DummySource:
+                def reply(self, message):
+                    pass
+                    
+                def get_server(self):
+                    return server_interface
+            
+            # 初始化PIMHelper并获取插件目录元数据
+            pim_helper = PIMHelper(server_interface)
+            dummy_source = DummySource()
+            cata_meta = pim_helper.get_cata_meta(dummy_source)
+            
+            # 获取所有插件数据并提取最新版本号
+            plugins = cata_meta.get_plugins()
+            return {plugin_id: plugin_data.latest_version for plugin_id, plugin_data in plugins.items()}
+        except Exception as e:
+            print(f"Error fetching plugin versions from PIM: {e}")
             return {}
 
     # 获取插件版本
@@ -181,6 +192,20 @@ def get_plugins_info(server_interface, detail=False):
 
         # 从API获取的最新版本号
         latest_version = plugin_versions.get(plugin_name, None)
+        
+        # 格式化版本号，去除插件ID前缀和v前缀
+        if latest_version and ("-v" in latest_version or "-" in latest_version):
+            version_parts = latest_version.split("-v")
+            if len(version_parts) > 1:
+                latest_version = version_parts[1]  # 使用-v分隔的后半部分
+            else:
+                # 尝试使用'-'分隔并保留最后一部分
+                version_parts = latest_version.split("-")
+                if len(version_parts) > 1:
+                    latest_version = version_parts[-1]
+                    # 如果最后一部分以'v'开头，去掉'v'
+                    if latest_version.startswith("v"):
+                        latest_version = latest_version[1:]
 
         if not detail and plugin_name not in main_page_ignore:  # 主页面插件信息
             respond.append({
@@ -319,54 +344,95 @@ def __copyFile(server, path, target_path):
         message = file_handler.read()
     with open(target_path, 'wb') as f:                   # copy to target_path
         f.write(message)
+
+def __copyFolder(server, folder_path, target_folder):
+    """
+    从插件内部提取一个文件夹到指定目录
+    
+    :param server: PluginServerInterface实例
+    :param folder_path: 插件内的文件夹路径
+    :param target_folder: 目标目录路径
+    """
+    # 确保目标目录存在
+    target_folder = Path(target_folder)
+    target_folder.mkdir(parents=True, exist_ok=True)
+    
+    try:
+        # 首先尝试作为文件处理，如果成功，则说明这是一个文件而不是文件夹
+        try:
+            with server.open_bundled_file(folder_path) as _:
+                # 如果能打开，说明是文件，直接复制
+                __copyFile(server, folder_path, target_folder)
+                return True
+        except FileNotFoundError:
+            # 不是文件，继续作为文件夹处理
+            pass
+        except Exception as e:
+            # 其他错误，记录并继续
+            server.logger.debug(f"尝试作为文件处理'{folder_path}'时出错: {e}")
+            pass
+
+        # 尝试使用插件的内部方法列出文件夹内容
+        items = []
+        try:
+            # 使用__plugin是插件内部属性，可能不稳定，但是尝试直接访问
+            items = server._PluginServerInterface__plugin.list_directory(folder_path)
+        except Exception:
+            # 如果上面的方法失败，尝试其他方法
+            # 直接使用MultiFilePlugin.list_directory方法
+            from mcdreforged.plugin.type.multi_file_plugin import MultiFilePlugin
+            if isinstance(server._PluginServerInterface__plugin, MultiFilePlugin):
+                items = server._PluginServerInterface__plugin.list_directory(folder_path)
+        
+        if not items:
+            server.logger.warning(f"无法获取文件夹 '{folder_path}' 的内容列表")
+            return False
+            
+        for item in items:
+            # 忽略__pycache__文件夹、utils文件夹和.py文件
+            if item == "__pycache__" or item == "utils" or item.endswith(".py"):
+                server.logger.debug(f"忽略文件/文件夹: {item}")
+                continue
+                
+            # 构建插件内的完整路径
+            plugin_item_path = f"{folder_path}/{item}"
+            # 构建目标路径
+            target_item_path = target_folder / item
+            
+            # 尝试判断是文件还是文件夹
+            try:
+                # 尝试作为文件打开
+                with server.open_bundled_file(plugin_item_path) as _:
+                    # 如果能打开，说明是文件，直接复制
+                    __copyFile(server, plugin_item_path, target_item_path)
+            except Exception:
+                # 如果打开失败，可能是文件夹，尝试递归复制
+                __copyFolder(server, plugin_item_path, target_item_path)
+                
+        server.logger.debug(f"成功从插件提取文件夹 '{folder_path}' 到 '{target_folder}'")
+        return True
+    except Exception as e:
+        server.logger.error(f"提取插件文件夹 '{folder_path}' 时出错: {e}")
+        return False
         
 def amount_static_files(server):
-    __copyFile(server, 'guguwebui/custom/server_lang.json', './guguwebui_static/custom/server_lang.json')
-
-    __copyFile(server, 'guguwebui/css/main.css', './guguwebui_static/css/main.css')
-    __copyFile(server, 'guguwebui/custom/overall.css', './guguwebui_static/custom/overall.css')
-    __copyFile(server, 'guguwebui/css/minecraft-config.css', './guguwebui_static/css/minecraft-config.css')
-
-    __copyFile(server, 'guguwebui/js/preloader.js', './guguwebui_static/js/preloader.js')
-    __copyFile(server, 'guguwebui/js/main.js', './guguwebui_static/js/main.js')
-    __copyFile(server, 'guguwebui/js/theme-preload.js', './guguwebui_static/js/theme-preload.js')
-    __copyFile(server, 'guguwebui/js/mcdr-config.js', './guguwebui_static/js/mcdr-config.js')
-    __copyFile(server, 'guguwebui/js/notice.js', './guguwebui_static/js/notice.js')
-
-    __copyFile(server, 'guguwebui/src/bg.png', './guguwebui_static/src/bg.png')
-    __copyFile(server, 'guguwebui/src/default_avatar.jpg', './guguwebui_static/src/default_avatar.jpg')
-
-    __copyFile(server, 'guguwebui/templates/404.html', './guguwebui_static/templates/404.html')
-    __copyFile(server, 'guguwebui/templates/index.html', './guguwebui_static/templates/index.html')
-    __copyFile(server, 'guguwebui/templates/login.html', './guguwebui_static/templates/login.html')
-    __copyFile(server, 'guguwebui/templates/mcdr.html', './guguwebui_static/templates/mcdr.html')
-    __copyFile(server, 'guguwebui/templates/mc.html', './guguwebui_static/templates/mc.html')
-    __copyFile(server, 'guguwebui/templates/plugins.html', './guguwebui_static/templates/plugins.html')
-    __copyFile(server, 'guguwebui/templates/online-plugins.html', './guguwebui_static/templates/online-plugins.html')
-    __copyFile(server, 'guguwebui/templates/terminal.html', './guguwebui_static/templates/terminal.html')
-    # __copyFile(server, 'guguwebui/templates/fabric.html', './guguwebui_static/templates/fabric.html')
-    __copyFile(server, 'guguwebui/templates/cq.html', './guguwebui_static/templates/cq.html')
-    __copyFile(server, 'guguwebui/templates/about.html', './guguwebui_static/templates/about.html')
-    __copyFile(server, 'guguwebui/templates/settings.html', './guguwebui_static/templates/settings.html')
-
-# Command to generate __copyFile list above
-# import os
-# from pathlib import Path
-# def generate_copy_instructions(source_dir, target_base_dir):
-#     instructions = []
-#     source_dir = Path(source_dir)
-#     for name in os.listdir(source_dir):
-#         if not os.path.isdir(name) or name in ["utils", "__pycache__"]:
-#             continue
-#         for file_name in os.listdir(source_dir / name):
-#             instructions.append(
-#                 f"__copyFile(server, 'guguwebui/{name}/{file_name}', '{target_base_dir}/{name}/{file_name}')"
-#             )
-
-#     return instructions
-
-# for i in generate_copy_instructions("./", "./guguwebui_static"):
-#     print(i)
+    # 创建主目录
+    os.makedirs('./guguwebui_static', exist_ok=True)
+    
+    # 使用新的文件夹复制函数来复制各个目录
+    success = True
+    # 复制各个子目录
+    for folder in ['src', 'css', 'js', 'templates', 'custom']:
+        if not __copyFolder(server, f'guguwebui/{folder}', f'./guguwebui_static/{folder}'):
+            success = False
+            server.logger.warning(f"复制 'guguwebui/{folder}' 目录失败")
+    
+    if success:
+        server.logger.debug("成功复制所有guguwebui目录")
+        return
+    
+    # 如果文件夹复制失败，退回到单文件复制方式
+    server.logger.warning("部分文件夹复制失败")
 
 #============================================================#
 

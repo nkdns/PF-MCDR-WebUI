@@ -2,10 +2,15 @@ import datetime
 import javaproperties
 import secrets
 import aiohttp
+import requests
+import os
+import json
+import lzma
+import time
 
 from pathlib import Path
 
-from fastapi import Depends, FastAPI, Form, Request, status, HTTPException
+from fastapi import Depends, FastAPI, Form, Request, status, HTTPException, Body
 from fastapi.responses import (
     HTMLResponse,
     RedirectResponse,
@@ -18,16 +23,63 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 from starlette.middleware.sessions import SessionMiddleware
 
 from .utils.log_watcher import LogWatcher
+from .utils.PIM import PluginInstaller  # 导入 PluginInstaller 类
 
 from .utils.constant import *
 from .utils.server_util import *
 from .utils.table import yaml
 from .utils.utils import *
 
+import mcdreforged.api.all as MCDR
+
+from .utils.utils import __copyFile
+
 app = FastAPI()
 
 # template engine -> jinja2
 templates = Jinja2Templates(directory=f"{STATIC_PATH}/templates")
+
+# 全局LogWatcher实例
+log_watcher = LogWatcher()
+
+# 初始化函数，在应用程序启动时调用
+def init_app(server_instance):
+    """初始化应用程序，注册事件监听器"""
+    global log_watcher
+    
+    # 存储服务器接口
+    app.state.server_interface = server_instance
+    
+    # 清理现有监听器，避免重复注册
+    if log_watcher:
+        log_watcher.stop()
+    
+    # 初始化LogWatcher实例，将 server_instance 传递给它
+    log_watcher = LogWatcher(server_interface=server_instance)
+    
+    # 设置日志捕获 - 直接调用此方法确保与MCDR内部日志系统连接
+    log_watcher._setup_log_capture()
+    
+    # 注册MCDR事件监听器，每种事件只注册一次
+    # 修正：GENERAL_INFO应该映射到on_mcdr_info，处理MCDR和服务器的常规信息
+    # USER_INFO应该映射到on_server_output，处理用户输入的命令
+    server_instance.register_event_listener(MCDR.MCDRPluginEvents.GENERAL_INFO, on_mcdr_info)
+    server_instance.register_event_listener(MCDR.MCDRPluginEvents.USER_INFO, on_server_output)
+    
+    server_instance.logger.info("WebUI日志捕获器已初始化，将直接从MCDR捕获日志")
+
+# 事件处理函数
+def on_server_output(server, info):
+    """处理服务器输出事件"""
+    global log_watcher
+    if log_watcher:
+        log_watcher.on_server_output(server, info)
+
+def on_mcdr_info(server, info):
+    """处理MCDR信息事件"""
+    global log_watcher
+    if log_watcher:
+        log_watcher.on_mcdr_info(server, info)
 
 # ============================================================#
 
@@ -258,14 +310,6 @@ async def online_plugins(request: Request, token_valid: bool = Depends(verify_to
         return templates.TemplateResponse("404.html", {"request": request}, status_code=404)
 
 
-@app.get("/fabric", response_class=HTMLResponse)
-async def fabric(request: Request, token_valid: bool = Depends(verify_token)):
-    try:
-        return await render_template_if_logged_in(request, "fabric.html")
-    except Exception:
-        return templates.TemplateResponse("404.html", {"request": request}, status_code=404)
-
-
 @app.get("/settings", response_class=HTMLResponse)
 async def settings(request: Request, token_valid: bool = Depends(verify_token)):
     try:
@@ -341,49 +385,118 @@ async def get_online_plugins(request: Request):
     except requests.RequestException as e:
         return {}
 
-
-# Install plugin
-@app.post("/api/install_plugin")
-async def install_plugin(request: Request, plugin_info:plugin_info):
-    if not request.session.get("logged_in"):
-        return JSONResponse(
-            {"status": "error", "message": "User not logged in"}, status_code=401
-        )
-    plugin_id = plugin_info.plugin_id
-    if plugin_id == "guguwebui":
-        return JSONResponse({"status": "error", "message": "无法处理自身"})
-    server:PluginServerInterface = app.state.server_interface
-
-    # server.execute_command(f"!!MCDR plugin install -y {plugin_id}")
-    # return JSONResponse({"status": "success"})
-    # 开始监听并匹配日志
-    log_watcher = LogWatcher()
-    # 设置需要监控的模式
-    patterns = [
-        "已安装的插件已满足所述需求，无需安装任何插件",
-        "插件安装完成",
-        "Nothing needs to be installed",
-        "Installation done"
-    ]
-
-    # 开始监控
-    log_watcher.start_watch(patterns)
-
-    # 模拟服务器指令
-    await asyncio.sleep(2)
-    server.execute_command(f"!!MCDR plugin install -y {plugin_id}")
-
-    # 获取匹配结果
-    result = log_watcher.get_result(timeout=10, match_all=False)
-
-    # 根据匹配结果进行响应
-    if (result.get("已安装的插件已满足所述需求，无需安装任何插件", True) or result.get("Nothing needs to be installed", True)):
-        return JSONResponse({"status": "success", "message": "已安装的插件已满足所述需求，无需安装任何插件"})
-    elif (result.get("插件安装完成", True) or result.get("Installation done", True)):
-        return JSONResponse({"status": "success"})
-    else:
-        return JSONResponse({"status": "error", "message": "安装失败"})
-
+# 从 everything_slim.json 获取在线插件列表，免登录
+@app.get("/api/online-plugins")
+async def get_online_plugins(request: Request):
+    # 使用 guguwebui_static 文件夹中的 cache 子文件夹存放缓存
+    cache_dir = os.path.join(STATIC_PATH, "cache")
+    cache_file = os.path.join(cache_dir, "everything_slim.json")
+    cache_xz_file = os.path.join(cache_dir, "everything_slim.json.xz")
+    
+    # 创建缓存目录
+    os.makedirs(cache_dir, exist_ok=True)
+    
+    # 检查缓存是否过期（2小时）
+    cache_expired = True
+    if os.path.exists(cache_file):
+        file_time = os.path.getmtime(cache_file)
+        if time.time() - file_time < 7200:  # 2小时 = 7200秒
+            cache_expired = False
+    
+    # 如果缓存已过期或不存在，则下载并解压新文件
+    if cache_expired:
+        try:
+            # 从配置中获取插件目录URL
+            server = app.state.server_interface
+            config = server.load_config_simple("config.json", DEFALUT_CONFIG)
+            url = config.get("mcdr_plugins_url", "https://api.mcdreforged.com/catalogue/everything_slim.json.xz")
+            response = requests.get(url, timeout=30)  # 增加超时时间设置
+            
+            if response.status_code == 200:
+                # 保存压缩文件
+                with open(cache_xz_file, 'wb') as f:
+                    f.write(response.content)
+                
+                # 解压文件
+                with lzma.open(cache_xz_file, 'rb') as f_in:
+                    with open(cache_file, 'wb') as f_out:
+                        f_out.write(f_in.read())
+            else:
+                # 如果下载失败但缓存文件存在，继续使用旧缓存
+                if not os.path.exists(cache_file):
+                    return []
+        except Exception as e:
+            # 下载或解压出错，如果缓存文件存在则使用旧缓存
+            if not os.path.exists(cache_file):
+                return []
+    
+    # 读取并解析文件
+    try:
+        with open(cache_file, 'r', encoding='utf-8') as f:
+            everything_data = json.load(f)
+        
+        # 转换为与旧API兼容的格式
+        plugins_data = []
+        for plugin_id, plugin_info in everything_data.get('plugins', {}).items():
+            # 获取元数据
+            meta = plugin_info.get('meta', {})
+            plugin_data = plugin_info.get('plugin', {})
+            repository = plugin_info.get('repository', {})
+            release = plugin_info.get('release', {})
+            
+            # 获取最新版本信息
+            latest_version = None
+            latest_version_index = release.get('latest_version_index', 0)
+            releases = release.get('releases', [])
+            if releases and len(releases) > latest_version_index:
+                latest_version = releases[latest_version_index]
+            
+            # 创建与旧格式兼容的结构
+            plugin_entry = {
+                "id": meta.get('id', plugin_id),
+                "name": meta.get('name', plugin_id),
+                "version": meta.get('version', ''),
+                "description": meta.get('description', {}),
+                "authors": [],
+                "dependencies": meta.get('dependencies', {}),
+                "labels": plugin_data.get('labels', []),
+                "repository_url": repository.get('html_url', '') or plugin_data.get('repository', ''),
+                "update_time": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                "latest_version": release.get('latest_version', meta.get('version', '')),
+            }
+            
+            # 格式化作者信息
+            author_names = meta.get('authors', [])
+            authors_dict = everything_data.get('authors', {}).get('authors', {})
+            
+            for author_name in author_names:
+                author_info = authors_dict.get(author_name, {})
+                if author_info:
+                    plugin_entry["authors"].append({
+                        "name": author_info.get('name', author_name),
+                        "link": author_info.get('link', '')
+                    })
+                else:
+                    plugin_entry["authors"].append({
+                        "name": author_name,
+                        "link": ""
+                    })
+            
+            # 添加最后更新时间
+            if latest_version and 'created_at' in latest_version:
+                try:
+                    # 将ISO格式时间转换为更友好的格式
+                    dt = datetime.fromisoformat(latest_version['created_at'].replace('Z', '+00:00'))
+                    plugin_entry["last_update_time"] = dt.strftime("%Y-%m-%d %H:%M:%S")
+                except:
+                    plugin_entry["last_update_time"] = latest_version.get('created_at', '')
+            
+            plugins_data.append(plugin_entry)
+        
+        return plugins_data
+    except Exception as e:
+        # 出错时返回空列表
+        return []
 
 # Loading/Unloading pluging
 @app.post("/api/toggle_plugin")
@@ -439,50 +552,6 @@ async def reload_plugin(request: Request, plugin_info:plugin_info):
 
     return JSONResponse({"status": "error", "message": f"Reload {plugin_id} failed"}, status_code=500)   
 
-
-# Update plugin
-@app.post("/api/update_plugin")
-async def update_plugin(request: Request, plugin_info:plugin_info):
-    if not request.session.get("logged_in"):
-        return JSONResponse(
-            {"status": "error", "message": "User not logged in"}, status_code=401
-        )
-    plugin_id = plugin_info.plugin_id
-    if plugin_id == "guguwebui":
-        return JSONResponse({"status": "error", "message": "无法处理自身"})
-    server:PluginServerInterface = app.state.server_interface
-
-    # 开始监听并匹配日志
-    log_watcher = LogWatcher()
-    # 设置需要监控的模式
-    patterns = [
-        "已安装的插件已满足所述需求，无需安装任何插件",
-        "插件安装完成",
-        "Nothing needs to be installed",
-        "Installation done"
-    ]
-
-    # 开始监控
-    log_watcher.start_watch(patterns)
-
-    # 模拟服务器指令
-    await asyncio.sleep(2)
-    server.execute_command(f"!!MCDR plugin install -U {plugin_id}")
-    await asyncio.sleep(2)
-    server.execute_command("!!MCDR confirm")
-
-    # 获取匹配结果
-    result = log_watcher.get_result(timeout=10, match_all=False)
-
-    # 根据匹配结果进行响应
-    if (result.get("已安装的插件已满足所述需求，无需安装任何插件", True) or result.get("Nothing needs to be installed", True)):
-        return JSONResponse({"status": "error", "message": "已安装的插件不满足要求，无法更新"})
-    elif (result.get("插件安装完成", True) or result.get("Installation done", True)):
-        return JSONResponse({"status": "success"})
-    else:
-        return JSONResponse({"status": "error", "message": "更新失败"})
-
-
 # List all config files for a plugin
 @app.get("/api/list_config_files")
 async def list_config_files(request: Request, plugin_id:str):
@@ -511,6 +580,7 @@ async def get_web_config(request: Request):
             "enable_temp_login_password": config["allow_temp_password"],
             "deepseek_api_key": config.get("deepseek_api_key", ""),
             "deepseek_model": config.get("deepseek_model", "deepseek-chat"),
+            "mcdr_plugins_url": config.get("mcdr_plugins_url", "https://api.mcdreforged.com/catalogue/everything_slim.json.xz"),
         }
     )
 
@@ -537,6 +607,9 @@ async def save_web_config(request: Request, config: saveconfig):
             web_config["deepseek_api_key"] = config.deepseek_api_key
         if config.deepseek_model is not None:
             web_config["deepseek_model"] = config.deepseek_model
+        # 更新MCDR插件目录URL
+        if config.mcdr_plugins_url is not None:
+            web_config["mcdr_plugins_url"] = config.mcdr_plugins_url
         
         response = {"status": "success"}
     # disable_admin_login_web & enable_temp_login_password
@@ -855,15 +928,13 @@ async def control_server(request: Request, control_info: server_control):
 
 # 获取服务器日志
 @app.get("/api/server_logs")
-async def get_server_logs(request: Request, start_line: int = 0, max_lines: int = 100, log_type: str = "mcdr", merged: bool = False):
+async def get_server_logs(request: Request, start_line: int = 0, max_lines: int = 100):
     """
     获取服务器日志
     
     Args:
         start_line: 开始行号（0为文件开始）
         max_lines: 最大返回行数（防止返回过多数据）
-        log_type: 日志类型，支持 'mcdr'（MCDR日志）、'minecraft'（Minecraft服务器日志）和'merged'（合并日志）
-        merged: 是否合并MCDR和Minecraft日志
     """
     if not request.session.get("logged_in"):
         return JSONResponse(
@@ -875,56 +946,20 @@ async def get_server_logs(request: Request, start_line: int = 0, max_lines: int 
         if max_lines > 500:
             max_lines = 500
         
-        # 获取日志文件路径
-        mcdr_log_path = "logs/MCDR.log"
-        mc_log_path = get_minecraft_log_path(app.state.server_interface)
+        # 使用全局LogWatcher实例
+        global log_watcher
         
-        # 处理合并日志请求
-        if merged:
-            log_watcher = LogWatcher()
-            result = log_watcher.get_merged_logs(mcdr_log_path, mc_log_path, max_lines)
-            
-            # 格式化合并日志内容
-            formatted_logs = []
-            for i, log in enumerate(result["logs"]):
-                formatted_logs.append({
-                    "line_number": i,
-                    "content": log["content"],
-                    "source": log["source"]
-                })
-            
-            return JSONResponse({
-                "status": "success",
-                "logs": formatted_logs,
-                "total_lines": result["total_lines"],
-                "current_start": result["start_line"],
-                "current_end": result["end_line"],
-                "log_type": "merged"
-            })
+        # 获取合并日志
+        result = log_watcher.get_merged_logs(max_lines)
         
-        # 处理单一类型日志请求
-        if log_type == "minecraft":
-            log_file_path = mc_log_path
-        else:
-            log_file_path = mcdr_log_path
-        
-        log_watcher = LogWatcher(log_file_path=log_file_path)
-        
-        # 如果请求特定行号之后的日志
-        if start_line > 0:
-            result = log_watcher.get_logs_after_line(start_line, max_lines)
-        else:
-            # 否则获取最新的日志
-            result = log_watcher.get_latest_logs(max_lines)
-        
-        # 格式化日志内容，去除行尾换行符，添加行号
+        # 格式化合并日志内容
         formatted_logs = []
-        for i, line in enumerate(result["logs"]):
-            line_number = result["start_line"] + i
+        for i, log in enumerate(result["logs"]):
             formatted_logs.append({
-                "line_number": line_number,
-                "content": line.rstrip("\n"),
-                "source": log_type
+                "line_number": i,
+                "content": log["content"],
+                "source": log["source"],
+                "counter": log.get("sequence_num", i)
             })
         
         return JSONResponse({
@@ -932,24 +967,27 @@ async def get_server_logs(request: Request, start_line: int = 0, max_lines: int 
             "logs": formatted_logs,
             "total_lines": result["total_lines"],
             "current_start": result["start_line"],
-            "current_end": result["end_line"],
-            "log_type": log_type
+            "current_end": result["end_line"]
         })
+        
     except Exception as e:
+        import traceback
+        error_msg = f"获取日志失败: {str(e)}\n{traceback.format_exc()}"
+        app.state.server_interface.logger.error(error_msg)
         return JSONResponse(
-            {"status": "error", "message": f"获取日志出错: {str(e)}"}, 
+            {"status": "error", "message": str(e)}, 
             status_code=500
         )
 
-# 获取最新的日志更新
+# 获取新增日志（基于计数器）
 @app.get("/api/new_logs")
-async def get_new_logs(request: Request, last_line: int = 0, log_type: str = "mcdr"):
+async def get_new_logs(request: Request, last_counter: int = 0, max_lines: int = 100):
     """
-    获取最新的日志更新，用于增量更新日志
+    获取指定计数器ID之后的新增日志
     
     Args:
-        last_line: 客户端已有的最后一行行号
-        log_type: 日志类型，支持 'mcdr'（MCDR日志）和 'minecraft'（Minecraft服务器日志）
+        last_counter: 上次获取的最后一条日志的计数器ID
+        max_lines: 最大返回行数
     """
     if not request.session.get("logged_in"):
         return JSONResponse(
@@ -957,50 +995,30 @@ async def get_new_logs(request: Request, last_line: int = 0, log_type: str = "mc
         )
     
     try:
-        # 根据日志类型选择不同的日志文件
-        if log_type == "minecraft":
-            # 获取基于MCDR配置的Minecraft日志路径，传递服务器接口
-            log_file_path = get_minecraft_log_path(app.state.server_interface)
-        else:
-            log_file_path = "logs/MCDR.log"  # 默认MCDR日志
-            
-        log_watcher = LogWatcher(log_file_path=log_file_path)
+        # 限制最大返回行数
+        if max_lines > 200:
+            max_lines = 200
         
-        # 先获取总行数，以确定是否有新日志
-        total_info = log_watcher.get_logs_after_line(0, 1)
-        total_lines = total_info["total_lines"]
+        # 使用全局LogWatcher实例
+        global log_watcher
         
-        # 没有新日志
-        if last_line >= total_lines:
-            return JSONResponse({
-                "status": "success",
-                "logs": [],
-                "total_lines": total_lines,
-                "has_new": False
-            })
-        
-        # 有新日志，获取新的日志行
-        max_new_lines = 200  # 限制一次获取的最大新日志行数
-        result = log_watcher.get_logs_after_line(last_line, min(total_lines - last_line, max_new_lines))
-        
-        # 格式化日志内容
-        formatted_logs = []
-        for i, line in enumerate(result["logs"]):
-            line_number = last_line + i
-            formatted_logs.append({
-                "line_number": line_number,
-                "content": line.rstrip("\n")
-            })
+        # 获取新增日志
+        result = log_watcher.get_logs_since_counter(last_counter, max_lines)
         
         return JSONResponse({
             "status": "success",
-            "logs": formatted_logs,
-            "total_lines": total_lines,
-            "has_new": True
+            "logs": result["logs"],
+            "total_lines": result["total_lines"],
+            "last_counter": result["last_counter"],
+            "new_logs_count": result["new_logs_count"]
         })
+        
     except Exception as e:
+        import traceback
+        error_msg = f"获取新日志失败: {str(e)}\n{traceback.format_exc()}"
+        app.state.server_interface.logger.error(error_msg)
         return JSONResponse(
-            {"status": "error", "message": f"获取日志更新出错: {str(e)}"}, 
+            {"status": "error", "message": str(e)}, 
             status_code=500
         )
 
@@ -1021,6 +1039,243 @@ async def terminal_page(request: Request):
     
     return templates.TemplateResponse("terminal.html", {"request": request})
 
+# 获取命令补全建议
+@app.get("/api/command_suggestions")
+async def get_command_suggestions(request: Request, input: str = ""):
+    """
+    获取MCDR命令补全建议
+    
+    Args:
+        input: 用户当前输入的命令前缀
+    """
+    if not request.session.get("logged_in"):
+        return JSONResponse({"status": "error", "message": "User not logged in"}, status_code=401)
+    
+    try:
+        # 获取服务器接口
+        server = app.state.server_interface
+        
+        # 如果MCDR服务器接口不可用，返回空列表
+        if not server:
+            return JSONResponse({"status": "success", "suggestions": []})
+        
+        # 获取命令管理器
+        command_manager = getattr(server, "_mcdr_server", None)
+        if not command_manager:
+            return JSONResponse({"status": "success", "suggestions": []})
+        command_manager = getattr(command_manager, "command_manager", None)
+        if not command_manager:
+            return JSONResponse({"status": "success", "suggestions": []})
+        
+        # 获取根命令节点
+        root_nodes = getattr(command_manager, "root_nodes", {})
+        
+        # 命令建议列表
+        suggestions = []
+        
+        # 将输入分割为命令部分
+        parts = input.strip().split()
+        
+        # 检查输入是否以空格结尾，这表示用户需要子命令补全
+        input_ends_with_space = input.endswith(' ')
+        
+        # 如果是空输入或者只有 !! 前缀，返回所有根命令
+        if not parts or (len(parts) == 1 and parts[0].startswith("!!") and not input_ends_with_space):
+            prefix = parts[0] if parts else ""
+            # 收集所有以输入前缀开头的根命令
+            for root_command in root_nodes.keys():
+                if root_command.startswith(prefix):
+                    suggestions.append({
+                        "command": root_command,
+                        "description": f"命令: {root_command}"
+                    })
+        # 如果是根命令后面跟空格，需要返回子命令
+        elif len(parts) == 1 and parts[0] in root_nodes and input_ends_with_space:
+            root_command = parts[0]
+            # 遍历所有持有该根命令的插件
+            for holder in root_nodes[root_command]:
+                node = holder.node
+                # 遍历根命令的所有子节点，返回所有可能的子命令
+                for child in node.get_children():
+                    # 字面量节点
+                    if hasattr(child, "literals"):
+                        for literal in child.literals:
+                            suggestions.append({
+                                "command": f"{root_command} {literal}",
+                                "description": f"子命令: {literal}"
+                            })
+                    # 参数节点
+                    elif hasattr(child, "get_name"):
+                        param_name = child.get_name()
+                        suggestions.append({
+                            "command": f"{root_command} <{param_name}>",
+                            "description": f"参数: {param_name}"
+                        })
+        # 否则尝试查找命令树中的补全
+        else:
+            # 当前输入的第一个部分（根命令）
+            root_command = parts[0]
+            
+            # 查找匹配的根命令
+            if root_command in root_nodes:
+                # 遍历所有持有该根命令的插件
+                for holder in root_nodes[root_command]:
+                    node = holder.node
+                    current_node = node
+                    
+                    # 依次匹配输入的每个部分
+                    matched = True
+                    # 如果最后一部分不是完整的命令（没有空格结尾），只处理到倒数第二部分
+                    process_until = len(parts) - (0 if parts[-1].strip() and input_ends_with_space else 1)
+                    
+                    # 保存当前节点的路径，用于记录经过的参数节点
+                    path_nodes = []
+                    
+                    for i in range(1, process_until):
+                        part = parts[i]
+                        found = False
+                        
+                        # 先尝试字面量节点匹配
+                        for child in current_node.get_children():
+                            # 字面量节点匹配
+                            if hasattr(child, "literals"):
+                                for literal in child.literals:
+                                    if literal == part:  # 完全匹配
+                                        current_node = child
+                                        found = True
+                                        path_nodes.append({"type": "literal", "node": child, "value": part})
+                                        break
+                                if found:
+                                    break
+                        
+                        # 如果字面量节点未匹配，尝试参数节点
+                        if not found:
+                            for child in current_node.get_children():
+                                if hasattr(child, "get_name"):
+                                    # 参数节点，记录参数名称和值
+                                    current_node = child
+                                    found = True
+                                    path_nodes.append({
+                                        "type": "argument", 
+                                        "node": child, 
+                                        "name": child.get_name(),
+                                        "value": part
+                                    })
+                                    break
+                        
+                        if not found:
+                            matched = False
+                            break
+                    
+                    # 如果前面的部分都匹配，找最后一部分的补全建议
+                    if matched:
+                        # 获取最后一部分作为前缀
+                        last_part = parts[-1] if len(parts) > 1 and not input_ends_with_space else ""
+                        
+                        # 获取完整的命令前缀（不包括最后一部分）
+                        prefix = " ".join(parts[:-1]) if last_part else " ".join(parts)
+                        if prefix and not prefix.endswith(" "):
+                            prefix += " "
+                        
+                        # 如果输入以空格结尾，我们应该提供下一级的完整建议列表
+                        if input_ends_with_space:
+                            # 遍历当前节点的所有子节点，查找可能的补全
+                            for child in current_node.get_children():
+                                # 字面量节点
+                                if hasattr(child, "literals"):
+                                    for literal in child.literals:
+                                        # 构建完整的命令补全
+                                        full_command = prefix + literal
+                                        suggestions.append({
+                                            "command": full_command,
+                                            "description": f"子命令: {literal}"
+                                        })
+                                # 参数节点
+                                elif hasattr(child, "get_name"):
+                                    param_name = child.get_name()
+                                    # 构建带参数提示的命令补全
+                                    full_command = prefix + f"<{param_name}>"
+                                    suggestions.append({
+                                        "command": full_command,
+                                        "description": f"参数: {param_name}"
+                                    })
+                        else:
+                            # 处理没有以空格结尾的情况，对最后一部分进行前缀匹配
+                            # 遍历当前节点的所有子节点，查找可能的补全
+                            for child in current_node.get_children():
+                                # 字面量节点
+                                if hasattr(child, "literals"):
+                                    for literal in child.literals:
+                                        # 如果最后部分为空，或者literal以最后部分开头，则添加为建议
+                                        if not last_part or literal.startswith(last_part):
+                                            # 构建完整的命令补全
+                                            full_command = prefix + literal
+                                            suggestions.append({
+                                                "command": full_command,
+                                                "description": f"子命令: {literal}"
+                                            })
+                                # 参数节点
+                                elif hasattr(child, "get_name"):
+                                    param_name = child.get_name()
+                                    # 仅当最后部分为空或没有明确指定参数时才添加参数建议
+                                    if not last_part or last_part.startswith("<"):
+                                        # 构建带参数提示的命令补全
+                                        full_command = prefix + f"<{param_name}>"
+                                        suggestions.append({
+                                            "command": full_command,
+                                            "description": f"参数: {param_name}"
+                                        })
+                        
+                        # 如果最后一个参数有可能的匹配值（例如命令+参数情况下）
+                        # 并且前一个节点是参数节点，尝试提供参数后的可能子命令
+                        if input_ends_with_space and path_nodes and path_nodes[-1]["type"] == "argument":
+                            # 假设用户已经输入了参数值，展示参数后的可能子命令
+                            param_node = path_nodes[-1]["node"]
+                            # 构建用于显示的完整命令前缀
+                            param_prefix = prefix.strip()  # 移除末尾空格
+                            
+                            # 遍历参数节点的子节点
+                            for child in param_node.get_children():
+                                if hasattr(child, "literals"):
+                                    for literal in child.literals:
+                                        # 添加参数后可能的子命令
+                                        full_command = f"{param_prefix} {literal}"
+                                        suggestions.append({
+                                            "command": full_command,
+                                            "description": f"子命令: {literal}"
+                                        })
+                                elif hasattr(child, "get_name"):
+                                    # 参数节点后还有参数
+                                    next_param_name = child.get_name()
+                                    full_command = f"{param_prefix} <{next_param_name}>"
+                                    suggestions.append({
+                                        "command": full_command,
+                                        "description": f"参数: {next_param_name}"
+                                    })
+        
+        # 按命令字母排序
+        suggestions.sort(key=lambda x: x["command"])
+        
+        # 限制返回数量，避免太多
+        max_suggestions = 100
+        if len(suggestions) > max_suggestions:
+            suggestions = suggestions[:max_suggestions]
+        
+        return JSONResponse({
+            "status": "success", 
+            "suggestions": suggestions,
+            "input": input
+        })
+        
+    except Exception as e:
+        import traceback
+        error_msg = f"获取命令补全失败: {str(e)}\n{traceback.format_exc()}"
+        app.state.server_interface.logger.error(error_msg)
+        return JSONResponse(
+            {"status": "error", "message": str(e)}, 
+            status_code=500
+        )
+
 @app.post("/api/send_command")
 async def send_command(request: Request):
     """
@@ -1040,6 +1295,18 @@ async def send_command(request: Request):
             return JSONResponse(
                 {"status": "error", "message": "Command cannot be empty"}, 
                 status_code=400
+            )
+            
+        # 检查是否为禁止的命令
+        forbidden_commands = [
+            '!!MCDR plugin reload guguwebui',
+            '!!MCDR plugin unload guguwebui',
+            'stop'
+        ]
+        if command in forbidden_commands:
+            return JSONResponse(
+                {"status": "error", "message": "该命令已被禁止执行"}, 
+                status_code=403
             )
         
         # 获取MCDR服务器接口
@@ -1193,4 +1460,369 @@ async def query_deepseek(request: Request, query_data: DeepseekQuery):
         return JSONResponse(
             {"status": "error", "message": f"请求失败: {str(e)}"}, 
             status_code=500
+        )
+
+# PIM插件安装和任务模型
+class PluginInstallRequest:
+    def __init__(self, plugin_id: str):
+        self.plugin_id = plugin_id
+
+class TaskStatusRequest:
+    def __init__(self, task_id: str):
+        self.task_id = task_id
+        
+# ============================================================#
+# PIM API 接口
+@app.post("/api/pim/install_plugin")
+async def api_install_plugin(
+    request: Request, 
+    plugin_req: dict = Body(...),
+    token_valid: bool = Depends(verify_token)
+):
+    """安装插件的API接口"""
+    if not request.session.get("logged_in"):
+        return JSONResponse(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            content={"success": False, "error": "未登录或会话已过期"}
+        )
+    
+    plugin_id = plugin_req.get("plugin_id")
+    if not plugin_id:
+        return JSONResponse(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            content={"success": False, "error": "缺少插件ID"}
+        )
+    
+    # 防止安装guguwebui插件
+    if plugin_id == "guguwebui":
+        return JSONResponse(
+            status_code=status.HTTP_403_FORBIDDEN,
+            content={"success": False, "error": "不允许安装WebUI自身，这可能会导致WebUI无法正常工作"}
+        )
+    
+    try:
+        # 获取服务器接口
+        server = app.state.server_interface
+        
+        # 初始化插件安装器
+        installer = PluginInstaller(server)
+        
+        # 尝试安装插件
+        task_id = installer.install_plugin(plugin_id)
+        
+        return JSONResponse(
+            content={
+                "success": True,
+                "task_id": task_id,
+                "message": f"开始安装插件 {plugin_id}"
+            }
+        )
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return JSONResponse(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            content={"success": False, "error": f"安装插件时出错: {str(e)}"}
+        )
+
+@app.post("/api/pim/update_plugin")
+async def api_update_plugin(
+    request: Request, 
+    plugin_req: dict = Body(...),
+    token_valid: bool = Depends(verify_token)
+):
+    """更新插件的API接口"""
+    if not request.session.get("logged_in"):
+        return JSONResponse(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            content={"success": False, "error": "未登录或会话已过期"}
+        )
+    
+    plugin_id = plugin_req.get("plugin_id")
+    if not plugin_id:
+        return JSONResponse(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            content={"success": False, "error": "缺少插件ID"}
+        )
+    
+    # 防止更新guguwebui插件
+    if plugin_id == "guguwebui":
+        return JSONResponse(
+            status_code=status.HTTP_403_FORBIDDEN,
+            content={"success": False, "error": "不允许更新WebUI自身，这可能会导致WebUI无法正常工作"}
+        )
+    
+    try:
+        # 获取服务器接口
+        server = app.state.server_interface
+        
+        # 初始化插件安装器
+        installer = PluginInstaller(server)
+        
+        # 更新实际上是重新安装
+        task_id = installer.install_plugin(plugin_id)
+        
+        return JSONResponse(
+            content={
+                "success": True,
+                "task_id": task_id,
+                "message": f"开始更新插件 {plugin_id}"
+            }
+        )
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return JSONResponse(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            content={"success": False, "error": f"更新插件时出错: {str(e)}"}
+        )
+
+@app.post("/api/pim/uninstall_plugin")
+async def api_uninstall_plugin(
+    request: Request, 
+    plugin_req: dict = Body(...),
+    token_valid: bool = Depends(verify_token)
+):
+    """卸载插件的API接口"""
+    if not request.session.get("logged_in"):
+        return JSONResponse(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            content={"success": False, "error": "未登录或会话已过期"}
+        )
+    
+    plugin_id = plugin_req.get("plugin_id")
+    if not plugin_id:
+        return JSONResponse(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            content={"success": False, "error": "缺少插件ID"}
+        )
+    
+    # 防止卸载guguwebui插件
+    if plugin_id == "guguwebui":
+        return JSONResponse(
+            status_code=status.HTTP_403_FORBIDDEN,
+            content={"success": False, "error": "不允许卸载WebUI自身，这将导致WebUI无法正常工作"}
+        )
+    
+    try:
+        # 获取服务器接口
+        server = app.state.server_interface
+        
+        # 初始化插件安装器
+        installer = PluginInstaller(server)
+        
+        # 卸载插件
+        task_id = installer.uninstall_plugin(plugin_id)
+        
+        return JSONResponse(
+            content={
+                "success": True,
+                "task_id": task_id,
+                "message": f"开始卸载插件 {plugin_id}"
+            }
+        )
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return JSONResponse(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            content={"success": False, "error": f"卸载插件时出错: {str(e)}"}
+        )
+
+@app.get("/api/pim/task_status")
+async def api_task_status(
+    request: Request, 
+    task_id: str = None,
+    plugin_id: str = None,
+    token_valid: bool = Depends(verify_token)
+):
+    """获取任务状态的API接口，支持通过任务ID或插件ID查询"""
+    if not request.session.get("logged_in"):
+        return JSONResponse(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            content={"success": False, "error": "未登录或会话已过期"}
+        )
+    
+    if not task_id and not plugin_id:
+        return JSONResponse(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            content={"success": False, "error": "缺少任务ID或插件ID"}
+        )
+    
+    try:
+        # 获取服务器接口
+        server = app.state.server_interface
+        
+        # 初始化插件安装器
+        installer = PluginInstaller(server)
+        
+        # 如果有任务ID，优先使用任务ID查询
+        if task_id:
+            task_info = installer.get_task_status(task_id)
+            
+            # 如果找不到指定任务，尝试查找最近的任务
+            if task_info.get("status") == "not_found":
+                server.logger.info(f"未找到任务 {task_id}，尝试查找最近的任务")
+                # 获取所有任务
+                all_tasks = installer.get_all_tasks()
+                # 按照开始时间倒序排序
+                recent_tasks = sorted(
+                    all_tasks.items(), 
+                    key=lambda x: x[1].get('start_time', 0), 
+                    reverse=True
+                )
+                
+                # 先检查是否有其他任务也处理相同的插件ID
+                if plugin_id:
+                    for tid, tinfo in recent_tasks:
+                        if tinfo.get('plugin_id') == plugin_id:
+                            task_info = tinfo
+                            server.logger.info(f"找到处理相同插件的任务 {tid}")
+                            break
+                
+                # 如果仍未找到，返回最近的一个任务
+                if task_info.get("status") == "not_found" and recent_tasks:
+                    recent_task_id, recent_task_info = recent_tasks[0]
+                    task_info = recent_task_info
+                    server.logger.info(f"使用最近的任务 {recent_task_id} 替代")
+                    
+                if task_info.get("status") == "not_found":
+                    return JSONResponse(
+                        status_code=status.HTTP_404_NOT_FOUND,
+                        content={"success": False, "error": f"任务 {task_id} 不存在"}
+                    )
+            
+            return JSONResponse(
+                content={
+                    "success": True,
+                    "task_info": task_info
+                }
+            )
+        
+        # 如果只有插件ID，则查找处理该插件的最新任务
+        elif plugin_id:
+            all_tasks = installer.get_all_tasks()
+            # 找到处理此插件的最新任务
+            plugin_tasks = [
+                (tid, tinfo) for tid, tinfo in all_tasks.items()
+                if tinfo.get('plugin_id') == plugin_id
+            ]
+            
+            # 按照开始时间倒序排序
+            plugin_tasks.sort(key=lambda x: x[1].get('start_time', 0), reverse=True)
+            
+            if plugin_tasks:
+                task_id, task_info = plugin_tasks[0]
+                server.logger.info(f"找到插件 {plugin_id} 的最新任务: {task_id}")
+                return JSONResponse(
+                    content={
+                        "success": True,
+                        "task_info": task_info
+                    }
+                )
+            else:
+                return JSONResponse(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    content={"success": False, "error": f"没有找到处理插件 {plugin_id} 的任务"}
+                )
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return JSONResponse(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            content={"success": False, "error": f"获取任务状态时出错: {str(e)}"}
+        )
+
+@app.get("/api/check_pim_status")
+async def check_pim_status(request: Request, token_valid: bool = Depends(verify_token)):
+    """检查PIM插件的安装状态"""
+    if not request.session.get("logged_in"):
+        return JSONResponse(
+            status_code=401,
+            content={"status": "error", "message": "未登录或会话已过期"}
+        )
+    
+    try:
+        # 获取服务器接口
+        server = app.state.server_interface
+        
+        # 获取已加载插件列表
+        loaded_plugin_metadata, unloaded_plugin_metadata, loaded_plugin, disabled_plugin = load_plugin_info(server)
+        
+        # 检查是否有id为pim_helper的插件
+        if "pim_helper" in loaded_plugin_metadata or "pim_helper" in unloaded_plugin_metadata:
+            status = "installed"
+        else:
+            status = "not_installed"
+        
+        return JSONResponse(
+            content={
+                "status": "success",
+                "pim_status": status
+            }
+        )
+    except Exception as e:
+        server.logger.error(f"检查PIM状态时出错: {str(e)}")
+        return JSONResponse(
+            status_code=500,
+            content={"status": "error", "message": f"检查PIM状态时出错: {str(e)}"}
+        )
+
+@app.get("/api/install_pim_plugin")
+async def install_pim_plugin(request: Request, token_valid: bool = Depends(verify_token)):
+    """将PIM作为独立插件安装"""
+    if not request.session.get("logged_in"):
+        return JSONResponse(
+            status_code=401,
+            content={"status": "error", "message": "未登录或会话已过期"}
+        )
+    
+    try:
+        # 获取服务器接口
+        server = app.state.server_interface
+        
+        # 获取已加载插件列表
+        loaded_plugin_metadata, unloaded_plugin_metadata, loaded_plugin, disabled_plugin = load_plugin_info(server)
+        
+        # 检查是否已安装
+        if "pim_helper" in loaded_plugin_metadata or "pim_helper" in unloaded_plugin_metadata:
+            return JSONResponse(
+                content={
+                    "status": "success",
+                    "message": "PIM插件已安装"
+                }
+            )
+        
+        # 获取MCDR根目录和plugins目录路径
+        # mcdr_root = server.get_mcdr_root()  # 这个方法不存在
+        # 使用get_data_folder()获取插件数据目录，然后回溯到MCDR根目录
+        data_folder = server.get_data_folder()
+        mcdr_root = os.path.dirname(os.path.dirname(data_folder))  # 从plugins/guguwebui/config回溯到MCDR根目录
+        plugins_dir = os.path.join(mcdr_root, "plugins")
+        
+        # 创建plugins目录（如果不存在）
+        os.makedirs(plugins_dir, exist_ok=True)
+        
+        # 使用__copyFile从插件包中复制PIM.py
+        source_path = "guguwebui/utils/PIM.py"  # 相对于插件包的路径
+        target_path = os.path.join(plugins_dir, "pim_helper.py")
+        
+        # 使用utils中的__copyFile函数
+        __copyFile(server, source_path, target_path)
+        
+        # 加载插件
+        server.load_plugin(target_path)
+        
+        return JSONResponse(
+            content={
+                "status": "success",
+                "message": "PIM插件已成功安装并加载"
+            }
+        )
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return JSONResponse(
+            status_code=500,
+            content={"status": "error", "message": f"安装PIM插件时出错: {str(e)}"}
         )

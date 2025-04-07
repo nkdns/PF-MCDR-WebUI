@@ -13,3 +13,4 @@ argon2_cffi
 python-multipart
 typing-extensions
 aiohttp
+uvicorn[standard]

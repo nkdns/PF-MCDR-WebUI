@@ -140,6 +140,26 @@
             color: rgb(252, 211, 77);
         }
 
+        .plugin-tag.information {
+            background-color: rgba(147, 51, 234, 0.1);
+            color: rgb(147, 51, 234);
+        }
+
+        .dark .plugin-tag.information {
+            background-color: rgba(147, 51, 234, 0.2);
+            color: rgb(237, 233, 254);
+        }
+
+        .plugin-tag.management {
+            background-color: rgba(147, 51, 234, 0.1);
+            color: rgb(147, 51, 234);
+        }
+
+        .dark .plugin-tag.management {
+            background-color: rgba(147, 51, 234, 0.2);
+            color: rgb(237, 233, 254);
+        }
+
         /* 通知样式 */
         .notification {
             position: fixed;
@@ -290,310 +310,7 @@
     </style>
 </head>
 <body class="h-full bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100 transition-colors duration-300">
-    <div x-data="{ 
-        serverStatus: 'loading',
-        userName: '',
-        serverVersion: '',
-        serverPlayers: '0/0',
-        plugins: [],
-        loading: true,
-        processingPlugins: {},
-        searchQuery: '',
-        currentPage: 1,
-        itemsPerPage: 10,
-        showNotification: false,
-        notificationMessage: '',
-        notificationType: 'success',
-        showPluginModal: false,
-        currentPlugin: null,
-        showRepoModal: false,
-        currentRepoUrl: '',
-        sortMethod: 'time', // 'name', 'time'
-        sortDirection: 'desc', // 'asc', 'desc'
-        
-        async checkLoginStatus() {
-            try {
-                const response = await fetch('/api/checkLogin');
-                const data = await response.json();
-                if (data.status === 'success') {
-                    this.userName = data.username;
-                }
-            } catch (error) {
-                console.error('Error checking login status:', error);
-            }
-        },
-        
-        async checkServerStatus() {
-            try {
-                this.serverStatus = 'loading';
-                const response = await fetch('/api/get_server_status');
-                const data = await response.json();
-                this.serverStatus = data.status || 'offline';
-                this.serverVersion = data.version || '';
-                this.serverPlayers = data.players || '0/0';
-            } catch (error) {
-                console.error('Error checking server status:', error);
-                this.serverStatus = 'error';
-            }
-        },
-        
-        async loadPlugins() {
-            try {
-                this.loading = true;
-                const response = await fetch('/api/online-plugins');
-                const data = await response.json();
-                this.plugins = data || [];
-                this.loading = false;
-                
-                // 确保每个插件的处理状态被正确初始化
-                if (this.plugins && this.plugins.length > 0) {
-                    this.plugins.forEach(plugin => {
-                        if (!this.processingPlugins.hasOwnProperty(plugin.id)) {
-                            this.processingPlugins[plugin.id] = false;
-                        }
-                    });
-                }
-            } catch (error) {
-                console.error('Error loading online plugins:', error);
-                this.loading = false;
-                this.showNotificationMsg('加载在线插件列表失败', 'error');
-            }
-        },
-        
-        filterPlugins() {
-            if (!this.searchQuery) return this.sortPlugins(this.plugins);
-            
-            const query = this.searchQuery.toLowerCase();
-            const filtered = this.plugins.filter(plugin => {
-                if (!plugin) return false;
-                
-                return (
-                    (plugin.id && plugin.id.toLowerCase().includes(query)) ||
-                    (plugin.name && plugin.name.toLowerCase().includes(query)) ||
-                    (plugin.description && plugin.description.zh_cn && plugin.description.zh_cn.toLowerCase().includes(query)) ||
-                    (plugin.description && plugin.description.en_us && plugin.description.en_us.toLowerCase().includes(query)) ||
-                    (plugin.authors && Array.isArray(plugin.authors) && plugin.authors.some(author => author && author.name && author.name.toLowerCase().includes(query)))
-                );
-            });
-            
-            return this.sortPlugins(filtered);
-        },
-        
-        sortPlugins(pluginsArray) {
-            if (!pluginsArray || pluginsArray.length === 0) return [];
-            
-            const sorted = [...pluginsArray];
-            
-            if (this.sortMethod === 'name') {
-                sorted.sort((a, b) => {
-                    if (!a || !b) return 0;
-                    const nameA = (a.name || a.id || '').toLowerCase();
-                    const nameB = (b.name || b.id || '').toLowerCase();
-                    return this.sortDirection === 'asc' 
-                        ? nameA.localeCompare(nameB) 
-                        : nameB.localeCompare(nameA);
-                });
-            } else if (this.sortMethod === 'time') {
-                sorted.sort((a, b) => {
-                    if (!a || !b) return 0;
-                    const timeA = a.last_update_time ? new Date(a.last_update_time).getTime() : 0;
-                    const timeB = b.last_update_time ? new Date(b.last_update_time).getTime() : 0;
-                    return this.sortDirection === 'asc' 
-                        ? timeA - timeB 
-                        : timeB - timeA;
-                });
-            }
-            
-            return sorted;
-        },
-        
-        toggleSortMethod(method) {
-            if (this.sortMethod === method) {
-                this.sortDirection = this.sortDirection === 'asc' ? 'desc' : 'asc';
-            } else {
-                this.sortMethod = method;
-                this.sortDirection = method === 'time' ? 'desc' : 'asc'; // 默认时间是最新的在前
-            }
-            this.currentPage = 1; // 重置到第一页
-        },
-        
-        getPaginatedPlugins() {
-            const filtered = this.filterPlugins();
-            const start = (this.currentPage - 1) * this.itemsPerPage;
-            const end = start + this.itemsPerPage;
-            return filtered.slice(start, end);
-        },
-        
-        getTotalPages() {
-            return Math.ceil(this.filterPlugins().length / this.itemsPerPage);
-        },
-        
-        goToPage(page) {
-            if (page < 1 || page > this.getTotalPages()) return;
-            this.currentPage = page;
-        },
-        
-        getPageNumbers() {
-            const totalPages = this.getTotalPages();
-            if (totalPages <= 7) {
-                return Array.from({length: totalPages}, (_, i) => i + 1);
-            }
-            
-            let pages = [];
-            
-            // 始终显示第一页
-            pages.push(1);
-            
-            if (this.currentPage > 3) {
-                pages.push('...');
-            }
-            
-            // 当前页附近的页码
-            let start = Math.max(2, this.currentPage - 1);
-            let end = Math.min(totalPages - 1, this.currentPage + 1);
-            
-            // 确保在开始和结束位置显示更多页码
-            if (this.currentPage <= 3) {
-                end = Math.min(5, totalPages - 1);
-            }
-            
-            if (this.currentPage >= totalPages - 2) {
-                start = Math.max(2, totalPages - 4);
-            }
-            
-            // 添加当前页附近的页码
-            for (let i = start; i <= end; i++) {
-                pages.push(i);
-            }
-            
-            if (this.currentPage < totalPages - 2) {
-                pages.push('...');
-            }
-            
-            // 始终显示最后一页
-            if (totalPages > 1) {
-                pages.push(totalPages);
-            }
-            
-            return pages;
-        },
-        
-        showPluginDetails(plugin) {
-            this.currentPlugin = plugin;
-            this.showPluginModal = true;
-        },
-        
-        closePluginModal() {
-            this.showPluginModal = false;
-            this.currentPlugin = null;
-        },
-        
-        showRepositoryPage(pluginId) {
-            this.currentRepoUrl = 'https://mcdreforged.com/zh-CN/plugin/' + pluginId;
-            this.showRepoModal = true;
-        },
-        
-        closeRepoModal() {
-            this.showRepoModal = false;
-            this.currentRepoUrl = '';
-        },
-        
-        async installPlugin(pluginId) {
-            if (this.processingPlugins[pluginId]) return;
-            
-            this.processingPlugins[pluginId] = true;
-            
-            try {
-                const response = await fetch('/api/install_plugin', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        plugin_id: pluginId
-                    })
-                });
-                
-                const result = await response.json();
-                
-                if (result.status === 'success') {
-                    this.showNotificationMsg('插件安装成功', 'success');
-                } else {
-                    this.showNotificationMsg(`安装失败: ${result.message || ''}`, 'error');
-                }
-            } catch (error) {
-                console.error(`Error installing plugin ${pluginId}:`, error);
-                this.showNotificationMsg('安装插件失败', 'error');
-            } finally {
-                this.processingPlugins[pluginId] = false;
-            }
-        },
-        
-        showNotificationMsg(message, type = 'success') {
-            this.notificationMessage = message;
-            this.notificationType = type;
-            this.showNotification = true;
-            
-            setTimeout(() => {
-                this.showNotification = false;
-            }, 5000);
-        },
-        
-        getPluginDescription(plugin) {
-            if (!plugin.description) return '';
-            return plugin.description.zh_cn || plugin.description.en_us || '';
-        },
-        
-        formatDate(dateString) {
-            if (!dateString) return '';
-            try {
-                const date = new Date(dateString);
-                return date.toLocaleDateString('zh-CN', {
-                    year: 'numeric',
-                    month: 'long',
-                    day: 'numeric'
-                });
-            } catch (e) {
-                return dateString;
-            }
-        }
-    }" 
-    x-init="
-        checkLoginStatus();
-        checkServerStatus();
-        loadPlugins();
-        
-        // 初始化处理中插件状态
-        processingPlugins = {};
-        
-        // 每60秒自动刷新服务器状态
-        setInterval(() => checkServerStatus(), 60000);
-        
-        // 保存主题设置到本地存储
-        $watch('darkMode', value => {
-            localStorage.setItem('darkMode', value);
-        });
-
-        // 重置分页
-        $watch('searchQuery', () => {
-            currentPage = 1;
-        });
-        
-        // 监视排序方法和方向的变化
-        $watch('sortMethod', () => {
-            // 强制重新计算分页数据
-            const temp = currentPage;
-            currentPage = 0;
-            currentPage = temp;
-        });
-        
-        $watch('sortDirection', () => {
-            // 强制重新计算分页数据
-            const temp = currentPage;
-            currentPage = 0;
-            currentPage = temp;
-        });
-    ">
+    <div x-data="onlinePluginsData" x-init="init()">
         <!-- 侧边栏 -->
         <div id="sidebar" :class="{'translate-x-0': sidebarOpen, '-translate-x-full': !sidebarOpen}" class="sidebar-width fixed top-0 left-0 bottom-0 z-30 transform transition-transform duration-300 ease-in-out bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 shadow-lg overflow-y-auto">
             <div class="p-4 flex flex-col h-full">
@@ -649,11 +366,6 @@
                         <a href="/cq" class="flex items-center px-4 py-3 text-sm font-medium rounded-lg text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
                             <i class="fas fa-comments w-6 text-center"></i>
                             <span class="ml-3">CQ-QQ-API</span>
-                        </a>
-                        
-                        <a href="/fabric" class="flex items-center px-4 py-3 text-sm font-medium rounded-lg text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
-                            <i class="fas fa-cube w-6 text-center"></i>
-                            <span class="ml-3">Fabric 管理</span>
                         </a>
                     </nav>
                 </div>
@@ -898,7 +610,18 @@
                                             <span>GitHub</span>
                                         </a>
                                         
+                                        <!-- 显示已安装标签 -->
+                                        <div
+                                            x-show="isPluginUpToDate(plugin.id, plugin.latest_version)"
+                                            class="inline-flex items-center px-3 py-1.5 border border-transparent rounded-md shadow-sm text-xs font-medium text-white bg-green-600"
+                                        >
+                                            <i class="fas fa-check-circle mr-1.5"></i>
+                                            <span x-text="'已安装 v' + getInstalledPluginVersion(plugin.id)"></span>
+                                        </div>
+                                        
+                                        <!-- 安装/更新按钮 -->
                                         <button 
+                                            x-show="!isPluginUpToDate(plugin.id, plugin.latest_version)"
                                             @click="installPlugin(plugin.id)"
                                             class="inline-flex items-center px-3 py-1.5 border border-transparent rounded-md shadow-sm text-xs font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none transition-colors"
                                             :disabled="processingPlugins[plugin.id]"
@@ -909,7 +632,7 @@
                                             <template x-if="processingPlugins[plugin.id]">
                                                 <i class="fas fa-circle-notch fa-spin mr-1.5"></i>
                                             </template>
-                                            <span>安装/更新</span>
+                                            <span x-text="isPluginInstalled(plugin.id) ? '更新' : '安装'"></span>
                                         </button>
                                     </div>
                                 </div>
@@ -978,11 +701,108 @@
                     <span x-text="notificationMessage"></span>
                 </div>
                 
+                <!-- 插件安装进度模态窗口 -->
+                <div x-show="showInstallModal" x-transition.opacity class="modal-backdrop">
+                    <div class="modal-content" @click.away="closeInstallModal()">
+                        <div class="modal-header">
+                            <h3 class="text-lg font-semibold text-gray-900 dark:text-white" x-text="'安装进度 - ' + installPluginId"></h3>
+                            <button @click="closeInstallModal()" class="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        </div>
+                        
+                        <div class="modal-body">
+                            <!-- 进度条 -->
+                            <div class="mb-4">
+                                <div class="flex justify-between mb-1">
+                                    <span class="text-sm font-medium text-gray-700 dark:text-gray-300" x-text="installMessage"></span>
+                                    <span id="install-progress-text" class="text-sm font-medium text-gray-700 dark:text-gray-300" x-text="Math.round(installProgress) + '%'"></span>
+                                </div>
+                                <div class="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2.5">
+                                    <div id="install-progress-bar" class="bg-blue-600 h-2.5 rounded-full" :style="'width: ' + installProgress + '%'"></div>
+                                </div>
+                            </div>
+                            
+                            <!-- 安装状态指示器 -->
+                            <div class="flex items-center mb-4">
+                                <div class="px-3 py-1 rounded-full text-xs font-medium flex items-center" :class="{
+                                    'bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300': installStatus === 'running',
+                                    'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300': installStatus === 'completed',
+                                    'bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300': installStatus === 'failed',
+                                    'bg-gray-100 dark:bg-gray-900/30 text-gray-800 dark:text-gray-300': installStatus === 'pending'
+                                }">
+                                    <span x-show="installStatus === 'running'" class="flex items-center">
+                                        <i class="fas fa-circle-notch fa-spin mr-1.5"></i>
+                                        <span>正在处理</span>
+                                    </span>
+                                    <span x-show="installStatus === 'completed'" class="flex items-center">
+                                        <i class="fas fa-check-circle mr-1.5"></i>
+                                        <span>已完成</span>
+                                    </span>
+                                    <span x-show="installStatus === 'failed'" class="flex items-center">
+                                        <i class="fas fa-exclamation-circle mr-1.5"></i>
+                                        <span>失败</span>
+                                    </span>
+                                    <span x-show="installStatus === 'pending'" class="flex items-center">
+                                        <i class="fas fa-hourglass-start mr-1.5"></i>
+                                        <span>等待中</span>
+                                    </span>
+                                </div>
+                            </div>
+                            
+                            <!-- 安装日志 -->
+                            <div class="mt-4">
+                                <h4 class="text-sm font-medium text-gray-800 dark:text-gray-200 mb-2">安装日志</h4>
+                                <div class="bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-md p-3 h-56 overflow-y-auto font-mono text-xs">
+                                    <template x-for="(message, index) in installLogMessages" :key="index">
+                                        <div class="py-0.5" :class="{'text-red-500': message.includes('错误') || message.includes('失败') || message.includes('⚠'), 'text-green-500': message.includes('成功') || message.includes('✓')}">
+                                            <span x-text="message"></span>
+                                        </div>
+                                    </template>
+                                    <div x-show="installLogMessages.length === 0" class="text-gray-500 dark:text-gray-400">
+                                        等待日志...
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="modal-footer">
+                            <button @click="closeInstallModal()" class="inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm text-sm font-medium text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none">
+                                <span x-text="installStatus === 'running' ? '隐藏' : '关闭'"></span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                
                 <!-- 插件详情模态窗口 -->
                 <div x-show="showPluginModal" x-transition.opacity class="modal-backdrop">
                     <div class="modal-content" @click.away="closePluginModal()">
                         <div class="modal-header">
-                            <h3 class="text-lg font-semibold text-gray-900 dark:text-white" x-text="currentPlugin ? (currentPlugin.name || currentPlugin.id) : '插件详情'"></h3>
+                            <div class="flex items-center">
+                                <!-- 返回按钮 -->
+                                <button 
+                                    x-show="pluginHistory.length > 0" 
+                                    @click="goBackToPlugin()" 
+                                    class="mr-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+                                    title="返回上一个插件"
+                                >
+                                    <i class="fas fa-arrow-left"></i>
+                                </button>
+                                
+                                <h3 class="text-lg font-semibold text-gray-900 dark:text-white" x-text="currentPlugin ? currentPlugin.name || currentPlugin.id : '插件详情'"></h3>
+                                
+                                <!-- 导航路径显示 -->
+                                <div x-show="pluginHistory.length > 0" class="ml-3 text-sm text-gray-500">
+                                    <span>访问历史: </span>
+                                    <template x-for="(historyPlugin, index) in pluginHistory.slice().reverse().slice(0, 2)" :key="index">
+                                        <span>
+                                            <span x-text="historyPlugin.name || historyPlugin.id"></span>
+                                            <i class="fas fa-chevron-right mx-1" x-show="index < Math.min(pluginHistory.length - 1, 1)"></i>
+                                        </span>
+                                    </template>
+                                    <i class="fas fa-chevron-right mx-1" x-show="pluginHistory.length > 2"></i>
+                                </div>
+                            </div>
                             <button @click="closePluginModal()" class="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200">
                                 <i class="fas fa-times"></i>
                             </button>
@@ -1057,9 +877,22 @@
                                     <h4 class="text-md font-medium text-gray-800 dark:text-gray-200 mb-2">依赖项</h4>
                                     <div class="dependencies-list">
                                         <template x-for="(version, name) in currentPlugin?.dependencies || {}" :key="name">
-                                            <div class="dependency-item">
-                                                <span x-text="name"></span>
-                                                <span class="text-gray-500 dark:text-gray-400" x-text="': ' + version"></span>
+                                            <div class="dependency-item flex items-center flex-nowrap">
+                                                <!-- 排除mcdreforged，使其他依赖可点击 -->
+                                                <template x-if="name.toLowerCase() === 'mcdreforged'">
+                                                    <span x-text="name"></span>
+                                                </template>
+                                                <template x-if="name.toLowerCase() !== 'mcdreforged'">
+                                                    <span 
+                                                        @click="showDependencyDetails(name)" 
+                                                        class="cursor-pointer hover:text-blue-500 hover:underline inline-flex items-center" 
+                                                        :title="'点击查看 ' + name + ' 的详细信息'"
+                                                    >
+                                                        <span x-text="name"></span>
+                                                        <i class="fas fa-external-link-alt ml-1 text-xs text-blue-500"></i>
+                                                    </span>
+                                                </template>
+                                                <span class="text-gray-500 dark:text-gray-400 whitespace-nowrap" x-text="': ' + version"></span>
                                             </div>
                                         </template>
                                     </div>
@@ -1098,8 +931,19 @@
                             <button @click="closePluginModal()" class="inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm text-sm font-medium text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none">
                                 <span>关闭</span>
                             </button>
+                            
+                            <!-- 已安装标签 -->
+                            <div
+                                x-show="currentPlugin && isPluginUpToDate(currentPlugin.id, currentPlugin.latest_version)"
+                                class="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-green-600"
+                            >
+                                <i class="fas fa-check-circle mr-1.5"></i>
+                                <span x-text="'已安装 v' + getInstalledPluginVersion(currentPlugin?.id)"></span>
+                            </div>
+                            
+                            <!-- 安装/更新按钮 -->
                             <button 
-                                x-show="currentPlugin"
+                                x-show="currentPlugin && !isPluginUpToDate(currentPlugin.id, currentPlugin.latest_version)"
                                 @click="installPlugin(currentPlugin?.id); closePluginModal()"
                                 class="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none"
                                 :disabled="currentPlugin && processingPlugins[currentPlugin.id]"
@@ -1110,7 +954,7 @@
                                 <template x-if="currentPlugin && processingPlugins[currentPlugin?.id]">
                                     <i class="fas fa-circle-notch fa-spin mr-1.5"></i>
                                 </template>
-                                <span>安装/更新</span>
+                                <span x-text="currentPlugin && isPluginInstalled(currentPlugin.id) ? '更新' : '安装'"></span>
                             </button>
                         </div>
                     </div>
@@ -1176,9 +1020,7 @@
     <!-- 公告脚本 -->
     <script src="/js/notice.js"></script>
 
-    <script>
-        // 设置当前年份
-        document.getElementById('year').textContent = new Date().getFullYear();
-    </script>
+    <!-- 在线插件页面脚本 -->
+    <script src="/js/online-plugins.js"></script>
 </body>
 </html> 

@@ -14,6 +14,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <!-- 自定义CSS -->
     <link rel="stylesheet" href="/css/main.css">
+    <link rel="stylesheet" href="/css/plugins.css">
     <!-- 自定义配置 -->
     <script>
         tailwind.config = {
@@ -48,350 +49,6 @@
             },
         }
     </script>
-    <style>
-        /* 自定义CSS变量 */
-        :root {
-            --sidebar-width: 260px;
-            --header-height: 64px;
-            --card-bg-light: rgba(255, 255, 255, 0.9);
-            --card-bg-dark: rgba(17, 24, 39, 0.8);
-        }
-        
-        /* 卡片悬停效果 */
-        .card-hover {
-            transition: all 0.3s ease;
-        }
-        
-        .card-hover:hover {
-            transform: translateY(-5px) rotate3d(1, 1, 0, 3deg);
-            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
-        }
-        
-        /* 自定义滚动条 */
-        ::-webkit-scrollbar {
-            width: 8px;
-            height: 8px;
-        }
-        
-        ::-webkit-scrollbar-track {
-            background: transparent;
-        }
-        
-        ::-webkit-scrollbar-thumb {
-            background: #d1d5db;
-            border-radius: 4px;
-        }
-        
-        .dark ::-webkit-scrollbar-thumb {
-            background: #4b5563;
-        }
-        
-        /* 侧边栏固定宽度 */
-        .sidebar-width {
-            width: var(--sidebar-width);
-        }
-        
-        /* 主内容区域的左边距，与侧边栏宽度相同 */
-        .main-content {
-            transition: margin-left 0.3s ease;
-        }
-        
-        .main-content.sidebar-open {
-            margin-left: var(--sidebar-width);
-        }
-
-        /* 插件卡片样式 */
-        .plugin-card {
-            transition: all 0.3s ease;
-            position: relative;
-            overflow: hidden;
-        }
-
-        .plugin-card:before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 4px;
-            height: 100%;
-            transition: all 0.3s ease;
-        }
-
-        .plugin-card.active:before {
-            background-color: #10B981;
-        }
-
-        .plugin-card.inactive:before {
-            background-color: #6B7280;
-        }
-
-        .plugin-card.unloaded:before {
-            background-color: #F59E0B;
-        }
-
-        .plugin-card.disabled:before {
-            background-color: #6B7280;
-        }
-
-        .plugin-card.error:before {
-            background-color: #EF4444;
-        }
-
-        /* 状态开关样式 */
-        .toggle-switch {
-            position: relative;
-            display: inline-block;
-            width: 44px;
-            height: 24px;
-        }
-
-        .toggle-switch input {
-            opacity: 0;
-            width: 0;
-            height: 0;
-        }
-
-        .toggle-slider {
-            position: absolute;
-            cursor: pointer;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background-color: #cbd5e1;
-            transition: .4s;
-            border-radius: 24px;
-        }
-
-        .toggle-slider:before {
-            position: absolute;
-            content: "";
-            height: 18px;
-            width: 18px;
-            left: 3px;
-            bottom: 3px;
-            background-color: white;
-            transition: .4s;
-            border-radius: 50%;
-        }
-
-        .dark .toggle-slider {
-            background-color: #475569;
-        }
-
-        input:checked + .toggle-slider {
-            background-color: #3b82f6;
-        }
-
-        input:focus + .toggle-slider {
-            box-shadow: 0 0 1px #3b82f6;
-        }
-
-        input:checked + .toggle-slider:before {
-            transform: translateX(20px);
-        }
-
-        /* 通知样式 */
-        .notification {
-            position: fixed;
-            right: 20px;
-            bottom: 20px;
-            display: flex;
-            align-items: center;
-            padding: 1rem 1.5rem;
-            border-radius: 0.375rem;
-            color: white;
-            font-weight: 500;
-            z-index: 100;
-            max-width: 24rem;
-            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
-            font-size: 1rem;
-            transform: scale(1.05);
-            animation: notification-pulse 2s infinite;
-        }
-
-        @keyframes notification-pulse {
-            0% {
-                box-shadow: 0 0 0 0 rgba(66, 153, 225, 0.5);
-            }
-            70% {
-                box-shadow: 0 0 0 10px rgba(66, 153, 225, 0);
-            }
-            100% {
-                box-shadow: 0 0 0 0 rgba(66, 153, 225, 0);
-            }
-        }
-
-        /* 模态窗口样式 */
-        .modal-backdrop {
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background-color: rgba(0, 0, 0, 0.5);
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            z-index: 100;
-        }
-
-        .modal-content {
-            background-color: white;
-            border-radius: 0.5rem;
-            max-width: 90%;
-            width: 800px;
-            max-height: 90vh;
-            overflow: hidden;
-            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
-        }
-
-        .dark .modal-content {
-            background-color: #1f2937;
-            border: 1px solid #374151;
-        }
-
-        .modal-header {
-            padding: 1rem 1.5rem;
-            border-bottom: 1px solid #e5e7eb;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .dark .modal-header {
-            border-bottom-color: #374151;
-        }
-
-        .modal-body {
-            padding: 1.5rem;
-            overflow-y: auto;
-            max-height: calc(90vh - 130px);
-        }
-
-        .modal-footer {
-            padding: 1rem 1.5rem;
-            border-top: 1px solid #e5e7eb;
-            display: flex;
-            justify-content: flex-end;
-            gap: 0.5rem;
-        }
-
-        .dark .modal-footer {
-            border-top-color: #374151;
-        }
-
-        /* CodeMirror 高度 */
-        .CodeMirror {
-            height: 400px !important;
-        }
-
-        /* 配置文件列表样式 */
-        .config-file-list {
-            display: flex;
-            flex-direction: column;
-            gap: 0.5rem;
-        }
-
-        .config-file-item {
-            padding: 0.75rem 1rem;
-            border-radius: 0.375rem;
-            border: 1px solid #e5e7eb;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            transition: all 0.2s;
-        }
-
-        .dark .config-file-item {
-            border-color: #374151;
-        }
-
-        .config-file-item:hover {
-            background-color: #f3f4f6;
-        }
-
-        .dark .config-file-item:hover {
-            background-color: #2d3748;
-        }
-
-        /* 编辑器容器样式 */
-        .editor-container {
-            border: 1px solid #e5e7eb;
-            border-radius: 0.375rem;
-            overflow: hidden;
-            height: 400px;
-        }
-
-        .dark .editor-container {
-            border-color: #374151;
-        }
-
-        /* HTML内容iframe样式 */
-        .html-iframe-container {
-            border: 1px solid #e5e7eb;
-            border-radius: 0.375rem;
-            overflow: hidden;
-            min-height: 400px;
-            width: 100%;
-        }
-
-        .dark .html-iframe-container {
-            border-color: #374151;
-        }
-
-        .html-iframe {
-            width: 100%;
-            min-height: 400px;
-            border: none;
-            background-color: white;
-        }
-
-        .dark .html-iframe {
-            background-color: #1f2937;
-        }
-
-        /* 编辑器标签页 */
-        .editor-tabs {
-            display: flex;
-            border-bottom: 1px solid #e5e7eb;
-            background-color: #f3f4f6;
-        }
-
-        .dark .editor-tabs {
-            border-bottom-color: #374151;
-            background-color: #374151;
-        }
-
-        .editor-tab {
-            padding: 0.5rem 1rem;
-            cursor: pointer;
-            border-right: 1px solid #e5e7eb;
-        }
-
-        .dark .editor-tab {
-            border-right-color: #4b5563;
-        }
-
-        .editor-tab.active {
-            background-color: white;
-            font-weight: 500;
-        }
-
-        .dark .editor-tab.active {
-            background-color: #1f2937;
-        }
-
-        /* CodeMirror 主题覆盖 */
-        .cm-editor {
-            height: 100%;
-        }
-
-        .dark .cm-editor {
-            background-color: #1f2937;
-            color: #e5e7eb;
-        }
-    </style>
     <!-- CodeMirror -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/6.65.7/codemirror.min.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/6.65.7/codemirror.min.js"></script>
@@ -400,505 +57,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/6.65.7/mode/properties/properties.min.js"></script>
 </head>
 <body class="h-full bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100 transition-colors duration-300">
-    <div x-data="{ 
-        serverStatus: 'loading',
-        userName: '',
-        serverVersion: '',
-        serverPlayers: '0/0',
-        plugins: [],
-        loading: true,
-        searchQuery: '',
-        notificationMessage: '',
-        notificationType: 'success',
-        showNotification: false,
-        processingPlugins: {},
-        showConfigModal: false,
-        currentPlugin: null,
-        configFiles: [],
-        selectedFile: '',
-        configContent: '',
-        showEditor: false,
-        editorMode: 'code', // 'code' or 'form'
-        codeMirrorEditor: null,
-        configData: null,
-        configTranslations: {}, // 添加翻译数据存储
-
-        async checkLoginStatus() {
-            try {
-                const response = await fetch('/api/checkLogin');
-                const data = await response.json();
-                if (data.status === 'success') {
-                    this.userName = data.username;
-                }
-            } catch (error) {
-                console.error('Error checking login status:', error);
-            }
-        },
-        
-        async checkServerStatus() {
-            try {
-                this.serverStatus = 'loading';
-                const response = await fetch('/api/get_server_status');
-                const data = await response.json();
-                this.serverStatus = data.status || 'offline';
-                this.serverVersion = data.version || '';
-                this.serverPlayers = data.players || '0/0';
-            } catch (error) {
-                console.error('Error checking server status:', error);
-                this.serverStatus = 'error';
-            }
-        },
-
-        async loadPlugins() {
-            try {
-                this.loading = true;
-                const response = await fetch('/api/plugins?detail=true');
-                const data = await response.json();
-                this.plugins = data.plugins || [];
-                this.loading = false;
-                
-                // 确保每个插件的处理状态被正确初始化
-                if (this.plugins && this.plugins.length > 0) {
-                    this.plugins.forEach(plugin => {
-                        if (!this.processingPlugins.hasOwnProperty(plugin.id)) {
-                            this.processingPlugins[plugin.id] = false;
-                        }
-                    });
-                }
-            } catch (error) {
-                console.error('Error loading plugins:', error);
-                this.loading = false;
-                this.showNotificationMsg('加载插件列表失败', 'error');
-            }
-        },
-
-        async togglePlugin(pluginId, targetStatus) {
-            if (pluginId === 'guguwebui') {
-                this.showNotificationMsg('不能切换 WebUI 插件的状态', 'error');
-                return;
-            }
-
-            this.processingPlugins[pluginId] = true;
-            
-            try {
-                const response = await fetch('/api/toggle_plugin', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        plugin_id: pluginId,
-                        status: targetStatus
-                    })
-                });
-                
-                const result = await response.json();
-                
-                if (result.status === 'success') {
-                    // 更新插件状态
-                    await this.loadPlugins();
-                    this.showNotificationMsg(`${targetStatus ? '启用' : '禁用'}插件成功`, 'success');
-                } else {
-                    this.showNotificationMsg(`${targetStatus ? '启用' : '禁用'}插件失败: ${result.message || ''}`, 'error');
-                }
-            } catch (error) {
-                console.error(`Error toggling plugin ${pluginId}:`, error);
-                this.showNotificationMsg(`${targetStatus ? '启用' : '禁用'}插件失败`, 'error');
-            } finally {
-                this.processingPlugins[pluginId] = false;
-            }
-        },
-
-        async reloadPlugin(pluginId) {
-            if (pluginId === 'guguwebui') {
-                this.showNotificationMsg('不能重载 WebUI 插件', 'error');
-                return;
-            }
-
-            this.processingPlugins[pluginId] = true;
-            
-            try {
-                const response = await fetch('/api/reload_plugin', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        plugin_id: pluginId
-                    })
-                });
-                
-                const result = await response.json();
-                
-                if (result.status === 'success') {
-                    await this.loadPlugins();
-                    this.showNotificationMsg('重载插件成功', 'success');
-                } else {
-                    this.showNotificationMsg(`重载插件失败: ${result.message || ''}`, 'error');
-                }
-            } catch (error) {
-                console.error(`Error reloading plugin ${pluginId}:`, error);
-                this.showNotificationMsg('重载插件失败', 'error');
-            } finally {
-                this.processingPlugins[pluginId] = false;
-            }
-        },
-
-        async updatePlugin(pluginId) {
-            if (pluginId === 'guguwebui') {
-                this.showNotificationMsg('不能更新 WebUI 插件', 'error');
-                return;
-            }
-
-            this.processingPlugins[pluginId] = true;
-            
-            try {
-                const response = await fetch('/api/update_plugin', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        plugin_id: pluginId
-                    })
-                });
-                
-                const result = await response.json();
-                console.log('更新响应数据:', result);
-                
-                if (result.status === 'success') {
-                    await this.loadPlugins();
-                    this.showNotificationMsg('更新插件成功', 'success');
-                } else {
-                    this.showNotificationMsg(`更新插件失败: ${result.message || ''}`, 'error');
-                }
-            } catch (error) {
-                console.error(`Error updating plugin ${pluginId}:`, error);
-                this.showNotificationMsg('更新插件失败', 'error');
-            } finally {
-                this.processingPlugins[pluginId] = false;
-            }
-        },
-
-        getPluginStatus(plugin) {
-            if (plugin.status === true || plugin.status === 'loaded') return 'active';
-            if (plugin.status === false || plugin.status === 'disabled') return 'inactive';
-            if (plugin.status === 'unloaded') return 'unloaded';
-            return 'error';
-        },
-
-        filterPlugins() {
-            if (!this.searchQuery) return this.plugins;
-            
-            const query = this.searchQuery.toLowerCase();
-            return this.plugins.filter(plugin => 
-                plugin.id.toLowerCase().includes(query) ||
-                plugin.name.toLowerCase().includes(query) ||
-                (plugin.description && plugin.description.toLowerCase().includes(query)) ||
-                (plugin.author && plugin.author.toLowerCase().includes(query))
-            );
-        },
-
-        showNotificationMsg(message, type = 'success') {
-            this.notificationMessage = message;
-            this.notificationType = type;
-            this.showNotification = true;
-            
-            setTimeout(() => {
-                this.showNotification = false;
-            }, 5000);
-        },
-
-        async openConfigModal(plugin) {
-            this.currentPlugin = plugin;
-            this.configFiles = [];
-            this.selectedFile = '';
-            this.configContent = '';
-            this.showEditor = false;
-            this.showConfigModal = true;
-            
-            try {
-                const response = await fetch(`/api/list_config_files?plugin_id=${plugin.id}`);
-                const data = await response.json();
-                this.configFiles = data.files || [];
-            } catch (error) {
-                console.error('Error fetching config files:', error);
-                this.showNotificationMsg('获取配置文件列表失败', 'error');
-            }
-        },
-        
-        async openConfigFile(file, mode = 'code') {
-            this.selectedFile = file;
-            this.editorMode = mode;
-            this.showEditor = true;
-            this.configTranslations = {}; // 重置翻译数据
-            
-            // 清除已有的编辑器实例
-            if (this.codeMirrorEditor) {
-                this.codeMirrorEditor.toTextArea();
-                this.codeMirrorEditor = null;
-            }
-            
-            try {
-                if (mode === 'code') {
-                    // 以代码编辑器模式打开
-                    const response = await fetch(`/api/load_config_file?path=${file}`);
-                    this.configContent = await response.text();
-                    
-                    // 使用setTimeout确保DOM已更新
-                    setTimeout(() => {
-                        const fileExt = file.split('.').pop().toLowerCase();
-                        let editorMode = 'text/plain';
-                        
-                        if (fileExt === 'json') editorMode = 'application/json';
-                        else if (fileExt === 'yml' || fileExt === 'yaml') editorMode = 'text/x-yaml';
-                        else if (fileExt === 'properties') editorMode = 'text/x-properties';
-                        
-                        const editorElement = document.getElementById('config-editor');
-                        if (editorElement) {
-                            this.codeMirrorEditor = CodeMirror.fromTextArea(editorElement, {
-                                mode: editorMode,
-                                lineNumbers: true,
-                                theme: this.darkMode ? 'darcula' : 'default',
-                                lineWrapping: true,
-                                autoCloseBrackets: true,
-                                matchBrackets: true,
-                                indentUnit: 2,
-                                tabSize: 2
-                            });
-                        }
-                    }, 100);
-                } else {
-                    // 以表单模式打开
-                    const response = await fetch(`/api/load_config?path=${file}`);
-                    const data = await response.json();
-                    
-                    // 重置状态，完全替换数据以触发Alpine.js响应式更新
-                    this.configData = {};
-                    
-                    // 使用setTimeout确保DOM和Alpine.js的响应式系统有时间处理第一步的清空操作
-                    setTimeout(() => {
-                        try {
-                            // 检查是否是HTML类型响应
-                            if (data && data.type === 'html') {
-                                this.configData = data; // 直接使用返回数据，包含type和content字段
-                                
-                                // 使用另一个setTimeout确保DOM已更新并且存在iframe元素
-                                setTimeout(() => {
-                                    const iframe = document.getElementById('html-config-iframe');
-                                    if (iframe) {
-                                        // 写入HTML内容到iframe
-                                        const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
-                                        iframeDoc.open();
-                                        iframeDoc.write(data.content);
-                                        iframeDoc.close();
-                                        
-                                        // 调整iframe高度以适应内容
-                                        iframe.onload = function() {
-                                            try {
-                                                const height = iframeDoc.body.scrollHeight;
-                                                if (height > 400) {
-                                                    iframe.style.height = height + 'px';
-                                                }
-                                            } catch (err) {
-                                                console.warn('Unable to adjust iframe height:', err);
-                                            }
-                                        };
-                                    }
-                                }, 100);
-                            } 
-                            // 确保不是空数据
-                            else if (data && typeof data === 'object') {
-                                // 确保configData是一个空对象
-                                this.configData = {};
-                                
-                                // 创建一个深复制，然后确保每个层级都已初始化
-                                const processedData = JSON.parse(JSON.stringify(data));
-                                
-                                // 预处理嵌套对象，确保每个层级都是安全的
-                                Object.keys(processedData).forEach(key => {
-                                    if (typeof processedData[key] === 'object' && processedData[key] !== null && !Array.isArray(processedData[key])) {
-                                        Object.keys(processedData[key]).forEach(nestedKey => {
-                                            if (typeof processedData[key][nestedKey] === 'object' && processedData[key][nestedKey] !== null && !Array.isArray(processedData[key][nestedKey])) {
-                                                Object.keys(processedData[key][nestedKey]).forEach(thirdKey => {
-                                                    if (typeof processedData[key][nestedKey][thirdKey] === 'object' && processedData[key][nestedKey][thirdKey] !== null && !Array.isArray(processedData[key][nestedKey][thirdKey])) {
-                                                        // 确保第四层对象存在
-                                                        processedData[key][nestedKey][thirdKey] = processedData[key][nestedKey][thirdKey] || {};
-                                                    }
-                                                });
-                                                // 确保第三层对象存在
-                                                processedData[key][nestedKey] = processedData[key][nestedKey] || {};
-                                            }
-                                        });
-                                        // 确保第二层对象存在
-                                        processedData[key] = processedData[key] || {};
-                                    }
-                                });
-                                
-                                // 设置处理后的数据
-                                this.configData = processedData;
-                                
-                                // 在加载配置数据后，请求翻译数据
-                                setTimeout(async () => {
-                                    try {
-                                        // console.log(`正在请求翻译数据: /api/load_config?path=${file}&translation=true`);
-                                        const translationResponse = await fetch(`/api/load_config?path=${file}&translation=true`);
-                                        const translationData = await translationResponse.json();
-                                        if (translationData && typeof translationData === 'object') {
-                                            // console.log('收到翻译数据:', translationData);
-                                            this.configTranslations = translationData;
-                                            
-                                            // 检查配置数据中的嵌套结构，记录所有键
-                                            const nestedKeys = [];
-                                            if (this.configData) {
-                                                Object.keys(this.configData).forEach(key => {
-                                                    if (typeof this.configData[key] === 'object' && this.configData[key] !== null && !Array.isArray(this.configData[key])) {
-                                                        Object.keys(this.configData[key]).forEach(nestedKey => {
-                                                            nestedKeys.push(nestedKey);
-                                                        });
-                                                    }
-                                                });
-                                            }
-                                            if (nestedKeys.length > 0) {
-                                                // console.log('嵌套键列表:', nestedKeys);
-                                                // console.log('匹配到的直接翻译:', nestedKeys.filter(key => this.configTranslations[key]).map(key => ({[key]: this.configTranslations[key]})));
-                                            }
-                                            
-                                            // 添加一个小延迟，确保翻译应用后UI已更新
-                                            setTimeout(() => {
-                                                // console.log('翻译数据已应用到表单');
-                                                // 这里可以执行表单初始化完成后的回调
-                                            }, 200);
-                                        } else {
-                                            console.warn('未收到有效的翻译数据');
-                                        }
-                                    } catch (err) {
-                                        console.warn('Error loading translations:', err);
-                                    }
-                                }, 100);
-                            } else {
-                                this.configData = {};
-                                console.warn('Empty or invalid config data received');
-                            }
-                        } catch (err) {
-                            console.error('Error processing config data:', err);
-                            this.configData = {};
-                        }
-                    }, 100);
-                }
-            } catch (error) {
-                console.error('Error loading config file:', error);
-                this.showNotificationMsg('加载配置文件失败', 'error');
-                // 确保在发生错误时也重置数据
-                this.configData = {};
-            }
-        },
-        
-        async saveConfigFile() {
-            try {
-                if (this.editorMode === 'code') {
-                    // 获取CodeMirror的内容
-                    const content = this.codeMirrorEditor.getValue();
-                    
-                    const response = await fetch('/api/save_config_file', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json'
-                        },
-                        body: JSON.stringify({
-                            action: this.selectedFile,
-                            content: content
-                        })
-                    });
-                    
-                    const result = await response.json();
-                    
-                    if (result.status === 'success') {
-                        this.showNotificationMsg('配置文件保存成功', 'success');
-                        // 关闭编辑器
-                        this.showEditor = false;
-                        this.selectedFile = '';
-                    } else {
-                        this.showNotificationMsg(`保存失败: ${result.message || ''}`, 'error');
-                    }
-                } else {
-                    // 如果是HTML类型，则不需要保存
-                    if (this.configData && this.configData.type === 'html') {
-                        this.showNotificationMsg('HTML界面不需要保存', 'success');
-                        return;
-                    }
-                    
-                    // 表单模式保存
-                    const response = await fetch('/api/save_config', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json'
-                        },
-                        body: JSON.stringify({
-                            file_path: this.selectedFile,
-                            config_data: this.configData
-                        })
-                    });
-                    
-                    const result = await response.json();
-                    
-                    if (result.status === 'success') {
-                        this.showNotificationMsg('配置文件保存成功', 'success');
-                        // 关闭编辑器
-                        this.showEditor = false;
-                        this.selectedFile = '';
-                    } else {
-                        this.showNotificationMsg(`保存失败: ${result.message || ''}`, 'error');
-                    }
-                }
-            } catch (error) {
-                console.error('Error saving config file:', error);
-                this.showNotificationMsg('保存配置文件失败', 'error');
-            }
-        },
-        
-        closeConfigModal() {
-            this.showConfigModal = false;
-            if (this.codeMirrorEditor) {
-                // 确保在关闭模态窗口时释放CodeMirror实例
-                this.codeMirrorEditor.toTextArea();
-                this.codeMirrorEditor = null;
-            }
-        },
-        
-        closeEditor() {
-            this.showEditor = false;
-            this.selectedFile = '';
-            if (this.codeMirrorEditor) {
-                // 确保在关闭编辑器时释放CodeMirror实例
-                this.codeMirrorEditor.toTextArea();
-                this.codeMirrorEditor = null;
-            }
-        },
-
-        // 添加重新加载当前文件的方法
-        async reloadCurrentFile(mode) {
-            if (this.selectedFile) {
-                await this.openConfigFile(this.selectedFile, mode);
-            }
-        }
-    }" 
-    x-init="
-        checkLoginStatus();
-        checkServerStatus();
-        loadPlugins();
-        
-        // 初始化处理中插件状态
-        processingPlugins = {};
-        
-        // 每60秒自动刷新服务器状态
-        setInterval(() => checkServerStatus(), 60000);
-        
-        // 保存主题设置到本地存储
-        $watch('darkMode', value => {
-            localStorage.setItem('darkMode', value);
-        });
-    ">
+    <div x-data="pluginsData" x-init="init()">
         <!-- 侧边栏 -->
         <div id="sidebar" :class="{'translate-x-0': sidebarOpen, '-translate-x-full': !sidebarOpen}" class="sidebar-width fixed top-0 left-0 bottom-0 z-30 transform transition-transform duration-300 ease-in-out bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 shadow-lg overflow-y-auto">
             <div class="p-4 flex flex-col h-full">
@@ -954,11 +113,6 @@
                         <a href="/cq" class="flex items-center px-4 py-3 text-sm font-medium rounded-lg text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
                             <i class="fas fa-comments w-6 text-center"></i>
                             <span class="ml-3">CQ-QQ-API</span>
-                        </a>
-                        
-                        <a href="/fabric" class="flex items-center px-4 py-3 text-sm font-medium rounded-lg text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
-                            <i class="fas fa-cube w-6 text-center"></i>
-                            <span class="ml-3">Fabric 管理</span>
                         </a>
                     </nav>
                 </div>
@@ -1105,7 +259,7 @@
                         <template x-for="plugin in filterPlugins()" :key="plugin.id">
                             <div class="plugin-card bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-sm overflow-hidden"
                                 :class="getPluginStatus(plugin)">
-                                <div class="p-5">
+                                <div class="p-5 h-full flex flex-col">
                                     <div class="flex items-start justify-between">
                                         <div class="flex-1">
                                             <h3 class="text-lg font-semibold text-gray-900 dark:text-white" x-text="plugin.name || plugin.id"></h3>
@@ -1130,8 +284,17 @@
                                     
                                     <div class="mt-4 flex flex-wrap gap-2">
                                         <span class="text-xs px-2 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-200 rounded" x-text="'v' + (plugin.version || '未知')"></span>
+                                        <template x-if="plugin.version !== plugin.version_latest">
+                                            <span class="text-xs px-2 py-1 rounded flex items-center"
+                                                :class="compareVersions(plugin.version, plugin.version_latest) > 0 ? 
+                                                    'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-200' : 
+                                                    'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-200'">
+                                                <span x-text="compareVersions(plugin.version, plugin.version_latest) > 0 ? '本地版本比在线版本高：' : '可更新：'"></span>
+                                                <span x-text="'v' + plugin.version_latest"></span>
+                                            </span>
+                                        </template>
                                         <span x-show="plugin.author" class="text-xs px-2 py-1 bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-200 rounded" x-text="'作者: ' + plugin.author"></span>
-                                        <a x-show="plugin.github" :href="plugin.github" target="_blank" class="text-xs px-2 py-1 bg-gray-100 hover:bg-gray-200 dark:bg-gray-700/50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-200 rounded inline-flex items-center">
+                                        <a x-show="plugin.github && plugin.github !== 'None'" :href="plugin.github" target="_blank" class="text-xs px-2 py-1 bg-gray-100 hover:bg-gray-200 dark:bg-gray-700/50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-200 rounded inline-flex items-center">
                                             <i class="fab fa-github mr-1"></i>
                                             <span>GitHub</span>
                                         </a>
@@ -1149,7 +312,7 @@
                                         </span>
                                     </div>
                                     
-                                    <div class="mt-5 flex justify-end space-x-3">
+                                    <div class="mt-auto pt-5 flex justify-end space-x-3">
                                         <button 
                                             x-show="plugin.id !== 'guguwebui' && plugin.config_file === true"
                                             @click="openConfigModal(plugin)"
@@ -1176,6 +339,21 @@
                                         
                                         <button 
                                             x-show="plugin.id !== 'guguwebui'"
+                                            @click="uninstallPlugin(plugin.id)"
+                                            class="inline-flex items-center justify-center px-3 py-1.5 border border-transparent rounded-md shadow-sm text-xs font-medium text-white bg-red-600 hover:bg-red-700 focus:outline-none transition-colors"
+                                            :disabled="processingPlugins[plugin.id]"
+                                        >
+                                            <template x-if="!processingPlugins[plugin.id]">
+                                                <i class="fas fa-trash-alt mr-1.5"></i>
+                                            </template>
+                                            <template x-if="processingPlugins[plugin.id]">
+                                                <i class="fas fa-circle-notch fa-spin mr-1.5"></i>
+                                            </template>
+                                            <span>卸载</span>
+                                        </button>
+                                        
+                                        <button 
+                                            x-show="plugin.id !== 'guguwebui' && plugin.version !== plugin.version_latest"
                                             @click="updatePlugin(plugin.id)"
                                             class="inline-flex items-center justify-center px-3 py-1.5 border border-transparent rounded-md shadow-sm text-xs font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none transition-colors"
                                             :disabled="processingPlugins[plugin.id]"
@@ -1378,17 +556,21 @@
                                                                     <!-- 处理嵌套对象中的值类型 -->
                                                                     <template x-if="typeof nestedValue === 'boolean'">
                                                                         <label class="toggle-switch">
-                                                                            <input type="checkbox" x-model="configData[key] && configData[key][nestedKey]">
+                                                                            <input type="checkbox" x-model="configData[key] && (configData[key][nestedKey] = configData[key][nestedKey] || false)">
                                                                             <span class="toggle-slider"></span>
                                                                         </label>
                                                                     </template>
                                                                     
                                                                     <template x-if="typeof nestedValue === 'number'">
-                                                                        <input type="number" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100" x-model.number="configData[key] ? configData[key][nestedKey] : 0">
+                                                                        <input type="number" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100" 
+                                                                            @input="if(!configData[key]) configData[key] = {}; configData[key][nestedKey] = parseFloat($event.target.value)" 
+                                                                            :value="configData[key] && configData[key][nestedKey]">
                                                                     </template>
                                                                     
                                                                     <template x-if="typeof nestedValue === 'string'">
-                                                                        <input type="text" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100" x-model="configData[key] ? configData[key][nestedKey] : ''">
+                                                                        <input type="text" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100" 
+                                                                            @input="if(!configData[key]) configData[key] = {}; configData[key][nestedKey] = $event.target.value" 
+                                                                            :value="configData[key] && configData[key][nestedKey]">
                                                                     </template>
                                                                     
                                                                     <!-- 处理嵌套对象中的数组 -->
@@ -1468,17 +650,22 @@
                                                                                     <!-- 处理第三层对象中的值类型 -->
                                                                                     <template x-if="typeof thirdValue === 'boolean'">
                                                                                         <label class="toggle-switch">
-                                                                                            <input type="checkbox" x-model="configData[key] && configData[key][nestedKey] ? configData[key][nestedKey][thirdKey] : false">
+                                                                                            <input type="checkbox" @input="if(!configData[key]) configData[key] = {}; if(!configData[key][nestedKey]) configData[key][nestedKey] = {}; configData[key][nestedKey][thirdKey] = $event.target.checked" 
+                                                                                                :checked="configData[key] && configData[key][nestedKey] && configData[key][nestedKey][thirdKey]">
                                                                                             <span class="toggle-slider"></span>
                                                                                         </label>
                                                                                     </template>
                                                                                     
                                                                                     <template x-if="typeof thirdValue === 'number'">
-                                                                                        <input type="number" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100" x-model.number="configData[key] && configData[key][nestedKey] ? configData[key][nestedKey][thirdKey] : 0">
+                                                                                        <input type="number" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100" 
+                                                                                            @input="if(!configData[key]) configData[key] = {}; if(!configData[key][nestedKey]) configData[key][nestedKey] = {}; configData[key][nestedKey][thirdKey] = parseFloat($event.target.value)" 
+                                                                                            :value="configData[key] && configData[key][nestedKey] && configData[key][nestedKey][thirdKey]">
                                                                                     </template>
                                                                                     
                                                                                     <template x-if="typeof thirdValue === 'string'">
-                                                                                        <input type="text" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100" x-model="configData[key] && configData[key][nestedKey] ? configData[key][nestedKey][thirdKey] : ''">
+                                                                                        <input type="text" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100" 
+                                                                                            @input="if(!configData[key]) configData[key] = {}; if(!configData[key][nestedKey]) configData[key][nestedKey] = {}; configData[key][nestedKey][thirdKey] = $event.target.value" 
+                                                                                            :value="configData[key] && configData[key][nestedKey] && configData[key][nestedKey][thirdKey]">
                                                                                     </template>
                                                                                     
                                                                                     <!-- 处理第三层嵌套中的数组 -->
@@ -1559,17 +746,22 @@
                                                                                                     <!-- 处理第四层对象中的值类型 -->
                                                                                                     <template x-if="typeof fourthValue === 'boolean'">
                                                                                                         <label class="toggle-switch">
-                                                                                                            <input type="checkbox" x-model="configData[key] && configData[key][nestedKey] && configData[key][nestedKey][thirdKey] ? configData[key][nestedKey][thirdKey][fourthKey] : false">
+                                                                                                            <input type="checkbox" @input="if(!configData[key]) configData[key] = {}; if(!configData[key][nestedKey]) configData[key][nestedKey] = {}; if(!configData[key][nestedKey][thirdKey]) configData[key][nestedKey][thirdKey] = {}; configData[key][nestedKey][thirdKey][fourthKey] = $event.target.checked" 
+                                                                                                                :checked="configData[key] && configData[key][nestedKey] && configData[key][nestedKey][thirdKey] && configData[key][nestedKey][thirdKey][fourthKey]">
                                                                                                             <span class="toggle-slider"></span>
                                                                                                         </label>
                                                                                                     </template>
                                                                                                     
                                                                                                     <template x-if="typeof fourthValue === 'number'">
-                                                                                                        <input type="number" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100" x-model.number="configData[key] && configData[key][nestedKey] && configData[key][nestedKey][thirdKey] ? configData[key][nestedKey][thirdKey][fourthKey] : 0">
+                                                                                                        <input type="number" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100" 
+                                                                                                            @input="if(!configData[key]) configData[key] = {}; if(!configData[key][nestedKey]) configData[key][nestedKey] = {}; if(!configData[key][nestedKey][thirdKey]) configData[key][nestedKey][thirdKey] = {}; configData[key][nestedKey][thirdKey][fourthKey] = parseFloat($event.target.value)" 
+                                                                                                            :value="configData[key] && configData[key][nestedKey] && configData[key][nestedKey][thirdKey] && configData[key][nestedKey][thirdKey][fourthKey]">
                                                                                                     </template>
                                                                                                     
                                                                                                     <template x-if="typeof fourthValue === 'string'">
-                                                                                                        <input type="text" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100" x-model="configData[key] && configData[key][nestedKey] && configData[key][nestedKey][thirdKey] ? configData[key][nestedKey][thirdKey][fourthKey] : ''">
+                                                                                                        <input type="text" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100" 
+                                                                                                            @input="if(!configData[key]) configData[key] = {}; if(!configData[key][nestedKey]) configData[key][nestedKey] = {}; if(!configData[key][nestedKey][thirdKey]) configData[key][nestedKey][thirdKey] = {}; configData[key][nestedKey][thirdKey][fourthKey] = $event.target.value" 
+                                                                                                            :value="configData[key] && configData[key][nestedKey] && configData[key][nestedKey][thirdKey] && configData[key][nestedKey][thirdKey][fourthKey]">
                                                                                                     </template>
                                                                                                     
                                                                                                     <!-- 处理第四层嵌套中的数组 -->
@@ -1694,6 +886,143 @@
                 <p>MCDR WebUI &copy; <span id="year"></span></p>
             </footer>
         </main>
+        
+        <!-- 插件安装/更新进度模态窗口 -->
+        <div x-show="showInstallModal" x-transition.opacity class="modal-backdrop">
+            <div class="modal-content" @click.away="closeInstallModal()">
+                <div class="modal-header">
+                    <h3 class="text-lg font-semibold text-gray-900 dark:text-white" x-text="installStatus === 'running' && installPluginId ? (installMessage.includes('卸载') ? '卸载进度 - ' : (installMessage.includes('更新') ? '更新进度 - ' : '安装进度 - ')) + installPluginId : '操作进度 - ' + installPluginId"></h3>
+                    <button @click="closeInstallModal()" class="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                
+                <div class="modal-body">
+                    <!-- 进度条 -->
+                    <div class="mb-4">
+                        <div class="flex justify-between mb-1">
+                            <span class="text-sm font-medium text-gray-700 dark:text-gray-300" x-text="installMessage"></span>
+                            <span id="install-progress-text" class="text-sm font-medium text-gray-700 dark:text-gray-300" x-text="Math.round(installProgress) + '%'"></span>
+                        </div>
+                        <div class="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2.5">
+                            <div id="install-progress-bar" class="bg-blue-600 h-2.5 rounded-full" :style="'width: ' + installProgress + '%'"></div>
+                        </div>
+                    </div>
+                    
+                    <!-- 安装状态指示器 -->
+                    <div class="flex items-center mb-4">
+                        <div class="px-3 py-1 rounded-full text-xs font-medium flex items-center" :class="{
+                            'bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300': installStatus === 'running',
+                            'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300': installStatus === 'completed',
+                            'bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300': installStatus === 'failed',
+                            'bg-gray-100 dark:bg-gray-900/30 text-gray-800 dark:text-gray-300': installStatus === 'pending'
+                        }">
+                            <span x-show="installStatus === 'running'" class="flex items-center">
+                                <i class="fas fa-circle-notch fa-spin mr-1.5"></i>
+                                <span>正在处理</span>
+                            </span>
+                            <span x-show="installStatus === 'completed'" class="flex items-center">
+                                <i class="fas fa-check-circle mr-1.5"></i>
+                                <span>已完成</span>
+                            </span>
+                            <span x-show="installStatus === 'failed'" class="flex items-center">
+                                <i class="fas fa-exclamation-circle mr-1.5"></i>
+                                <span>失败</span>
+                            </span>
+                            <span x-show="installStatus === 'pending'" class="flex items-center">
+                                <i class="fas fa-hourglass-start mr-1.5"></i>
+                                <span>等待中</span>
+                            </span>
+                        </div>
+                    </div>
+                    
+                    <!-- 安装日志 -->
+                    <div class="mt-4">
+                        <h4 class="text-sm font-medium text-gray-800 dark:text-gray-200 mb-2">处理日志</h4>
+                        <div class="bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-md p-3 h-56 overflow-y-auto font-mono text-xs">
+                            <template x-for="(message, index) in installLogMessages" :key="index">
+                                <div class="py-0.5" :class="{'text-red-500': message.includes('错误') || message.includes('失败') || message.includes('⚠'), 'text-green-500': message.includes('成功') || message.includes('✓')}">
+                                    <span x-text="message"></span>
+                                </div>
+                            </template>
+                            <div x-show="installLogMessages.length === 0" class="text-gray-500 dark:text-gray-400">
+                                等待日志...
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="modal-footer">
+                    <button @click="closeInstallModal()" class="inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm text-sm font-medium text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none">
+                        <span x-text="installStatus === 'running' ? '隐藏' : '关闭'"></span>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 确认操作模态窗口 -->
+        <div x-show="showConfirmModal" x-transition.opacity class="modal-backdrop">
+            <div class="modal-content max-w-md" @click.away="closeConfirmModal()">
+                <div class="modal-header">
+                    <h3 class="text-lg font-semibold text-gray-900 dark:text-white" x-text="confirmTitle"></h3>
+                    <button @click="closeConfirmModal()" class="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                
+                <div class="modal-body">
+                    <div class="flex mb-4">
+                        <div class="flex-shrink-0 mr-3">
+                            <div class="flex items-center justify-center h-10 w-10 rounded-full" :class="{
+                                'bg-blue-100 dark:bg-blue-900/30': confirmType === 'install',
+                                'bg-yellow-100 dark:bg-yellow-900/30': confirmType === 'update' || confirmType === 'reload',
+                                'bg-red-100 dark:bg-red-900/30': confirmType === 'uninstall'
+                            }">
+                                <i class="fas" :class="{
+                                    'fa-download text-blue-600 dark:text-blue-400': confirmType === 'install',
+                                    'fa-sync text-yellow-600 dark:text-yellow-400': confirmType === 'update' || confirmType === 'reload',
+                                    'fa-trash-alt text-red-600 dark:text-red-400': confirmType === 'uninstall'
+                                }"></i>
+                            </div>
+                        </div>
+                        <div>
+                            <p class="text-gray-700 dark:text-gray-300" x-text="confirmMessage"></p>
+                            <p class="mt-2 text-sm text-gray-500 dark:text-gray-400" x-show="confirmType === 'uninstall'">
+                                <i class="fas fa-exclamation-triangle mr-1 text-yellow-500"></i>
+                                此操作将永久删除插件文件，无法恢复。
+                            </p>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="modal-footer">
+                    <button @click="closeConfirmModal()" class="inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm text-sm font-medium text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none">
+                        <span>取消</span>
+                    </button>
+                    <button 
+                        @click="executeConfirmedAction()"
+                        class="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white focus:outline-none"
+                        :class="{
+                            'bg-blue-600 hover:bg-blue-700': confirmType === 'install',
+                            'bg-yellow-600 hover:bg-yellow-700': confirmType === 'update' || confirmType === 'reload',
+                            'bg-red-600 hover:bg-red-700': confirmType === 'uninstall'
+                        }"
+                    >
+                        <i class="fas mr-1.5" :class="{
+                            'fa-download': confirmType === 'install',
+                            'fa-sync': confirmType === 'update' || confirmType === 'reload',
+                            'fa-trash-alt': confirmType === 'uninstall'
+                        }"></i>
+                        <span x-text="{
+                            'install': '确认安装',
+                            'update': '确认更新',
+                            'reload': '确认重载',
+                            'uninstall': '确认卸载'
+                        }[confirmType] || '确认'"></span>
+                    </button>
+                </div>
+            </div>
+        </div>
     </div>
 </div>
 
@@ -1706,9 +1035,7 @@
 <!-- 公告脚本 -->
 <script src="/js/notice.js"></script>
 
-<script>
-    // 设置当前年份
-    document.getElementById('year').textContent = new Date().getFullYear();
-</script>
+    <!-- 本地插件页面脚本 -->
+    <script src="/js/plugins.js"></script>
 </body>
 </html> 

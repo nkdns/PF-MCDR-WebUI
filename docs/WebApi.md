@@ -447,192 +447,114 @@
   ```
 - 使用位置: 插件管理页面
 
-### 在线插件仓库
-- 端点: `/api/online-plugins`
-- 方法: GET
-- 参数:
-  - `page`: 页码（可选，默认1）
-  - `per_page`: 每页项目数（可选，默认20）
-  - `search`: 搜索关键词（可选）
-- 功能: 获取在线插件仓库中的插件列表
-- 响应:
-  ```json
-  {
-    "status": "success",
-    "plugins": [
-      {
-        "id": "插件ID",
-        "name": "插件名称",
-        "version": "最新版本",
-        "description": {
-          "en_us": "英文描述",
-          "zh_cn": "中文描述"
-        },
-        "author": "插件作者",
-        "tags": ["标签列表"],
-        "dependencies": ["依赖插件列表"],
-        "repository": "代码仓库地址",
-        "installed": true|false,
-        "installed_version": "已安装版本（如果已安装）",
-        "update_available": true|false
-      }
-    ],
-    "total": 总插件数,
-    "page": 当前页码,
-    "total_pages": 总页数
-  }
-  ```
-- 调用示例:
-  ```javascript
-  async function getOnlinePlugins(page = 1, perPage = 20, search = '') {
-    try {
-      const params = new URLSearchParams({
-        page: page,
-        per_page: perPage
-      });
-      
-      if (search) {
-        params.append('search', search);
-      }
-      
-      const response = await fetch(`/api/online-plugins?${params.toString()}`);
-      const data = await response.json();
-      
-      if (data.status === 'success') {
-        console.log(`获取到 ${data.plugins.length} 个在线插件`);
-        console.log(`总计: ${data.total} 个插件，共 ${data.total_pages} 页`);
-        
-        // 处理插件列表
-        data.plugins.forEach(plugin => {
-          const status = plugin.installed 
-            ? (plugin.update_available ? '可更新' : '已安装') 
-            : '未安装';
-          console.log(`${plugin.name} (${plugin.id}) - ${status}`);
-        });
-      } else {
-        console.error('获取在线插件列表失败');
-      }
-    } catch (error) {
-      console.error('获取在线插件列表出错:', error);
-    }
-  }
-  
-  // 搜索示例
-  // getOnlinePlugins(1, 20, 'backup');  // 搜索包含"backup"的插件
-  ```
-- 使用位置: 在线插件页面
-- 备注: 
-  - 支持分页和搜索功能
-  - 返回的插件会标记是否已安装及是否有更新可用
+### 获取在线插件列表
 
-### 安装插件
-- 端点: `/api/install_plugin`
-- 方法: POST
-- 参数: 
-  - `plugin_id`: 插件ID
-  - `from_url`: 是否从URL安装（可选，布尔值，默认false）
-  - `url`: 安装URL（当from_url为true时需要）
-- 功能: 安装指定插件
-- 响应:
-  ```json
-  {
-    "status": "success|error",
-    "message": "操作结果信息"
-  }
-  ```
-- 调用示例:
+- **URL**: `/api/online-plugins`
+- **方法**: GET
+- **功能**: 获取在线插件列表
+- **参数**: 无
+- **返回**: 插件列表JSON
+- **示例**:
   ```javascript
-  // 从仓库安装插件
-  async function installPlugin(pluginId) {
-    try {
-      const response = await fetch('/api/install_plugin', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          plugin_id: pluginId
-        })
-      });
-      
-      const result = await response.json();
-      if (result.status === 'success') {
-        console.log(`插件 ${pluginId} 安装成功: ${result.message}`);
-      } else {
-        console.error(`安装失败: ${result.message}`);
-      }
-    } catch (error) {
-      console.error('安装插件出错:', error);
-    }
-  }
-  
-  // 从URL安装插件
-  async function installPluginFromUrl(pluginId, url) {
-    try {
-      const response = await fetch('/api/install_plugin', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          plugin_id: pluginId,
-          from_url: true,
-          url: url
-        })
-      });
-      
-      const result = await response.json();
-      if (result.status === 'success') {
-        console.log(`插件从URL安装成功: ${result.message}`);
-      } else {
-        console.error(`安装失败: ${result.message}`);
-      }
-    } catch (error) {
-      console.error('安装插件出错:', error);
-    }
-  }
+  fetch('/api/online-plugins')
+    .then(response => response.json())
+    .then(data => {
+      console.log(data);
+    });
   ```
-- 使用位置: 在线插件页面
+- **说明**: 此API会从MCDR插件目录获取最新的插件列表，并缓存2小时
 
-### 更新插件
-- 端点: `/api/update_plugin`
-- 方法: POST
-- 参数: 
-  - `plugin_id`: 插件ID
-- 功能: 更新指定插件
-- 响应:
-  ```json
-  {
-    "status": "success|error",
-    "message": "操作结果信息"
-  }
-  ```
-- 调用示例:
+### 获取已安装插件列表：此API已废弃
+
+- **URL**: `/api/installed-plugins`
+- **方法**: GET
+- **功能**: 获取已安装的插件列表
+- **参数**: 无
+- **返回**: 已安装插件列表JSON
+- **示例**:
   ```javascript
-  async function updatePlugin(pluginId) {
-    try {
-      const response = await fetch('/api/update_plugin', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          plugin_id: pluginId
-        })
-      });
-      
-      const result = await response.json();
-      if (result.status === 'success') {
-        console.log(`插件 ${pluginId} 更新成功: ${result.message}`);
-      } else {
-        console.error(`更新失败: ${result.message}`);
-      }
-    } catch (error) {
-      console.error('更新插件出错:', error);
-    }
-  }
+  fetch('/api/installed-plugins')
+    .then(response => response.json())
+    .then(data => {
+      console.log(data);
+    });
   ```
-- 使用位置: 插件管理页面
+- **说明**: 此API会返回服务器上已安装的所有插件信息
+
+### 安装插件：此API已废弃
+
+- **URL**: `/api/install_plugin`
+- **方法**: POST
+- **参数**: 
+  - `plugin_id`: 插件ID
+- **返回**: 操作结果JSON
+- **示例**:
+  ```javascript
+  fetch('/api/install_plugin', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      plugin_id: 'example_plugin'
+    })
+  })
+  .then(response => response.json())
+  .then(data => {
+    console.log(data);
+  });
+  ```
+- **说明**: 此API会从MCDR插件目录下载并安装指定的插件
+
+### 更新插件：此API已废弃
+
+- **URL**: `/api/update_plugin`
+- **方法**: POST
+- **参数**: 
+  - `plugin_id`: 插件ID
+- **返回**: 操作结果JSON
+- **示例**:
+  ```javascript
+  fetch('/api/update_plugin', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      plugin_id: 'example_plugin'
+    })
+  })
+  .then(response => response.json())
+  .then(data => {
+    console.log(data);
+  });
+  ```
+- **说明**: 此API会检查并更新指定的插件到最新版本
+
+### 卸载插件：此API已废弃
+
+- **URL**: `/api/uninstall_plugin`
+- **方法**: POST
+- **参数**: 
+  - `plugin_id`: 插件ID
+- **返回**: 操作结果JSON
+- **示例**:
+  ```javascript
+  fetch('/api/uninstall_plugin', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      plugin_id: 'example_plugin'
+    })
+  })
+  .then(response => response.json())
+  .then(data => {
+    console.log(data);
+  });
+  ```
+- **说明**: 此API会卸载指定的插件
 
 ## 配置相关API
 
@@ -1052,3 +974,318 @@
   - 需要在Web设置中配置有效的DeepSeek API密钥
   - chat_history参数用于支持连续对话，保留上下文
   - 支持的模型包括：`deepseek-chat`、`deepseek-coder`等
+
+## PIM插件安装器API
+
+### 检查PIM状态
+- 端点: `/api/check_pim_status`
+- 方法: GET
+- 功能: 检查PIM插件的安装状态
+- 响应:
+  ```json
+  {
+    "status": "success|error",
+    "pim_status": "installed|not_installed",
+    "message": "错误信息（如果失败）"
+  }
+  ```
+- 调用示例:
+  ```javascript
+  async function checkPimStatus() {
+    try {
+      const response = await fetch('/api/check_pim_status');
+      const data = await response.json();
+      
+      if (data.status === 'success') {
+        if (data.pim_status === 'installed') {
+          console.log('PIM插件已安装');
+          return true;
+        } else {
+          console.log('PIM插件未安装');
+          return false;
+        }
+      } else {
+        console.error(`检查PIM状态失败: ${data.message}`);
+        return false;
+      }
+    } catch (error) {
+      console.error('检查PIM状态出错:', error);
+      return false;
+    }
+  }
+  ```
+- 使用位置: 插件管理页面
+- 备注: 用于检查PIM插件是否已安装，以便决定是否显示安装PIM插件的选项
+
+### 安装PIM插件
+- 端点: `/api/install_pim_plugin`
+- 方法: GET
+- 功能: 将PIM作为独立插件安装到MCDR中
+- 响应:
+  ```json
+  {
+    "status": "success|error",
+    "message": "操作结果信息"
+  }
+  ```
+- 调用示例:
+  ```javascript
+  async function installPimPlugin() {
+    try {
+      const response = await fetch('/api/install_pim_plugin');
+      const data = await response.json();
+      
+      if (data.status === 'success') {
+        console.log(`PIM插件安装成功: ${data.message}`);
+        return true;
+      } else {
+        console.error(`安装失败: ${data.message}`);
+        return false;
+      }
+    } catch (error) {
+      console.error('安装PIM插件出错:', error);
+      return false;
+    }
+  }
+  ```
+- 使用位置: 插件管理页面
+- 备注: 将PIM插件从WebUI中提取出来，作为独立插件安装到MCDR中
+
+### 安装插件
+- 端点: `/api/pim/install_plugin`
+- 方法: POST
+- 参数: 
+  - `plugin_id`: 插件ID
+- 功能: 安装指定插件（使用PIM插件安装器）
+- 响应:
+  ```json
+  {
+    "success": true|false,
+    "task_id": "任务ID",
+    "message": "操作结果信息",
+    "error": "错误信息（如果失败）"
+  }
+  ```
+- 调用示例:
+  ```javascript
+  async function installPlugin(pluginId) {
+    if (pluginId === "guguwebui") {
+      console.error("不允许安装WebUI自身，这可能会导致WebUI无法正常工作");
+      return;
+    }
+    
+    try {
+      const response = await fetch('/api/pim/install_plugin', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          plugin_id: pluginId
+        })
+      });
+      
+      const result = await response.json();
+      if (result.success) {
+        console.log(`开始安装插件 ${pluginId}, 任务ID: ${result.task_id}`);
+        return result.task_id;
+      } else {
+        console.error(`安装失败: ${result.error || ''}`);
+        return null;
+      }
+    } catch (error) {
+      console.error('安装插件出错:', error);
+      return null;
+    }
+  }
+  ```
+- 使用位置: 插件管理页面和在线插件页面
+- 备注: 
+  - 返回的任务ID可用于查询安装进度
+  - 不允许安装ID为"guguwebui"的插件，以保护WebUI自身的稳定性
+
+### 更新插件
+- 端点: `/api/pim/update_plugin`
+- 方法: POST
+- 参数: 
+  - `plugin_id`: 插件ID
+- 功能: 更新指定插件（使用PIM插件安装器）
+- 响应:
+  ```json
+  {
+    "success": true|false,
+    "task_id": "任务ID",
+    "message": "操作结果信息",
+    "error": "错误信息（如果失败）"
+  }
+  ```
+- 调用示例:
+  ```javascript
+  async function updatePlugin(pluginId) {
+    if (pluginId === "guguwebui") {
+      console.error("不允许更新WebUI自身，这可能会导致WebUI无法正常工作");
+      return;
+    }
+    
+    try {
+      const response = await fetch('/api/pim/update_plugin', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          plugin_id: pluginId
+        })
+      });
+      
+      const result = await response.json();
+      if (result.success) {
+        console.log(`开始更新插件 ${pluginId}, 任务ID: ${result.task_id}`);
+        return result.task_id;
+      } else {
+        console.error(`更新失败: ${result.error || ''}`);
+        return null;
+      }
+    } catch (error) {
+      console.error('更新插件出错:', error);
+      return null;
+    }
+  }
+  ```
+- 使用位置: 插件管理页面
+- 备注: 
+  - 返回的任务ID可用于查询更新进度
+  - 不允许更新ID为"guguwebui"的插件，以保护WebUI自身的稳定性
+
+### 卸载插件
+- 端点: `/api/pim/uninstall_plugin`
+- 方法: POST
+- 参数: 
+  - `plugin_id`: 插件ID
+- 功能: 卸载指定插件并删除相关文件（使用PIM插件安装器）
+- 响应:
+  ```json
+  {
+    "success": true|false,
+    "task_id": "任务ID",
+    "message": "操作结果信息",
+    "error": "错误信息（如果失败）"
+  }
+  ```
+- 调用示例:
+  ```javascript
+  async function uninstallPlugin(pluginId) {
+    if (pluginId === "guguwebui") {
+      console.error("不允许卸载WebUI自身，这将导致WebUI无法正常工作");
+      return;
+    }
+    
+    try {
+      const response = await fetch('/api/pim/uninstall_plugin', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          plugin_id: pluginId
+        })
+      });
+      
+      const result = await response.json();
+      if (result.success) {
+        console.log(`开始卸载插件 ${pluginId}, 任务ID: ${result.task_id}`);
+        return result.task_id;
+      } else {
+        console.error(`卸载失败: ${result.error || ''}`);
+        return null;
+      }
+    } catch (error) {
+      console.error('卸载插件出错:', error);
+      return null;
+    }
+  }
+  ```
+- 使用位置: 插件管理页面
+- 备注: 
+  - 返回的任务ID可用于查询卸载进度
+  - 不允许卸载ID为"guguwebui"的插件，以保护WebUI自身的稳定性
+  - 卸载操作会同时删除插件的文件，是永久性的操作
+  - 如果插件被其他插件依赖，可能会需要额外确认
+
+### 获取任务状态
+- 端点: `/api/pim/task_status`
+- 方法: GET
+- 参数: 
+  - `task_id`: 任务ID（可选，与plugin_id二选一）
+  - `plugin_id`: 插件ID（可选，与task_id二选一）
+- 功能: 获取指定任务的执行状态，或获取指定插件最近的任务状态
+- 响应:
+  ```json
+  {
+    "success": true|false,
+    "task_info": {
+      "id": "任务ID",
+      "plugin_id": "插件ID",
+      "status": "pending|running|completed|failed",
+      "progress": 0.0-1.0,
+      "message": "当前状态描述",
+      "start_time": 开始时间戳,
+      "end_time": 结束时间戳,
+      "all_messages": ["任务执行过程中的所有消息列表"],
+      "error_messages": ["错误消息列表"]
+    },
+    "error": "错误信息（如果请求失败）"
+  }
+  ```
+- 调用示例:
+  ```javascript
+  // 通过任务ID查询
+  async function checkTaskStatus(taskId, pluginId = null) {
+    try {
+      let url = `/api/pim/task_status?task_id=${taskId}`;
+      if (pluginId) {
+        url += `&plugin_id=${pluginId}`;
+      }
+      
+      const response = await fetch(url);
+      const data = await response.json();
+      
+      if (data.success && data.task_info) {
+        console.log(`任务 ${taskId} 状态:`, data.task_info);
+        return data.task_info;
+      } else {
+        console.error(`获取任务状态失败: ${data.error || '未知错误'}`);
+        return null;
+      }
+    } catch (error) {
+      console.error('查询任务状态出错:', error);
+      return null;
+    }
+  }
+  
+  // 通过插件ID查询
+  async function checkPluginTaskStatus(pluginId) {
+    try {
+      const response = await fetch(`/api/pim/task_status?plugin_id=${pluginId}`);
+      const data = await response.json();
+      
+      if (data.success && data.task_info) {
+        console.log(`插件 ${pluginId} 最近任务状态:`, data.task_info);
+        return data.task_info;
+      } else {
+        console.error(`获取插件任务状态失败: ${data.error || '未知错误'}`);
+        return null;
+      }
+    } catch (error) {
+      console.error('查询插件任务状态出错:', error);
+      return null;
+    }
+  }
+  ```
+- 使用位置: 插件管理页面和在线插件页面
+- 备注: 
+  - 可以通过任务ID或插件ID查询任务状态
+  - 当任务未找到但提供了插件ID时，会尝试查找关联该插件的最新任务
+  - progress属性为0到1的小数，表示任务进度百分比
+  - all_messages包含任务执行的完整日志
+  - status可能的值：pending（等待中）、running（执行中）、completed（已完成）、failed（失败）

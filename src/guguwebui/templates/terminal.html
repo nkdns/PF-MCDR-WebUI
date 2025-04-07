@@ -280,529 +280,137 @@
         .dark ::-webkit-scrollbar-thumb {
             background: #4b5563;
         }
+        
+        /* API Key设置弹窗样式 */
+        .api-key-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(0, 0, 0, 0.6);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            opacity: 0;
+            transition: opacity 0.3s;
+            pointer-events: none;
+        }
+        
+        .api-key-modal.active {
+            opacity: 1;
+            pointer-events: auto;
+        }
+        
+        .api-key-container {
+            width: 90%;
+            max-width: 500px;
+            background-color: white;
+            border-radius: 8px;
+            overflow: hidden;
+            transform: scale(0.95);
+            transition: transform 0.3s;
+            max-height: 80vh;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .dark .api-key-container {
+            background-color: #1f2937;
+            color: #e5e7eb;
+        }
+        
+        .api-key-modal.active .api-key-container {
+            transform: scale(1);
+        }
+        
+        .api-key-header {
+            padding: 16px;
+            border-bottom: 1px solid #e5e7eb;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .dark .api-key-header {
+            border-color: #374151;
+        }
+        
+        .api-key-body {
+            padding: 16px;
+            overflow-y: auto;
+            flex-grow: 1;
+        }
+        
+        .api-key-input {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #e5e7eb;
+            border-radius: 4px;
+            font-family: inherit;
+            margin-bottom: 16px;
+        }
+        
+        .dark .api-key-input {
+            background-color: #374151;
+            border-color: #4b5563;
+            color: #e5e7eb;
+        }
+        
+        .api-key-footer {
+            padding: 16px;
+            border-top: 1px solid #e5e7eb;
+            display: flex;
+            justify-content: flex-end;
+            gap: 8px;
+        }
+        
+        .dark .api-key-footer {
+            border-color: #374151;
+        }
+        
+        /* 命令补全相关样式 */
+        .command-suggestions {
+            max-height: 300px;
+            animation: slideIn 0.2s ease-out;
+        }
+        
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        /* 命令补全项样式 */
+        .suggestion-item {
+            transition: background-color 0.1s;
+        }
+        
+        /* 键盘快捷键样式 */
+        kbd {
+            font-family: SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+            display: inline-block;
+            font-size: 0.75rem;
+            line-height: 1;
+            border: 1px solid rgba(0, 0, 0, 0.1);
+            border-radius: 3px;
+            box-shadow: 0 1px 1px rgba(0, 0, 0, 0.2);
+        }
+        
+        .dark kbd {
+            border-color: rgba(255, 255, 255, 0.1);
+            box-shadow: 0 1px 1px rgba(0, 0, 0, 0.4);
+        }
     </style>
 </head>
 <body class="h-full bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100 transition-colors duration-300">
-    <div x-data="{ 
-        serverStatus: 'loading',
-        userName: '',
-        serverVersion: '',
-        processingServer: false,
-        showNotification: false,
-        notificationMessage: '',
-        notificationType: 'success',
-        
-        // 终端相关数据
-        logType: 'merged', // 'mcdr' 或 'minecraft' 或 'merged'
-        mergedLogs: true, // 默认启用合并日志模式
-        logs: [],
-        lastLine: 0,
-        totalLines: 0,
-        isLoading: true,
-        autoScroll: true,
-        autoRefresh: true,
-        filterText: '',
-        refreshInterval: null,
-        commandInput: '', // 命令输入框内容
-        commandHistory: [], // 命令历史记录
-        historyIndex: -1, // 当前历史记录索引
-        tempCommand: '', // 临时保存当前命令
-
-        // AI询问相关
-        showAiQueryModal: false,
-        aiQueryTitle: 'AI日志分析询问',
-        aiQuery: '',
-        aiLogPreview: '',
-        aiSelectedText: '',
-        aiResponse: '',
-        aiLoading: false,
-        aiContinueChat: false,
-        aiChatHistory: [], // 用于连续对话
-
-        checkLoginStatus: async function() {
-            try {
-                const response = await fetch('/api/checkLogin');
-                const data = await response.json();
-                if (data.status === 'success') {
-                    this.userName = data.username;
-                }
-            } catch (error) {
-                console.error('Error checking login status:', error);
-            }
-        },
-        
-        checkServerStatus: async function() {
-            try {
-                this.serverStatus = 'loading';
-                const response = await fetch('/api/get_server_status');
-                const data = await response.json();
-                this.serverStatus = data.status || 'offline';
-                this.serverVersion = data.version || '';
-            } catch (error) {
-                console.error('Error checking server status:', error);
-                this.serverStatus = 'error';
-            }
-        },
-        
-        // 加载日志
-        loadLogs: async function() {
-            this.isLoading = true;
-            try {
-                // 构建URL参数
-                const params = new URLSearchParams({
-                    log_type: this.logType,
-                    max_lines: 500,
-                    merged: this.mergedLogs
-                });
-                
-                const response = await fetch(`/api/server_logs?${params.toString()}`);
-                const data = await response.json();
-                
-                if (data.status === 'success') {
-                    this.logs = data.logs || [];
-                    this.totalLines = data.total_lines || 0;
-                    this.lastLine = data.current_end || this.totalLines;
-                    
-                    // 加载完成后始终滚动到底部
-                    if (this.autoScroll) {
-                        this.$nextTick(() => {
-                            const terminal = document.getElementById('terminal');
-                            if (terminal) {
-                                terminal.scrollTop = terminal.scrollHeight;
-                            }
-                        });
-                    }
-                } else {
-                    this.showNotificationMsg(`加载日志失败: ${data.message || '未知错误'}`, 'error');
-                }
-            } catch (error) {
-                console.error('Error loading logs:', error);
-                this.showNotificationMsg('加载日志失败', 'error');
-            } finally {
-                this.isLoading = false;
-            }
-        },
-        
-        // 获取新日志
-        fetchNewLogs: async function() {
-            if (this.isLoading) return;
-            
-            try {
-                let url = `/api/new_logs?last_line=${this.lastLine}&log_type=${this.logType}`;
-                
-                // 如果是合并日志，使用合并模式获取
-                if (this.mergedLogs) {
-                    const params = new URLSearchParams({
-                        log_type: this.logType,
-                        max_lines: 500,
-                        merged: true
-                    });
-                    url = `/api/server_logs?${params.toString()}`;
-                }
-                
-                const response = await fetch(url);
-                const data = await response.json();
-                
-                if (data.status === 'success') {
-                    if (this.mergedLogs) {
-                        // 合并模式直接刷新全部日志
-                        this.logs = data.logs || [];
-                        this.totalLines = data.total_lines || 0;
-                    } else {
-                        // 标准模式增量更新
-                        if (data.logs && data.logs.length > 0) {
-                            // 合并新日志
-                            this.logs = [...this.logs, ...data.logs];
-                            this.lastLine = data.total_lines || this.lastLine;
-                            this.totalLines = data.total_lines || this.totalLines;
-                        }
-                    }
-                    
-                    // 如果启用了自动滚动，滚动到底部
-                    if (this.autoScroll) {
-                        this.$nextTick(() => {
-                            const terminal = document.getElementById('terminal');
-                            if (terminal) {
-                                terminal.scrollTop = terminal.scrollHeight;
-                            }
-                        });
-                    }
-                }
-            } catch (error) {
-                console.error('Error fetching new logs:', error);
-            }
-        },
-        
-        // 切换日志类型
-        switchLogType: function(type) {
-            if (this.logType === type && !this.mergedLogs) return;
-            
-            this.logType = type;
-            this.mergedLogs = false;
-            this.logs = [];
-            this.lastLine = 0;
-            this.loadLogs();
-        },
-        
-        // 切换合并日志模式
-        toggleMergedLogs: function() {
-            this.mergedLogs = !this.mergedLogs;
-            this.logs = [];
-            this.lastLine = 0;
-            this.loadLogs();
-        },
-        
-        // 切换自动刷新
-        toggleAutoRefresh: function() {
-            this.autoRefresh = !this.autoRefresh;
-            
-            if (this.autoRefresh) {
-                // 启动定时刷新
-                this.refreshInterval = setInterval(() => this.fetchNewLogs(), 3000);
-            } else {
-                // 停止定时刷新
-                clearInterval(this.refreshInterval);
-            }
-        },
-        
-        // 清空终端
-        clearTerminal: function() {
-            this.logs = [];
-        },
-        
-        // 高亮日志
-        highlightLog: function(log) {
-            // 如果log是undefined，返回空字符串
-            if (!log || !log.content) return '';
-            
-            // 根据日志内容添加高亮类
-            const content = log.content;
-            
-            if (content.includes('INFO') || content.includes('[I]')) return 'log-info';
-            if (content.includes('WARN') || content.includes('[W]')) return 'log-warning';
-            if (content.includes('ERROR') || content.includes('[E]')) return 'log-error';
-            if (content.includes('SUCCESS')) return 'log-success';
-            if (content.includes('Command')) return 'log-command';
-            return '';
-        },
-        
-        // 过滤日志
-        filteredLogs: function() {
-            if (!this.filterText) return this.logs;
-            return this.logs.filter(log => 
-                log.content.toLowerCase().includes(this.filterText.toLowerCase())
-            );
-        },
-        
-        // 复制日志到剪贴板
-        copyLogs: function() {
-            if (!this.logs || this.logs.length === 0) {
-                this.showNotificationMsg('没有日志可复制', 'error');
-                return;
-            }
-            
-            const logText = this.logs.map(log => `${log.line_number}: ${log.content}`).join('\n');
-            navigator.clipboard.writeText(logText)
-                .then(() => this.showNotificationMsg('日志已复制到剪贴板', 'success'))
-                .catch(err => {
-                    console.error('复制失败:', err);
-                    this.showNotificationMsg('复制失败', 'error');
-                });
-        },
-        
-        showNotificationMsg: function(message, type = 'success') {
-            this.notificationMessage = message;
-            this.notificationType = type;
-            this.showNotification = true;
-            
-            setTimeout(() => {
-                this.showNotification = false;
-            }, 3000);
-        },
-        
-        // 发送命令到MCDR终端
-        sendCommand: async function() {
-            if (!this.commandInput.trim()) {
-                return;
-            }
-            
-            const command = this.commandInput.trim();
-            
-            // 检查是否为禁止的命令（会导致UI自身插件卸载或重载）
-            const forbiddenCommands = [
-                '!!MCDR plugin reload guguwebui',
-                '!!MCDR plugin unload guguwebui'
-            ];
-            
-            if (forbiddenCommands.includes(command)) {
-                this.showNotificationMsg(`不允许执行该命令，这可能导致WebUI自身停止运行`, 'error');
-                return;
-            }
-            
-            try {
-                const response = await fetch('/api/send_command', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({ command: command })
-                });
-                
-                const data = await response.json();
-                
-                if (data.status === 'success') {
-                    // 添加到历史记录
-                    if (this.commandHistory.length === 0 || this.commandHistory[0] !== command) {
-                        this.commandHistory.unshift(command);
-                        // 限制历史记录长度
-                        if (this.commandHistory.length > 50) {
-                            this.commandHistory.pop();
-                        }
-                        // 保存到本地存储
-                        localStorage.setItem('commandHistory', JSON.stringify(this.commandHistory));
-                    }
-                    
-                    // 重置历史索引
-                    this.historyIndex = -1;
-                    // 命令发送成功后清空输入框
-                    this.commandInput = '';
-                    // 可以选择显示提示信息
-                    this.showNotificationMsg(`命令已发送：${data.feedback}`, 'success');
-                } else {
-                    this.showNotificationMsg(`发送失败: ${data.message || '未知错误'}`, 'error');
-                }
-            } catch (error) {
-                console.error('Error sending command:', error);
-                this.showNotificationMsg('发送命令失败', 'error');
-            }
-        },
-        
-        // 处理键盘上下键浏览历史记录
-        handleHistoryNavigation: function(event) {
-            // 上方向键
-            if (event.key === 'ArrowUp') {
-                event.preventDefault();
-                if (this.historyIndex === -1) {
-                    // 首次按上键，保存当前输入
-                    this.tempCommand = this.commandInput;
-                }
-                
-                if (this.historyIndex < this.commandHistory.length - 1) {
-                    this.historyIndex++;
-                    this.commandInput = this.commandHistory[this.historyIndex];
-                }
-            } 
-            // 下方向键
-            else if (event.key === 'ArrowDown') {
-                event.preventDefault();
-                if (this.historyIndex > 0) {
-                    this.historyIndex--;
-                    this.commandInput = this.commandHistory[this.historyIndex];
-                } else if (this.historyIndex === 0) {
-                    // 返回到临时保存的命令
-                    this.historyIndex = -1;
-                    this.commandInput = this.tempCommand;
-                }
-            }
-        },
-        
-        // 打开AI询问弹窗
-        openAIQueryModal: function(selectedText = '') {
-            this.aiQuery = '';
-            this.aiResponse = '';
-            this.aiLoading = false;
-            this.aiSelectedText = selectedText;
-            
-            // 如果有选中的文本，则使用选中的文本作为询问内容
-            if (selectedText) {
-                this.aiLogPreview = selectedText;
-                this.aiQueryTitle = '询问选中内容';
-            } else {
-                // 否则，获取最近的200行日志
-                const recentLogs = this.logs.slice(Math.max(0, this.logs.length - 200));
-                this.aiLogPreview = recentLogs.map(log => {
-                    let prefix = '';
-                    if (this.mergedLogs) {
-                        prefix = log.source === 'mcdr' ? '[MCDR] ' : '[MC] ';
-                    }
-                    return `${prefix}${log.content}`;
-                }).join('\n');
-                this.aiQueryTitle = 'AI日志分析询问';
-            }
-            
-            // 显示弹窗
-            const modal = document.getElementById('aiQueryModal');
-            if (modal) {
-                modal.classList.add('active');
-                this.showAiQueryModal = true;
-            }
-        },
-        
-        // 关闭AI询问弹窗
-        closeAIQueryModal: function() {
-            const modal = document.getElementById('aiQueryModal');
-            if (modal) {
-                modal.classList.remove('active');
-                setTimeout(() => {
-                    this.showAiQueryModal = false;
-                }, 300);
-            }
-        },
-        
-        // 提交AI询问
-        submitAIQuery: function() {
-            if (this.aiLoading) return;
-            
-            this.aiLoading = true;
-            this.aiResponse = '';
-            
-            // 如果用户没有输入问题，使用默认问题
-            const query = this.aiQuery.trim() || '分析这些日志中的错误并提供解决方案';
-            
-            // 准备发送到API的数据
-            let requestData = {
-                query: query,
-                system_prompt: '你是一个Minecraft服务器日志分析专家，请分析以下日志并提供详细的解释和解决方案。请只关注与问题相关的内容，不要重复日志内容。'
-            };
-            
-            // 如果启用了连续对话，添加聊天历史
-            if (this.aiContinueChat && this.aiChatHistory.length > 0) {
-                requestData.chat_history = this.aiChatHistory;
-            }
-            
-            // 添加日志内容
-            if (this.aiSelectedText) {
-                requestData.query += `\n\n选中的日志内容：\n${this.aiSelectedText}`;
-            } else {
-                requestData.query += `\n\n最近的日志内容：\n${this.aiLogPreview}`;
-            }
-            
-            // 发送请求到API
-            fetch('/api/deepseek', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify(requestData)
-            })
-            .then(response => response.json())
-            .then(data => {
-                this.aiLoading = false;
-                
-                if (data.status === 'success') {
-                    this.aiResponse = data.answer;
-                    
-                    // 如果启用了连续对话，更新聊天历史
-                    if (this.aiContinueChat) {
-                        this.aiChatHistory.push({
-                            role: 'user',
-                            content: query
-                        });
-                        this.aiChatHistory.push({
-                            role: 'assistant',
-                            content: data.answer
-                        });
-                        
-                        // 限制历史长度，避免token过多
-                        if (this.aiChatHistory.length > 10) {
-                            this.aiChatHistory = this.aiChatHistory.slice(this.aiChatHistory.length - 10);
-                        }
-                    }
-                } else {
-                    this.aiResponse = `错误: ${data.message || '请求失败'}`;
-                }
-            })
-            .catch(error => {
-                console.error('AI询问出错:', error);
-                this.aiLoading = false;
-                this.aiResponse = `请求出错: ${error.message}`;
-            });
-        },
-        
-        // 初始化选择文本悬浮按钮
-        initSelectionButton: function() {
-            const terminal = document.getElementById('terminal');
-            const selectionButton = document.getElementById('selectionActionButton');
-            const self = this;
-            
-            if (!terminal || !selectionButton) return;
-            
-            document.addEventListener('mouseup', function(e) {
-                const selection = window.getSelection();
-                const selectedText = selection.toString().trim();
-                
-                // 如果有选中文本并且在终端内部
-                if (selectedText && terminal.contains(selection.anchorNode)) {
-                    const range = selection.getRangeAt(0);
-                    const rect = range.getBoundingClientRect();
-                    
-                    // 计算按钮位置
-                    const terminalRect = terminal.getBoundingClientRect();
-                    selectionButton.style.top = (rect.bottom - terminalRect.top + 8) + 'px';
-                    selectionButton.style.left = (rect.left - terminalRect.left + rect.width / 2 - 40) + 'px';
-                    selectionButton.style.display = 'block';
-                    
-                    // 设置点击事件
-                    selectionButton.onclick = function() {
-                        self.openAIQueryModal(selectedText);
-                        selectionButton.style.display = 'none';
-                    };
-                } else {
-                    selectionButton.style.display = 'none';
-                }
-            });
-            
-            // 点击其他地方时隐藏按钮
-            document.addEventListener('mousedown', function(e) {
-                if (!selectionButton.contains(e.target)) {
-                    selectionButton.style.display = 'none';
-                }
-            });
-        },
-        
-        init()
-        {
-            // 添加现有的初始化代码
-            this.checkLoginStatus();
-            this.checkServerStatus();
-            
-            // 每60秒自动刷新服务器状态
-            setInterval(() => this.checkServerStatus(), 60000);
-            
-            // 初始加载日志
-            this.loadLogs();
-            
-            // 启动自动刷新
-            this.refreshInterval = setInterval(() => {
-                if (this.autoRefresh) this.fetchNewLogs();
-            }, 3000);
-            
-            // 保存主题设置到本地存储
-            this.$watch('darkMode', value => {
-                localStorage.setItem('darkMode', value);
-            });
-            
-            // 组件销毁时清除定时器
-            this.$cleanup = () => {
-                clearInterval(this.refreshInterval);
-            };
-            
-            // 加载历史命令记录
-            const savedHistory = localStorage.getItem('commandHistory');
-            if (savedHistory) {
-                try {
-                    this.commandHistory = JSON.parse(savedHistory);
-                } catch (e) {
-                    console.error('Error loading command history:', e);
-                    this.commandHistory = [];
-                }
-            }
-            
-            // 初始化选择文本悬浮按钮功能
-            this.initSelectionButton();
-        }
-    }" 
-    x-init="init()">
+    <div x-data="terminalData" x-init="init()">
         <!-- 侧边栏 -->
         <div id="sidebar" :class="{'translate-x-0': sidebarOpen, '-translate-x-full': !sidebarOpen}" class="sidebar-width fixed top-0 left-0 bottom-0 z-30 transform transition-transform duration-300 ease-in-out bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 shadow-lg overflow-y-auto">
             <div class="p-4 flex flex-col h-full">
@@ -858,11 +466,6 @@
                         <a href="/cq" class="flex items-center px-4 py-3 text-sm font-medium rounded-lg text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
                             <i class="fas fa-comments w-6 text-center"></i>
                             <span class="ml-3">CQ-QQ-API</span>
-                        </a>
-                        
-                        <a href="/fabric" class="flex items-center px-4 py-3 text-sm font-medium rounded-lg text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
-                            <i class="fas fa-cube w-6 text-center"></i>
-                            <span class="ml-3">Fabric 管理</span>
                         </a>
                     </nav>
                 </div>
@@ -954,24 +557,10 @@
             </header>
             
             <!-- 主内容 -->
-            <main class="pt-16 px-4 sm:px-6 md:px-8 pb-20">
+            <main class="pt-24 px-4 sm:px-6 md:px-8 pb-20">
                 <!-- 控制栏 -->
-                <div class="mt-6 bg-white dark:bg-gray-800 rounded-lg shadow p-4 mb-4">
+                <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-4 mb-4">
                     <div class="flex flex-wrap items-center justify-between gap-4">
-                        <!-- 日志类型选择 -->
-                        <div class="flex items-center space-x-2">
-                            <span class="text-sm font-medium text-gray-700 dark:text-gray-300">日志类型:</span>
-                            <button @click="switchLogType('mcdr')" class="px-3 py-1.5 text-xs rounded-md" :class="logType === 'mcdr' && !mergedLogs ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 font-medium' : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300'">
-                                MCDR 日志
-                            </button>
-                            <button @click="switchLogType('minecraft')" class="px-3 py-1.5 text-xs rounded-md" :class="logType === 'minecraft' && !mergedLogs ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 font-medium' : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300'">
-                                Minecraft 日志
-                            </button>
-                            <button @click="toggleMergedLogs()" class="px-3 py-1.5 text-xs rounded-md" :class="mergedLogs ? 'bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 font-medium' : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300'">
-                                <i class="fas fa-code-merge mr-1"></i>合并日志
-                            </button>
-                        </div>
-                        
                         <!-- 过滤器 -->
                         <div class="flex-1 max-w-md">
                             <div class="relative">
@@ -1026,54 +615,37 @@
                 <div id="selectionActionButton" class="selection-action-button">
                     <i class="fas fa-question-circle mr-1"></i> 询问AI
                 </div>
-                
-                <!-- 终端显示区域 -->
-                <div class="relative">
-                    <!-- 加载指示器 -->
-                    <div x-show="isLoading" class="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center z-10 rounded-lg">
-                        <div class="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-lg flex items-center space-x-3">
-                            <div class="w-6 h-6 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
-                            <span class="text-sm font-medium text-gray-700 dark:text-gray-300">加载日志中...</span>
-                        </div>
-                    </div>
                     
-                    <!-- 终端窗口 -->
-                    <div id="terminal" class="h-[65vh] terminal rounded-lg p-4 overflow-auto">
-                        <template x-if="logs.length === 0 && !isLoading">
-                            <div class="text-center text-gray-500 h-full flex items-center justify-center">
-                                <span>无日志记录或日志已被清空</span>
-                            </div>
-                        </template>
-                        
-                        <template x-for="(log, index) in logs" :key="index">
-                            <div x-show="!filterText || log.content.toLowerCase().includes(filterText.toLowerCase())" :class="highlightLog(log)" class="leading-relaxed">
-                                <!-- 日志来源指示器 -->
-                                <span x-show="mergedLogs" :class="log.source === 'mcdr' ? 'text-blue-400' : 'text-green-400'" class="mr-1">
-                                    <span x-show="log.source === 'mcdr'">[MCDR #<span class="text-blue-400" x-text="log.line_number"></span>]</span>
-                                    <span x-show="log.source === 'minecraft'">[MC #<span class="text-blue-400" x-text="log.line_number"></span>]</span>
-                                </span>
-                                <!-- <span class="text-gray-500">[</span><span class="text-blue-400" x-text="log.line_number"></span><span class="text-gray-500">]</span> --><span x-text="log.content"></span> 
-                            </div>
-                        </template>
+                <!-- 状态栏 -->
+                <div class="mt-2 flex justify-between text-xs text-gray-500 dark:text-gray-400 px-2">
+                    <div>
+                        <span>共 </span>
+                        <span x-text="totalLines"></span>
+                        <span> 行日志</span>
+                        <span x-show="filterText"> | 过滤: "</span>
+                        <span x-show="filterText" x-text="filterText"></span>
+                        <span x-show="filterText">"</span>
                     </div>
+                    <div>
+                    <span>服务器日志</span>
+                        <span> | </span>
+                        <span x-text="autoRefresh ? '自动刷新：开' : '自动刷新：关'"></span>
+                    </div>
+                </div>
+            
+                <!-- 日志显示区域 -->
+                <div id="terminal" class="h-[65vh] terminal rounded-lg p-4 overflow-auto">
+                    <template x-if="logs.length === 0 && !isLoading">
+                        <div class="text-center text-gray-500 h-full flex items-center justify-center">
+                            <span>无日志记录或日志已被清空</span>
+                        </div>
+                    </template>
                     
-                    <!-- 状态栏 -->
-                    <div class="mt-2 flex justify-between text-xs text-gray-500 dark:text-gray-400 px-2">
-                        <div>
-                            <span>共 </span>
-                            <span x-text="totalLines"></span>
-                            <span> 行日志</span>
-                            <span x-show="filterText"> | 过滤: "</span>
-                            <span x-show="filterText" x-text="filterText"></span>
-                            <span x-show="filterText">"</span>
+                    <template x-for="(log, index) in logs" :key="index">
+                        <div x-show="!filterText || log.content.toLowerCase().includes(filterText.toLowerCase())" :class="highlightLog(log)" class="leading-relaxed">
+                            <span x-text="log.content"></span> 
                         </div>
-                        <div>
-                            <span x-show="!mergedLogs" x-text="logType === 'mcdr' ? 'MCDR 日志' : 'Minecraft 日志'"></span>
-                            <span x-show="mergedLogs">合并日志</span>
-                            <span> | </span>
-                            <span x-text="autoRefresh ? '自动刷新：开' : '自动刷新：关'"></span>
-                        </div>
-                    </div>
+                    </template>
                 </div>
             </main>
             
@@ -1083,15 +655,38 @@
                     <form @submit.prevent="sendCommand" class="flex items-center">
                         <div class="relative flex-1">
                             <input 
+                                id="commandInput"
                                 type="text" 
                                 x-model="commandInput" 
-                                @keydown="handleHistoryNavigation"
+                                @input="handleCommandInputChange"
+                                @keydown="handleKeyDown"
                                 placeholder="输入命令发送到MCDR终端..." 
                                 class="w-full pl-10 pr-4 py-2 rounded-md bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-800 dark:text-gray-200"
                                 autofocus
                             >
                             <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                                 <i class="fas fa-terminal text-gray-400"></i>
+                            </div>
+                            
+                            <!-- 命令补全下拉框 -->
+                            <div 
+                                x-show="showSuggestions" 
+                                class="absolute z-50 mt-1 w-full rounded-md bg-white dark:bg-gray-700 shadow-lg command-suggestions overflow-auto max-h-60"
+                                style="top: auto; bottom: 100%;"
+                            >
+                                <ul class="py-1 text-sm text-gray-700 dark:text-gray-200">
+                                    <template x-for="(suggestion, index) in commandSuggestions" :key="index">
+                                        <li 
+                                            @click="selectSuggestion(index)"
+                                            @mouseenter="selectedSuggestionIndex = index"
+                                            :class="{'bg-blue-100 dark:bg-blue-800': selectedSuggestionIndex === index}"
+                                            class="px-4 py-2 hover:bg-blue-50 dark:hover:bg-blue-700 cursor-pointer flex justify-between items-center"
+                                        >
+                                            <div class="font-mono" x-text="suggestion.command"></div>
+                                            <div class="text-xs text-gray-500 dark:text-gray-400" x-text="suggestion.description"></div>
+                                        </li>
+                                    </template>
+                                </ul>
                             </div>
                         </div>
                         <button 
@@ -1103,6 +698,11 @@
                         </button>
                     </form>
                 </div>
+            </div>
+            
+            <!-- 命令补全提示 -->
+            <div class="fixed bottom-16 right-4 text-xs text-gray-500 dark:text-gray-400 bg-white dark:bg-gray-800 px-2 py-1 rounded shadow" x-show="commandInput && commandInput.startsWith('!!')">
+                <span>使用 <kbd class="px-1 py-0.5 bg-gray-200 dark:bg-gray-700 rounded">Tab</kbd> 键显示/关闭命令补全，或补全选择的命令</span>
             </div>
         </div>
         
@@ -1194,6 +794,45 @@
                 </div>
             </div>
         </div>
+
+        <!-- API Key设置弹窗 -->
+        <div id="apiKeyModal" class="api-key-modal" x-show="showApiKeyModal" x-cloak>
+            <div class="api-key-container">
+                <div class="api-key-header">
+                    <h3 class="text-lg font-semibold">设置API密钥</h3>
+                    <button @click="closeApiKeyModal" class="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div class="api-key-body">
+                    <div class="mb-4">
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">API密钥</label>
+                        <input 
+                            type="text" 
+                            x-model="apiKey" 
+                            class="api-key-input" 
+                            placeholder="请输入您的API密钥"
+                        >
+                    </div>
+                </div>
+                <div class="api-key-footer">
+                    <button 
+                        @click="closeApiKeyModal"
+                        class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700"
+                    >
+                        取消
+                    </button>
+                    <button 
+                        @click="saveApiKey"
+                        class="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 focus:outline-none"
+                        :disabled="aiLoading"
+                    >
+                        <i class="fas fa-save mr-2"></i>
+                        保存
+                    </button>
+                </div>
+            </div>
+        </div>
     </div>
 
     <!-- 导入主脚本 -->
@@ -1204,5 +843,8 @@
     
     <!-- 公告脚本 -->
     <script src="/js/notice.js"></script>
+    
+    <!-- 终端页面脚本 -->
+    <script src="/js/terminal.js"></script>
 </body>
 </html> 

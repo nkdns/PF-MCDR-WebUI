@@ -7,6 +7,11 @@ from mcdreforged.api.types import PluginServerInterface
 
 from .utils.utils import amount_static_files
 from .web_server import *
+
+# 导出 PluginInstaller 类及相关功能
+from .utils.PIM import PluginInstaller, get_installer, create_installer
+
+__all__ = ['PluginInstaller', 'get_installer', 'create_installer'] 
 #============================================================#
 
 def on_load(server: PluginServerInterface, old):
@@ -24,7 +29,9 @@ def on_load(server: PluginServerInterface, old):
     app.mount("/js", StaticFiles(directory=f"{STATIC_PATH}/js"), name="static")
     app.mount("/css", StaticFiles(directory=f"{STATIC_PATH}/css"), name="static")
     app.mount("/custom", StaticFiles(directory=f"{STATIC_PATH}/custom"), name="static")
-    app.state.server_interface = server # save server into app.state
+    
+    # 初始化应用程序和日志捕获器
+    init_app(server)
     
     config = uvicorn.Config(app, host=host, port=port, log_level="warning")
     web_server_interface = ThreadedUvicorn(config)
@@ -35,6 +42,10 @@ def on_load(server: PluginServerInterface, old):
 
 
 def on_unload(server: PluginServerInterface):
+    # 停止日志捕获
+    if 'log_watcher' in globals() and log_watcher:
+        log_watcher.stop()
+        
     web_server_interface.stop()
     server.logger.info("[GUGUWebUI] WebUI 已卸载")
 

@@ -100,96 +100,7 @@
     </style>
 </head>
 <body class="h-full bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100 transition-colors duration-300">
-    <div x-data="{ 
-        serverStatus: 'loading',
-        userName: '',
-        serverVersion: '',
-        serverPlayers: '0/0',
-        processingServer: false,
-        showNotification: false,
-        notificationMessage: '',
-        notificationType: 'success',
-
-        checkLoginStatus: async function() {
-            try {
-                const response = await fetch('/api/checkLogin');
-                const data = await response.json();
-                if (data.status === 'success') {
-                    this.userName = data.username;
-                }
-            } catch (error) {
-                console.error('Error checking login status:', error);
-            }
-        },
-        
-        checkServerStatus: async function() {
-            try {
-                this.serverStatus = 'loading';
-                const response = await fetch('/api/get_server_status');
-                const data = await response.json();
-                this.serverStatus = data.status || 'offline';
-                this.serverVersion = data.version || '';
-                this.serverPlayers = data.players || '0/0';
-            } catch (error) {
-                console.error('Error checking server status:', error);
-                this.serverStatus = 'error';
-            }
-        },
-        
-        controlServer: async function(action) {
-            if (this.processingServer) return;
-            
-            this.processingServer = true;
-            
-            try {
-                const response = await fetch('/api/control_server', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({ action: action })
-                });
-                
-                const data = await response.json();
-                
-                if (data.status === 'success') {
-                    this.showNotificationMsg(data.message || `服务器${action === 'start' ? '启动' : (action === 'stop' ? '停止' : '重启')}命令已发送`, 'success');
-                    
-                    // 延迟几秒后刷新服务器状态
-                    setTimeout(() => this.checkServerStatus(), 5000);
-                } else {
-                    this.showNotificationMsg(`操作失败: ${data.message || '未知错误'}`, 'error');
-                }
-            } catch (error) {
-                console.error('Error controlling server:', error);
-                this.showNotificationMsg('服务器控制操作失败', 'error');
-            } finally {
-                this.processingServer = false;
-            }
-        },
-        
-        showNotificationMsg: function(message, type = 'success') {
-            this.notificationMessage = message;
-            this.notificationType = type;
-            this.showNotification = true;
-            
-            setTimeout(() => {
-                this.showNotification = false;
-            }, 5000);
-        }
-    }" 
-    x-init="
-        checkLoginStatus();
-        checkServerStatus();
-        
-        // 每60秒自动刷新服务器状态
-        setInterval(() => checkServerStatus(), 60000);
-        
-        // 保存主题设置到本地存储
-        $watch('darkMode', value => {
-            localStorage.setItem('darkMode', value);
-        });
-    ">
+    <div x-data="indexData" x-init="init()">
         <!-- 侧边栏 -->
         <div id="sidebar" :class="{'translate-x-0': sidebarOpen, '-translate-x-full': !sidebarOpen}" class="sidebar-width fixed top-0 left-0 bottom-0 z-30 transform transition-transform duration-300 ease-in-out bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 shadow-lg overflow-y-auto">
             <div class="p-4 flex flex-col h-full">
@@ -245,11 +156,6 @@
                         <a href="/cq" class="flex items-center px-4 py-3 text-sm font-medium rounded-lg text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
                             <i class="fas fa-comments w-6 text-center"></i>
                             <span class="ml-3">CQ-QQ-API</span>
-                        </a>
-                        
-                        <a href="/fabric" class="flex items-center px-4 py-3 text-sm font-medium rounded-lg text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
-                            <i class="fas fa-cube w-6 text-center"></i>
-                            <span class="ml-3">Fabric 管理</span>
                         </a>
                     </nav>
                 </div>
@@ -341,9 +247,9 @@
             </header>
             
             <!-- 主内容 -->
-            <main class="pt-16 px-4 sm:px-6 md:px-8 pb-8">
+            <main class="pt-24 px-4 sm:px-6 md:px-8 pb-8">
                 <!-- 统计卡片 -->
-                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mt-6">
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                     <!-- 服务器状态卡片 -->
                     <div class="card-hover bg-white dark:bg-gray-800 rounded-xl shadow-md p-6 border border-gray-200 dark:border-gray-700 relative">
                         <div class="flex items-center">
@@ -636,42 +542,8 @@
     
     <!-- 公告脚本 -->
     <script src="/js/notice.js"></script>
-
-    <script>
-        // 设置当前时间和版权年份
-        function updateTime() {
-            const now = new Date();
-            document.getElementById('current-time').textContent = now.toLocaleString('zh-CN');
-        }
-        
-        updateTime();
-        setInterval(updateTime, 1000);
-        
-        document.getElementById('year').textContent = new Date().getFullYear();
-        
-        // 获取WebUI版本
-        async function getWebUIVersion() {
-            try {
-                const response = await fetch('/api/gugubot_plugins');
-                const data = await response.json();
-                
-                if (data.gugubot_plugins) {
-                    const guguwebui = data.gugubot_plugins.find(p => p.id === 'guguwebui');
-                    
-                    if (guguwebui && guguwebui.version) {
-                        document.getElementById('web-version').textContent = guguwebui.version;
-                    } else {
-                        document.getElementById('web-version').textContent = '未知';
-                    }
-                }
-            } catch (error) {
-                console.error('获取WebUI版本失败:', error);
-                document.getElementById('web-version').textContent = '获取失败';
-            }
-        }
-        
-        // 页面加载完成后获取版本
-        document.addEventListener('DOMContentLoaded', getWebUIVersion);
-    </script>
+    
+    <!-- 控制面板页面脚本 -->
+    <script src="/js/index.js"></script>
 </body>
 </html> 
