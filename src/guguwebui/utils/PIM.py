@@ -2287,7 +2287,7 @@ class PluginInstaller:
                     
             return {task_id: task_info.copy() for task_id, task_info in self.install_tasks.items()}
             
-    def _create_command_source(self, task_id: str) -> 'CustomCommandSource':
+    def _create_command_source(self, task_id: str) -> 'CustomCommandSource': # type: ignore
         """
         创建自定义的命令源，用于捕获安装/卸载过程中的输出
         
