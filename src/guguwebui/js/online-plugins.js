@@ -24,6 +24,18 @@ document.addEventListener('alpine:init', () => {
         sortMethod: 'time', // 'name', 'time'
         sortDirection: 'desc', // 'asc', 'desc'
         
+        // README相关属性
+        showReadmeModal: false,
+        currentReadmePlugin: null,
+        readmeLoading: false,
+        readmeError: false,
+        readmeErrorMessage: '',
+        vditor: null,
+        readmeContent: '',
+        readmeType: 'readme', // 'readme' 或 'catalogue'
+        readmeUrl: '',
+        catalogueUrl: '',
+        
         // 插件安装相关属性
         installTaskId: null,
         installProgress: 0,
@@ -118,6 +130,261 @@ document.addEventListener('alpine:init', () => {
                 this.loading = false;
                 this.showNotificationMsg('加载在线插件列表失败', 'error');
             }
+        },
+        
+        // 显示README内容
+        async showReadme(plugin) {
+            this.currentReadmePlugin = plugin;
+            this.showReadmeModal = true;
+            this.readmeLoading = true;
+            this.readmeError = false;
+            this.readmeErrorMessage = '';
+            
+            // 保存 README URL
+            this.readmeUrl = plugin.readme_url;
+            
+            // 解析 Catalogue URL
+            this.catalogueUrl = this.parseCatalogueUrl(plugin.readme_url);
+            
+            // 默认打开 Catalogue 文档（如果存在），否则打开 README
+            this.readmeType = this.catalogueUrl ? 'catalogue' : 'readme';
+            
+            try {
+                // 加载默认文档内容
+                const defaultUrl = this.readmeType === 'readme' ? this.readmeUrl : this.catalogueUrl;
+                await this.loadReadmeContent(defaultUrl);
+                
+            } catch (error) {
+                console.error('Error loading content:', error);
+                this.readmeError = true;
+                this.readmeErrorMessage = error.message || '加载文档时出错';
+                this.readmeLoading = false;
+            }
+        },
+        
+        // 从readme_url解析出catalogue_url
+        parseCatalogueUrl(readmeUrl) {
+            try {
+                // 检查是否是GitHub的raw内容URL
+                if (readmeUrl.includes('raw.githubusercontent.com')) {
+                    // 提取仓库信息
+                    const urlParts = readmeUrl.split('/');
+                    const username = urlParts[3];
+                    const repo = urlParts[4];
+                    const branch = urlParts[5];
+                    
+                    // 构建catalogue_url
+                    return `https://raw.githubusercontent.com/${username}/${repo}/${branch}/README.md`;
+                }
+                
+                // 如果不是GitHub的raw内容URL，尝试构建
+                if (readmeUrl.includes('github.com')) {
+                    // 将blob/master/README.md转换为raw/master/README.md
+                    return readmeUrl.replace('github.com', 'raw.githubusercontent.com')
+                        .replace('/blob/', '/')
+                        .replace('/README.md', '/catalogue.md');
+                }
+                
+                return '';
+            } catch (error) {
+                console.warn('解析catalogue_url失败:', error);
+                return '';
+            }
+        },
+        
+        // 加载README内容
+        async loadReadmeContent(url) {
+            try {
+                // 直接从url获取内容
+                const response = await fetch(url);
+                if (!response.ok) {
+                    throw new Error(`获取文档失败: ${response.status} ${response.statusText}`);
+                }
+                
+                const content = await response.text();
+                this.readmeContent = content;
+                
+                // 初始化或更新Vditor
+                this.initVditor(content);
+                
+            } catch (error) {
+                console.error('Error loading content:', error);
+                this.readmeError = true;
+                this.readmeErrorMessage = error.message || '加载文档时出错';
+                this.readmeLoading = false;
+            }
+        },
+        
+        // 切换文档类型
+        async switchReadmeType(type) {
+            if (this.readmeType === type) return;
+            
+            this.readmeType = type;
+            this.readmeLoading = true;
+            
+            try {
+                const url = type === 'readme' ? this.readmeUrl : this.catalogueUrl;
+                
+                if (!url) {
+                    throw new Error(`未找到${type === 'readme' ? '自述文件' : '介绍'}文档链接`);
+                }
+                
+                await this.loadReadmeContent(url);
+                
+            } catch (error) {
+                console.error(`Error switching to ${type}:`, error);
+                this.readmeError = true;
+                this.readmeErrorMessage = error.message || `切换到${type === 'readme' ? '自述文件' : '介绍'}文档时出错`;
+                this.readmeLoading = false;
+            }
+        },
+        
+        // 初始化Vditor
+        initVditor(content) {
+            // 初始化Vditor
+            if (!this.vditor) {
+                this.vditor = new Vditor('vditor', {
+                    mode: 'ir',
+                    theme: this.darkMode ? 'dark' : 'classic',
+                    preview: {
+                        theme: {
+                            current: this.darkMode ? 'dark' : 'light'
+                        },
+                        maxLength: 100000,
+                        scrollable: true,
+                        markdown: {
+                            toc: true,
+                            mark: true,
+                            footnotes: true,
+                            autoSpace: true,
+                            fixTermTypo: true,
+                            math: true,
+                            mermaid: true,
+                            plantuml: true,
+                        }
+                    },
+                    cache: {
+                        enable: false
+                    },
+                    toolbar: [],
+                    counter: {
+                        enable: false
+                    },
+                    upload: {
+                        enable: false
+                    },
+                    select: {
+                        enable: false
+                    },
+                    typewriterMode: false,
+                    toolbarConfig: {
+                        pin: false
+                    },
+                    after: () => {
+                        // 在Vditor完全初始化后设置内容
+                        this.vditor.setValue(content);
+                        this.readmeLoading = false;
+                        
+                        // 确保内容可以滚动
+                        const vditorElement = document.getElementById('vditor');
+                        if (vditorElement) {
+                            vditorElement.style.overflow = 'auto';
+                            vditorElement.style.maxHeight = 'calc(90vh - 120px)';
+                        }
+                    }
+                });
+            } else {
+                // 更新主题 - 修复主题设置问题
+                try {
+                    // 完全重新初始化Vditor以确保主题正确应用
+                    this.vditor.destroy();
+                    this.vditor = new Vditor('vditor', {
+                        mode: 'ir',
+                        theme: this.darkMode ? 'dark' : 'classic',
+                        preview: {
+                            theme: {
+                                current: this.darkMode ? 'dark' : 'light'
+                            },
+                            maxLength: 100000,
+                            scrollable: true,
+                            markdown: {
+                                toc: true,
+                                mark: true,
+                                footnotes: true,
+                                autoSpace: true,
+                                fixTermTypo: true,
+                                math: true,
+                                mermaid: true,
+                                plantuml: true,
+                            }
+                        },
+                        cache: {
+                            enable: false
+                        },
+                        toolbar: [],
+                        counter: {
+                            enable: false
+                        },
+                        upload: {
+                            enable: false
+                        },
+                        select: {
+                            enable: false
+                        },
+                        typewriterMode: false,
+                        toolbarConfig: {
+                            pin: false
+                        },
+                        after: () => {
+                            // 在Vditor完全初始化后设置内容
+                            this.vditor.setValue(content);
+                            this.readmeLoading = false;
+                            
+                            // 确保内容可以滚动
+                            const vditorElement = document.getElementById('vditor');
+                            if (vditorElement) {
+                                vditorElement.style.overflow = 'auto';
+                                vditorElement.style.maxHeight = 'calc(90vh - 120px)';
+                            }
+                        }
+                    });
+                } catch (themeError) {
+                    console.warn('设置主题时出错，继续处理:', themeError);
+                    
+                    // 如果重新初始化失败，尝试直接设置内容
+                    this.vditor.setValue(content);
+                    this.readmeLoading = false;
+                    
+                    // 确保内容可以滚动
+                    const vditorElement = document.getElementById('vditor');
+                    if (vditorElement) {
+                        vditorElement.style.overflow = 'auto';
+                        vditorElement.style.maxHeight = 'calc(90vh - 120px)';
+                    }
+                }
+            }
+        },
+        
+        // 重试加载README
+        retryLoadReadme() {
+            if (this.currentReadmePlugin) {
+                this.showReadme(this.currentReadmePlugin);
+            }
+        },
+        
+        // 关闭README模态窗口
+        closeReadmeModal() {
+            this.showReadmeModal = false;
+            this.currentReadmePlugin = null;
+            this.readmeLoading = false;
+            this.readmeError = false;
+            this.readmeErrorMessage = '';
+        },
+        
+        // 格式化数字（添加千位分隔符）
+        formatNumber(num) {
+            if (num === undefined || num === null) return '0';
+            return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
         },
         
         filterPlugins() {

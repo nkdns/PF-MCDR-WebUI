@@ -7,6 +7,7 @@ import os
 import json
 import lzma
 import time
+import io
 
 from pathlib import Path
 
@@ -23,7 +24,7 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 from starlette.middleware.sessions import SessionMiddleware
 
 from .utils.log_watcher import LogWatcher
-from .utils.PIM import PluginInstaller  # 导入 PluginInstaller 类
+from .utils.PIM import PluginInstaller, create_installer  # 修改导入，添加 create_installer
 
 from .utils.constant import *
 from .utils.server_util import *
@@ -35,6 +36,10 @@ import mcdreforged.api.all as MCDR
 from .utils.utils import __copyFile
 
 app = FastAPI()
+
+# 全局变量，用于存储在线插件数据
+online_plugins_data = []
+online_plugins_last_update = 0
 
 # template engine -> jinja2
 templates = Jinja2Templates(directory=f"{STATIC_PATH}/templates")
@@ -371,132 +376,173 @@ async def get_plugins(request: Request, detail: bool = False):
         content={"plugins": plugins}
     )
 
-# 请求 https://looseprince.github.io/Plugin-Catalogue/plugins.json 返回json，免登录
-@app.get("/api/online-plugins")
-async def get_online_plugins(request: Request):
-    url = "https://looseprince.github.io/Plugin-Catalogue/plugins.json"
-    try:
-        response = requests.get(url, timeout=10)  # 增加超时时间设置
-        if response.status_code == 200:
-            plugins_data = response.json()
-            return plugins_data
-        else:
-            return {}
-    except requests.RequestException as e:
-        return {}
-
 # 从 everything_slim.json 获取在线插件列表，免登录
 @app.get("/api/online-plugins")
 async def get_online_plugins(request: Request):
-    # 使用 guguwebui_static 文件夹中的 cache 子文件夹存放缓存
-    cache_dir = os.path.join(STATIC_PATH, "cache")
-    cache_file = os.path.join(cache_dir, "everything_slim.json")
-    cache_xz_file = os.path.join(cache_dir, "everything_slim.json.xz")
+    global online_plugins_data, online_plugins_last_update
     
-    # 创建缓存目录
-    os.makedirs(cache_dir, exist_ok=True)
+    # 检查内存缓存是否过期（2小时）
+    current_time = time.time()
+    cache_expired = current_time - online_plugins_last_update > 7200  # 2小时 = 7200秒
     
-    # 检查缓存是否过期（2小时）
-    cache_expired = True
-    if os.path.exists(cache_file):
-        file_time = os.path.getmtime(cache_file)
-        if time.time() - file_time < 7200:  # 2小时 = 7200秒
-            cache_expired = False
-    
-    # 如果缓存已过期或不存在，则下载并解压新文件
-    if cache_expired:
+    # 如果缓存已过期或为空，则下载并解析新数据
+    if cache_expired or not online_plugins_data:
         try:
             # 从配置中获取插件目录URL
             server = app.state.server_interface
             config = server.load_config_simple("config.json", DEFALUT_CONFIG)
             url = config.get("mcdr_plugins_url", "https://api.mcdreforged.com/catalogue/everything_slim.json.xz")
-            response = requests.get(url, timeout=30)  # 增加超时时间设置
+            
+            # 下载压缩文件
+            response = requests.get(url, timeout=30)
             
             if response.status_code == 200:
-                # 保存压缩文件
-                with open(cache_xz_file, 'wb') as f:
-                    f.write(response.content)
+                # 解压数据
+                with lzma.open(io.BytesIO(response.content), 'rb') as f_in:
+                    everything_data = json.loads(f_in.read().decode('utf-8'))
                 
-                # 解压文件
-                with lzma.open(cache_xz_file, 'rb') as f_in:
-                    with open(cache_file, 'wb') as f_out:
-                        f_out.write(f_in.read())
+                # 转换为与旧API兼容的格式
+                plugins_data = []
+                for plugin_id, plugin_info in everything_data.get('plugins', {}).items():
+                    try:
+                        # 获取元数据
+                        meta = plugin_info.get('meta', {})
+                        plugin_data = plugin_info.get('plugin', {})
+                        repository = plugin_info.get('repository', {})
+                        release = plugin_info.get('release', {})
+                        
+                        # 获取最新版本信息
+                        latest_version = None
+                        try:
+                            latest_version_index = release.get('latest_version_index', 0)
+                            releases = release.get('releases', [])
+                            if releases and len(releases) > latest_version_index:
+                                latest_version = releases[latest_version_index]
+                        except Exception as version_error:
+                            server.logger.error(f"处理插件 {plugin_id} 的版本信息时出错: {version_error}")
+                            latest_version = None
+                        
+                        # 创建与旧格式兼容的结构
+                        try:
+                            plugin_entry = {
+                                "id": meta.get('id', plugin_id),
+                                "name": meta.get('name', plugin_id),
+                                "version": meta.get('version', ''),
+                                "description": meta.get('description', {}),
+                                "authors": [],
+                                "dependencies": meta.get('dependencies', {}),
+                                "labels": plugin_data.get('labels', []),
+                                "repository_url": repository.get('html_url', '') or plugin_data.get('repository', ''),
+                                "update_time": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                                "latest_version": release.get('latest_version', meta.get('version', '')),
+                                "license": (repository.get('license', {}) or {}).get('spdx_id', '未知'),
+                                "downloads": 0,  # 初始化下载计数
+                                "readme_url": repository.get('readme_url', '') or plugin_data.get('readme_url', '') or '',
+                            }
+                        except Exception as entry_error:
+                            server.logger.error(f"创建插件 {plugin_id} 条目时出错: {entry_error}")
+                            # 创建一个最小的安全条目
+                            plugin_entry = {
+                                "id": plugin_id,
+                                "name": plugin_id,
+                                "version": "",
+                                "description": {},
+                                "authors": [],
+                                "dependencies": {},
+                                "labels": [],
+                                "repository_url": "",
+                                "update_time": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                                "latest_version": "",
+                                "license": "未知",
+                                "downloads": 0,
+                                "readme_url": "",
+                            }
+                        
+                        # 计算所有版本的下载总数
+                        try:
+                            total_downloads = 0
+                            for rel in releases:
+                                if isinstance(rel, dict) and 'asset' in rel:
+                                    asset = rel['asset']
+                                    if isinstance(asset, dict) and 'download_count' in asset:
+                                        try:
+                                            total_downloads += int(asset['download_count'])
+                                        except (ValueError, TypeError):
+                                            # 忽略无法转换为整数的下载计数
+                                            pass
+                            plugin_entry["downloads"] = total_downloads
+                        except Exception as downloads_error:
+                            server.logger.error(f"计算插件 {plugin_id} 的下载次数时出错: {downloads_error}")
+                        
+                        # 格式化作者信息
+                        author_names = plugin_data.get('authors', []) or meta.get('authors', [])
+                        authors_info = everything_data.get('authors', {}) or {}
+                        authors_dict = authors_info.get('authors', {}) if isinstance(authors_info, dict) else {}
+                        
+                        for author_name in author_names:
+                            try:
+                                author_info = authors_dict.get(author_name, {})
+                                if author_info:
+                                    plugin_entry["authors"].append({
+                                        "name": author_info.get('name', author_name),
+                                        "link": author_info.get('link', '')
+                                    })
+                                else:
+                                    plugin_entry["authors"].append({
+                                        "name": author_name,
+                                        "link": ""
+                                    })
+                            except Exception as author_error:
+                                # 如果处理单个作者信息失败，记录错误但继续处理
+                                server.logger.error(f"处理插件 {plugin_id} 的作者 {author_name} 信息时出错: {author_error}")
+                                # 添加一个安全的作者信息
+                                plugin_entry["authors"].append({
+                                    "name": "未知作者",
+                                    "link": ""
+                                })
+                        
+                        # 添加最后更新时间
+                        if latest_version and 'created_at' in latest_version:
+                            try:
+                                # 将ISO格式时间转换为更友好的格式
+                                dt = datetime.datetime.fromisoformat(latest_version['created_at'].replace('Z', '+00:00'))
+                                plugin_entry["last_update_time"] = dt.strftime("%Y-%m-%d %H:%M:%S")
+                            except Exception as time_error:
+                                server.logger.error(f"处理插件 {plugin_id} 的时间信息时出错: {time_error}")
+                                plugin_entry["last_update_time"] = latest_version.get('created_at', '')
+                        
+                        plugins_data.append(plugin_entry)
+                    except Exception as plugin_error:
+                        # 如果处理单个插件失败，记录错误但继续处理其他插件
+                        server.logger.error(f"处理插件 {plugin_id} 信息时出错: {plugin_error}")
+                
+                # 更新内存缓存
+                online_plugins_data = plugins_data
+                online_plugins_last_update = current_time
+                
+                return plugins_data
             else:
-                # 如果下载失败但缓存文件存在，继续使用旧缓存
-                if not os.path.exists(cache_file):
-                    return []
-        except Exception as e:
-            # 下载或解压出错，如果缓存文件存在则使用旧缓存
-            if not os.path.exists(cache_file):
+                server.logger.error(f"下载插件数据失败: HTTP {response.status_code}")
+                # 如果下载失败但内存缓存存在，继续使用旧缓存
+                if online_plugins_data:
+                    return online_plugins_data
                 return []
+        except Exception as e:
+            # 下载或解析出错，记录详细错误信息
+            import traceback
+            error_msg = f"获取在线插件列表失败: {str(e)}\n{traceback.format_exc()}"
+            if server:
+                server.logger.error(error_msg)
+            else:
+                print(error_msg)
+            
+            # 如果内存缓存存在则使用旧缓存
+            if online_plugins_data:
+                return online_plugins_data
+            return []
     
-    # 读取并解析文件
-    try:
-        with open(cache_file, 'r', encoding='utf-8') as f:
-            everything_data = json.load(f)
-        
-        # 转换为与旧API兼容的格式
-        plugins_data = []
-        for plugin_id, plugin_info in everything_data.get('plugins', {}).items():
-            # 获取元数据
-            meta = plugin_info.get('meta', {})
-            plugin_data = plugin_info.get('plugin', {})
-            repository = plugin_info.get('repository', {})
-            release = plugin_info.get('release', {})
-            
-            # 获取最新版本信息
-            latest_version = None
-            latest_version_index = release.get('latest_version_index', 0)
-            releases = release.get('releases', [])
-            if releases and len(releases) > latest_version_index:
-                latest_version = releases[latest_version_index]
-            
-            # 创建与旧格式兼容的结构
-            plugin_entry = {
-                "id": meta.get('id', plugin_id),
-                "name": meta.get('name', plugin_id),
-                "version": meta.get('version', ''),
-                "description": meta.get('description', {}),
-                "authors": [],
-                "dependencies": meta.get('dependencies', {}),
-                "labels": plugin_data.get('labels', []),
-                "repository_url": repository.get('html_url', '') or plugin_data.get('repository', ''),
-                "update_time": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-                "latest_version": release.get('latest_version', meta.get('version', '')),
-            }
-            
-            # 格式化作者信息
-            author_names = meta.get('authors', [])
-            authors_dict = everything_data.get('authors', {}).get('authors', {})
-            
-            for author_name in author_names:
-                author_info = authors_dict.get(author_name, {})
-                if author_info:
-                    plugin_entry["authors"].append({
-                        "name": author_info.get('name', author_name),
-                        "link": author_info.get('link', '')
-                    })
-                else:
-                    plugin_entry["authors"].append({
-                        "name": author_name,
-                        "link": ""
-                    })
-            
-            # 添加最后更新时间
-            if latest_version and 'created_at' in latest_version:
-                try:
-                    # 将ISO格式时间转换为更友好的格式
-                    dt = datetime.fromisoformat(latest_version['created_at'].replace('Z', '+00:00'))
-                    plugin_entry["last_update_time"] = dt.strftime("%Y-%m-%d %H:%M:%S")
-                except:
-                    plugin_entry["last_update_time"] = latest_version.get('created_at', '')
-            
-            plugins_data.append(plugin_entry)
-        
-        return plugins_data
-    except Exception as e:
-        # 出错时返回空列表
-        return []
+    # 使用内存缓存
+    return online_plugins_data
 
 # Loading/Unloading pluging
 @app.post("/api/toggle_plugin")
@@ -1479,50 +1525,45 @@ async def api_install_plugin(
     plugin_req: dict = Body(...),
     token_valid: bool = Depends(verify_token)
 ):
-    """安装插件的API接口"""
-    if not request.session.get("logged_in"):
+    """
+    安装指定的插件
+    """
+    if not token_valid:
         return JSONResponse(
             status_code=status.HTTP_401_UNAUTHORIZED,
             content={"success": False, "error": "未登录或会话已过期"}
         )
     
     plugin_id = plugin_req.get("plugin_id")
+    version = plugin_req.get("version")
+    
     if not plugin_id:
         return JSONResponse(
             status_code=status.HTTP_400_BAD_REQUEST,
             content={"success": False, "error": "缺少插件ID"}
         )
     
-    # 防止安装guguwebui插件
-    if plugin_id == "guguwebui":
-        return JSONResponse(
-            status_code=status.HTTP_403_FORBIDDEN,
-            content={"success": False, "error": "不允许安装WebUI自身，这可能会导致WebUI无法正常工作"}
-        )
-    
     try:
-        # 获取服务器接口
         server = app.state.server_interface
+        # 创建安装器实例
+        installer = create_installer(server)
         
-        # 初始化插件安装器
-        installer = PluginInstaller(server)
-        
-        # 尝试安装插件
-        task_id = installer.install_plugin(plugin_id)
+        # 启动异步安装
+        task_id = installer.install_plugin(plugin_id, version)
         
         return JSONResponse(
             content={
-                "success": True,
-                "task_id": task_id,
-                "message": f"开始安装插件 {plugin_id}"
+                "success": True, 
+                "task_id": task_id, 
+                "message": f"开始安装插件 {plugin_id}" + (f" v{version}" if version else "")
             }
         )
     except Exception as e:
-        import traceback
-        traceback.print_exc()
+        server = app.state.server_interface
+        server.logger.error(f"安装插件失败: {e}")
         return JSONResponse(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            content={"success": False, "error": f"安装插件时出错: {str(e)}"}
+            content={"success": False, "error": f"安装插件失败: {str(e)}"}
         )
 
 @app.post("/api/pim/update_plugin")
@@ -1531,50 +1572,45 @@ async def api_update_plugin(
     plugin_req: dict = Body(...),
     token_valid: bool = Depends(verify_token)
 ):
-    """更新插件的API接口"""
-    if not request.session.get("logged_in"):
+    """
+    更新指定的插件到指定版本
+    """
+    if not token_valid:
         return JSONResponse(
             status_code=status.HTTP_401_UNAUTHORIZED,
             content={"success": False, "error": "未登录或会话已过期"}
         )
     
     plugin_id = plugin_req.get("plugin_id")
+    version = plugin_req.get("version")
+    
     if not plugin_id:
         return JSONResponse(
             status_code=status.HTTP_400_BAD_REQUEST,
             content={"success": False, "error": "缺少插件ID"}
         )
     
-    # 防止更新guguwebui插件
-    if plugin_id == "guguwebui":
-        return JSONResponse(
-            status_code=status.HTTP_403_FORBIDDEN,
-            content={"success": False, "error": "不允许更新WebUI自身，这可能会导致WebUI无法正常工作"}
-        )
-    
     try:
-        # 获取服务器接口
         server = app.state.server_interface
+        # 创建安装器实例
+        installer = create_installer(server)
         
-        # 初始化插件安装器
-        installer = PluginInstaller(server)
-        
-        # 更新实际上是重新安装
-        task_id = installer.install_plugin(plugin_id)
+        # 启动异步安装/更新
+        task_id = installer.install_plugin(plugin_id, version)
         
         return JSONResponse(
             content={
-                "success": True,
-                "task_id": task_id,
-                "message": f"开始更新插件 {plugin_id}"
+                "success": True, 
+                "task_id": task_id, 
+                "message": f"开始更新插件 {plugin_id}" + (f" 到 v{version}" if version else " 到最新版本")
             }
         )
     except Exception as e:
-        import traceback
-        traceback.print_exc()
+        server = app.state.server_interface
+        server.logger.error(f"更新插件失败: {e}")
         return JSONResponse(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            content={"success": False, "error": f"更新插件时出错: {str(e)}"}
+            content={"success": False, "error": f"更新插件失败: {str(e)}"}
         )
 
 @app.post("/api/pim/uninstall_plugin")
@@ -1583,50 +1619,44 @@ async def api_uninstall_plugin(
     plugin_req: dict = Body(...),
     token_valid: bool = Depends(verify_token)
 ):
-    """卸载插件的API接口"""
-    if not request.session.get("logged_in"):
+    """
+    卸载指定的插件
+    """
+    if not token_valid:
         return JSONResponse(
             status_code=status.HTTP_401_UNAUTHORIZED,
             content={"success": False, "error": "未登录或会话已过期"}
         )
     
     plugin_id = plugin_req.get("plugin_id")
+    
     if not plugin_id:
         return JSONResponse(
             status_code=status.HTTP_400_BAD_REQUEST,
             content={"success": False, "error": "缺少插件ID"}
         )
     
-    # 防止卸载guguwebui插件
-    if plugin_id == "guguwebui":
-        return JSONResponse(
-            status_code=status.HTTP_403_FORBIDDEN,
-            content={"success": False, "error": "不允许卸载WebUI自身，这将导致WebUI无法正常工作"}
-        )
-    
     try:
-        # 获取服务器接口
         server = app.state.server_interface
+        # 创建安装器实例
+        installer = create_installer(server)
         
-        # 初始化插件安装器
-        installer = PluginInstaller(server)
-        
-        # 卸载插件
+        # 启动异步卸载
         task_id = installer.uninstall_plugin(plugin_id)
         
         return JSONResponse(
             content={
-                "success": True,
-                "task_id": task_id,
+                "success": True, 
+                "task_id": task_id, 
                 "message": f"开始卸载插件 {plugin_id}"
             }
         )
     except Exception as e:
-        import traceback
-        traceback.print_exc()
+        server = app.state.server_interface
+        server.logger.error(f"卸载插件失败: {e}")
         return JSONResponse(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            content={"success": False, "error": f"卸载插件时出错: {str(e)}"}
+            content={"success": False, "error": f"卸载插件失败: {str(e)}"}
         )
 
 @app.get("/api/pim/task_status")
@@ -1636,25 +1666,21 @@ async def api_task_status(
     plugin_id: str = None,
     token_valid: bool = Depends(verify_token)
 ):
-    """获取任务状态的API接口，支持通过任务ID或插件ID查询"""
-    if not request.session.get("logged_in"):
+    """
+    获取任务状态
+    
+    可以通过任务ID或插件ID获取
+    """
+    if not token_valid:
         return JSONResponse(
             status_code=status.HTTP_401_UNAUTHORIZED,
             content={"success": False, "error": "未登录或会话已过期"}
         )
     
-    if not task_id and not plugin_id:
-        return JSONResponse(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            content={"success": False, "error": "缺少任务ID或插件ID"}
-        )
-    
     try:
-        # 获取服务器接口
         server = app.state.server_interface
-        
-        # 初始化插件安装器
-        installer = PluginInstaller(server)
+        # 创建安装器实例
+        installer = create_installer(server)
         
         # 如果有任务ID，优先使用任务ID查询
         if task_id:
@@ -1825,4 +1851,62 @@ async def install_pim_plugin(request: Request, token_valid: bool = Depends(verif
         return JSONResponse(
             status_code=500,
             content={"status": "error", "message": f"安装PIM插件时出错: {str(e)}"}
+        )
+
+# 添加新的API端点，使用PluginInstaller获取插件版本
+@app.get("/api/pim/plugin_versions_v2")
+async def api_get_plugin_versions_v2(
+    request: Request, 
+    plugin_id: str,
+    token_valid: bool = Depends(verify_token)
+):
+    """使用PluginInstaller获取插件的所有可用版本"""
+    if not request.session.get("logged_in"):
+        return JSONResponse(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            content={"success": False, "error": "未登录或会话已过期"}
+        )
+    
+    if not plugin_id:
+        return JSONResponse(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            content={"success": False, "error": "缺少插件ID"}
+        )
+    
+    try:
+        # 获取服务器接口
+        server = app.state.server_interface
+        
+        # 创建PluginInstaller实例，使用 create_installer 函数
+        plugin_installer = create_installer(server)
+        
+        # 获取插件版本
+        versions = plugin_installer.get_plugin_versions(plugin_id)
+        
+        # 获取当前已安装版本
+        installed_version = None
+        plugin_manager = getattr(server, "_PluginServerInterface__plugin", None)
+        if plugin_manager:
+            plugin_manager = getattr(plugin_manager, "plugin_manager", None)
+            if plugin_manager:
+                installed_plugin = plugin_manager.get_plugin_from_id(plugin_id)
+                if installed_plugin:
+                    installed_version = str(installed_plugin.get_version())
+        
+        return JSONResponse(
+            content={
+                "success": True,
+                "versions": versions,
+                "plugin_id": plugin_id,
+                "installed_version": installed_version
+            }
+        )
+        
+    except Exception as e:
+        import traceback
+        error_trace = traceback.format_exc()
+        server.logger.error(f"获取插件版本失败: {e}\n{error_trace}")
+        return JSONResponse(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            content={"success": False, "error": f"获取插件版本失败: {str(e)}"}
         )

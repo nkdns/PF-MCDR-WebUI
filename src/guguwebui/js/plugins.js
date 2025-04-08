@@ -40,6 +40,15 @@ document.addEventListener('alpine:init', () => {
         confirmPluginId: '',
         confirmType: '', // 'uninstall', 'reload', 'update'
 
+        // 添加版本切换相关属性
+        showVersionModal: false,
+        versionsLoading: false,
+        versionError: false,
+        versionErrorMessage: '',
+        currentVersionPlugin: null, 
+        versions: [],
+        installedVersion: null,
+
         // 比较两个版本号的函数 
         // 返回值: 如果v1 > v2，返回1；如果v1 < v2，返回-1；如果相等，返回0
         compareVersions(v1, v2) {
@@ -252,41 +261,6 @@ document.addEventListener('alpine:init', () => {
                             this.installMessage = `更新失败: ${result.error || ''}`;
                             this.showNotificationMsg(`更新插件失败: ${result.error || ''}`, 'error');
                             this.processingPlugins[id] = false;
-                        } else {
-                            // 回退到旧版API
-                            console.log('PIM API不可用，回退到旧版API');
-                            this.installMessage = '正在使用传统方式更新...';
-                            this.installLogMessages.push('PIM安装器不可用，使用传统更新方式');
-                            
-                            response = await fetch('/api/update_plugin', {
-                                method: 'POST',
-                                headers: {
-                                    'Content-Type': 'application/json'
-                                },
-                                body: JSON.stringify({
-                                    plugin_id: id
-                                })
-                            });
-                            
-                            result = await response.json();
-                            
-                            if (result.status === 'success') {
-                                // 旧版API成功
-                                this.installProgress = 100;
-                                this.installStatus = 'completed';
-                                this.installMessage = result.message || '更新成功';
-                                this.showNotificationMsg(`插件 ${id} 更新成功`, 'success');
-                                
-                                // 刷新插件列表
-                                await this.loadPlugins();
-                            } else {
-                                // 旧版API失败
-                                this.installStatus = 'failed';
-                                this.installMessage = `更新失败: ${result.message || ''}`;
-                                this.showNotificationMsg(`更新插件失败: ${result.message || ''}`, 'error');
-                            }
-                            
-                            this.processingPlugins[id] = false;
                         }
                     } catch (error) {
                         console.error(`Error updating plugin ${id}:`, error);
@@ -359,41 +333,6 @@ document.addEventListener('alpine:init', () => {
                             this.installMessage = `安装失败: ${result.error || ''}`;
                             this.showNotificationMsg(`安装插件失败: ${result.error || ''}`, 'error');
                             this.processingPlugins[id] = false;
-                        } else {
-                            // 回退到旧版API
-                            console.log('PIM API不可用，回退到旧版API');
-                            this.installMessage = '正在使用传统方式安装...';
-                            this.installLogMessages.push('PIM安装器不可用，使用传统安装方式');
-                            
-                            response = await fetch('/api/install_plugin', {
-                                method: 'POST',
-                                headers: {
-                                    'Content-Type': 'application/json'
-                                },
-                                body: JSON.stringify({
-                                    plugin_id: id
-                                })
-                            });
-                            
-                            result = await response.json();
-                            
-                            if (result.status === 'success') {
-                                // 旧版API成功
-                                this.installProgress = 100;
-                                this.installStatus = 'completed';
-                                this.installMessage = result.message || '安装成功';
-                                this.showNotificationMsg(`插件 ${id} 安装成功`, 'success');
-                                
-                                // 刷新插件列表
-                                await this.loadPlugins();
-                            } else {
-                                // 旧版API失败
-                                this.installStatus = 'failed';
-                                this.installMessage = `安装失败: ${result.message || ''}`;
-                                this.showNotificationMsg(`安装插件失败: ${result.message || ''}`, 'error');
-                            }
-                            
-                            this.processingPlugins[id] = false;
                         }
                     } catch (error) {
                         console.error(`Error installing plugin ${id}:`, error);
@@ -412,7 +351,6 @@ document.addEventListener('alpine:init', () => {
             
             try {
                 console.log(`检查任务 ${this.installTaskId} 进度，插件ID: ${this.installPluginId}`);
-                // 添加插件ID作为备用参数
                 const response = await fetch(`/api/pim/task_status?task_id=${this.installTaskId}&plugin_id=${this.installPluginId}`);
                 const data = await response.json();
                 
@@ -427,9 +365,15 @@ document.addEventListener('alpine:init', () => {
                     
                     // 更新日志消息
                     if (taskInfo.all_messages && Array.isArray(taskInfo.all_messages)) {
-                        this.installLogMessages = taskInfo.all_messages;
+                        // 确保日志消息是新的
+                        if (JSON.stringify(this.installLogMessages) !== JSON.stringify(taskInfo.all_messages)) {
+                            this.installLogMessages = taskInfo.all_messages;
+                        }
                     } else if (taskInfo.error_messages && Array.isArray(taskInfo.error_messages)) {
-                        this.installLogMessages = taskInfo.error_messages;
+                        // 确保错误消息是新的
+                        if (JSON.stringify(this.installLogMessages) !== JSON.stringify(taskInfo.error_messages)) {
+                            this.installLogMessages = taskInfo.error_messages;
+                        }
                     }
                     
                     // 强制立即更新DOM
@@ -441,8 +385,10 @@ document.addEventListener('alpine:init', () => {
                     // 检查任务是否完成
                     if (taskInfo.status === 'completed' || taskInfo.status === 'failed') {
                         // 停止轮询
-                        clearInterval(this.installProgressTimer);
-                        this.installProgressTimer = null;
+                        if (this.installProgressTimer) {
+                            clearInterval(this.installProgressTimer);
+                            this.installProgressTimer = null;
+                        }
                         
                         // 加载最新的插件列表
                         await this.loadPlugins();
@@ -475,11 +421,20 @@ document.addEventListener('alpine:init', () => {
                             this.installMessage = retryData.task_info.message || '处理中...';
                             this.installStatus = retryData.task_info.status;
                             
+                            // 更新日志消息
+                            if (retryData.task_info.all_messages && Array.isArray(retryData.task_info.all_messages)) {
+                                this.installLogMessages = retryData.task_info.all_messages;
+                            } else if (retryData.task_info.error_messages && Array.isArray(retryData.task_info.error_messages)) {
+                                this.installLogMessages = retryData.task_info.error_messages;
+                            }
+                            
                             // 如果任务已经完成或失败
                             if (retryData.task_info.status === 'completed' || retryData.task_info.status === 'failed') {
                                 // 停止轮询
-                                clearInterval(this.installProgressTimer);
-                                this.installProgressTimer = null;
+                                if (this.installProgressTimer) {
+                                    clearInterval(this.installProgressTimer);
+                                    this.installProgressTimer = null;
+                                }
                                 
                                 // 刷新插件列表
                                 await this.loadPlugins();
@@ -512,8 +467,10 @@ document.addEventListener('alpine:init', () => {
                     this.installMessage = `插件 ${this.installPluginId} 操作可能已完成，请检查插件列表`;
                     
                     // 停止轮询
-                    clearInterval(this.installProgressTimer);
-                    this.installProgressTimer = null;
+                    if (this.installProgressTimer) {
+                        clearInterval(this.installProgressTimer);
+                        this.installProgressTimer = null;
+                    }
                     
                     // 设置处理状态
                     this.processingPlugins[this.installPluginId] = false;
@@ -988,6 +945,199 @@ document.addEventListener('alpine:init', () => {
             this.closeConfirmModal();
         },
 
+        async showPluginVersions(plugin) {
+            if (!plugin || plugin.id === 'guguwebui') {
+                this.showNotificationMsg('不能为 WebUI 选择版本', 'error');
+                return;
+            }
+            
+            this.versionsLoading = true;
+            this.versionError = false;
+            this.currentVersionPlugin = plugin;
+            this.installedVersion = plugin.version;
+            this.versions = [];
+            this.showVersionModal = true;
+            
+            try {
+                const response = await fetch(`/api/pim/plugin_versions_v2?plugin_id=${plugin.id}`);
+                const result = await response.json();
+                
+                if (result.success) {
+                    // 标记哪些版本正在处理中
+                    this.versions = result.versions.map(version => ({
+                        ...version,
+                        processing: false
+                    }));
+                    this.installedVersion = result.installed_version;
+                } else {
+                    this.versionError = true;
+                    this.versionErrorMessage = result.error || '获取版本列表失败';
+                }
+            } catch (error) {
+                console.error(`Error loading versions for plugin ${plugin.id}:`, error);
+                this.versionError = true;
+                this.versionErrorMessage = '获取版本列表失败: ' + error.message;
+            } finally {
+                this.versionsLoading = false;
+            }
+        },
+        
+        async switchPluginVersion(version) {
+            if (!this.currentVersionPlugin || !version) return;
+            
+            const pluginId = this.currentVersionPlugin.id;
+            const versionObj = this.versions.find(v => v.version === version);
+            
+            if (!versionObj || versionObj.processing) return;
+            
+            // 检查是否与当前安装的版本相同
+            if (this.installedVersion && version === this.installedVersion) {
+                this.showNotificationMsg(`当前已安装 ${pluginId} 的 ${version} 版本`, 'info');
+                return;
+            }
+            
+            // 标记此版本为处理中
+            versionObj.processing = true;
+            
+            try {
+                // 先卸载，再安装指定版本
+                if (this.installedVersion) {
+                    const response = await fetch('/api/pim/uninstall_plugin', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            plugin_id: pluginId
+                        })
+                    });
+                    
+                    const uninstallResult = await response.json();
+                    if (!uninstallResult.success) {
+                        throw new Error('卸载失败: ' + (uninstallResult.error || '未知错误'));
+                    }
+                    
+                    // 获取卸载任务ID并开始轮询
+                    if (uninstallResult.task_id) {
+                        this.installTaskId = uninstallResult.task_id;
+                        this.installPluginId = pluginId;
+                        this.installStatus = 'running';
+                        this.installProgress = 0;
+                        this.installMessage = `正在卸载 ${pluginId}...`;
+                        this.installLogMessages = [];
+                        this.showInstallModal = true;
+                        
+                        // 开始轮询卸载进度
+                        if (this.installProgressTimer) {
+                            clearInterval(this.installProgressTimer);
+                        }
+                        this.installProgressTimer = setInterval(() => {
+                            this.checkInstallProgress();
+                        }, 2000);
+                        
+                        // 等待卸载完成
+                        while (this.installStatus === 'running') {
+                            await new Promise(resolve => setTimeout(resolve, 1000));
+                        }
+                        
+                        if (this.installStatus === 'failed') {
+                            throw new Error('卸载失败: ' + this.installMessage);
+                        }
+                    }
+                }
+                
+                // 安装指定版本
+                const response = await fetch('/api/pim/install_plugin', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        plugin_id: pluginId,
+                        version: version
+                    })
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    this.installTaskId = result.task_id;
+                    this.installPluginId = pluginId;
+                    this.installStatus = 'running';
+                    this.installProgress = 0;
+                    this.installMessage = `正在安装 ${pluginId} v${version}...`;
+                    this.installLogMessages = [];
+                    this.showInstallModal = true;
+                    
+                    // 开始轮询安装进度
+                    if (this.installProgressTimer) {
+                        clearInterval(this.installProgressTimer);
+                    }
+                    this.installProgressTimer = setInterval(() => {
+                        this.checkInstallProgress();
+                    }, 2000);
+                    
+                    // 关闭版本选择模态框
+                    this.closeVersionModal();
+                    
+                    // 刷新插件列表
+                    await this.loadPlugins();
+                } else {
+                    throw new Error(result.error || '安装失败');
+                }
+            } catch (error) {
+                console.error(`Error switching plugin ${pluginId} to version ${version}:`, error);
+                this.showNotificationMsg(`切换版本失败: ${error.message}`, 'error');
+                
+                // 清理定时器
+                if (this.installProgressTimer) {
+                    clearInterval(this.installProgressTimer);
+                    this.installProgressTimer = null;
+                }
+            } finally {
+                // 取消标记处理中状态
+                versionObj.processing = false;
+            }
+        },
+        
+        closeVersionModal() {
+            this.showVersionModal = false;
+            this.currentVersionPlugin = null;
+            this.versions = [];
+            this.versionError = false;
+        },
+        
+        // 格式化日期显示
+        formatDate(dateString) {
+            if (!dateString) return '未知日期';
+            
+            try {
+                const date = new Date(dateString);
+                return date.toLocaleDateString('zh-CN', { 
+                    year: 'numeric', 
+                    month: 'short', 
+                    day: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                });
+            } catch (e) {
+                return dateString;
+            }
+        },
+        
+        // 格式化数字，如：1000 -> 1k
+        formatNumber(num) {
+            if (num === undefined || num === null) return '0';
+            
+            if (num >= 1000000) {
+                return (num / 1000000).toFixed(1) + 'M';
+            } else if (num >= 1000) {
+                return (num / 1000).toFixed(1) + 'k';
+            } else {
+                return num.toString();
+            }
+        },
+
         init() {
             this.checkLoginStatus();
             this.checkServerStatus();
@@ -995,6 +1145,15 @@ document.addEventListener('alpine:init', () => {
             
             // 初始化处理中插件状态
             this.processingPlugins = {};
+            
+            // 初始化版本切换相关变量
+            this.showVersionModal = false;
+            this.versionsLoading = false;
+            this.versionError = false;
+            this.versionErrorMessage = '';
+            this.currentVersionPlugin = null;
+            this.versions = [];
+            this.installedVersion = null;
             
             // 每60秒自动刷新服务器状态
             setInterval(() => this.checkServerStatus(), 60000);

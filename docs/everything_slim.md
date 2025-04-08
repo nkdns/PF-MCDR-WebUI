@@ -102,7 +102,7 @@
             "url": "https://...",                       // 发布页面URL
             "name": "版本名称",                         // 发布名称
             "tag_name": "v1.0.0",                       // 标签名
-            "created_at": "2023-01-19T16:59:59Z",       // 创建时间
+            "created_at": "2023-01-19T16:59:59Z",       // 创建时间（该版本的更新时间）
             "description": "描述",                      // 描述
             "prerelease": false,                        // 是否预发布
             "asset": {                                  // 资源文件
@@ -110,7 +110,7 @@
                 "name": "Plugin-v1.0.0.mcdr",           // 文件名
                 "size": 2518,                           // 大小(bytes)
                 "download_count": 1412,                 // 下载次数
-                "created_at": "2023-01-19T17:01:07Z",   // 创建时间
+                "created_at": "2023-01-19T17:01:07Z",   // 创建时间（该版本的更新时间）
                 "browser_download_url": "https://...",  // 下载URL
                 "hash_md5": "哈希值",                   // MD5哈希
                 "hash_sha256": "哈希值"                 // SHA256哈希

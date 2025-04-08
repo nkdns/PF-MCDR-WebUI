@@ -77,6 +77,7 @@ instance/
 
 # Sphinx documentation
 docs/_build/
+src/guguwebui/static/
 
 # PyBuilder
 .pybuilder/

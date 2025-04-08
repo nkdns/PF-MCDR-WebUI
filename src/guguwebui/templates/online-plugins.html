@@ -12,6 +12,9 @@
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
     <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <!-- Vditor -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/vditor@3.9.6/dist/index.css" />
+    <script src="https://cdn.jsdelivr.net/npm/vditor@3.9.6/dist/index.min.js"></script>
     <!-- 自定义CSS -->
     <link rel="stylesheet" href="/css/main.css">
     <!-- 自定义配置 -->
@@ -160,6 +163,99 @@
             color: rgb(237, 233, 254);
         }
 
+        .vditor {
+            border: none !important;
+        }
+
+        .vditor-toolbar {
+            display: none !important;
+        }
+
+        .vditor-ir__node img {
+            display: inline-block !important;
+            vertical-align: middle !important;
+            margin: 0 2px !important;
+        }
+        
+        .vditor-ir__node[data-type="a"] {
+            display: inline-block !important;
+            white-space: nowrap !important;
+        }
+        
+        .vditor-ir__node[data-type="img"] {
+            display: inline-block !important;
+            white-space: nowrap !important;
+        }
+        
+        .vditor-ir__node[data-type="a"] img {
+            display: inline-block !important;
+            vertical-align: middle !important;
+        }
+        
+        p {
+            white-space: normal !important;
+            overflow-wrap: break-word !important;
+        }
+        
+        .vditor-ir__node[data-type="a"] + .vditor-ir__node[data-type="a"] {
+            margin-left: 5px !important;
+        }
+        
+        .vditor-ir pre.vditor-reset {
+            background-color: transparent !important;
+        }
+        
+        .vditor-ir {
+            background-color: transparent !important;
+        }
+        
+        .readme-switch-buttons {
+            display: flex;
+            margin-bottom: 1rem;
+            border-bottom: 1px solid #e5e7eb;
+            padding-bottom: 0.5rem;
+        }
+        
+        .dark .readme-switch-buttons {
+            border-bottom-color: #374151;
+        }
+        
+        .readme-switch-button {
+            padding: 0.5rem 1rem;
+            margin-right: 0.5rem;
+            border-radius: 0.375rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .readme-switch-button.active {
+            background-color: #3b82f6;
+            color: white;
+        }
+        
+        .dark .readme-switch-button.active {
+            background-color: #2563eb;
+        }
+        
+        .readme-switch-button:not(.active) {
+            background-color: #f3f4f6;
+            color: #4b5563;
+        }
+        
+        .dark .readme-switch-button:not(.active) {
+            background-color: #374151;
+            color: #d1d5db;
+        }
+        
+        .readme-switch-button:not(.active):hover {
+            background-color: #e5e7eb;
+        }
+        
+        .dark .readme-switch-button:not(.active):hover {
+            background-color: #4b5563;
+        }
+        
         /* 通知样式 */
         .notification {
             position: fixed;
@@ -581,6 +677,18 @@
                                             <i class="fas fa-calendar-alt mr-1"></i>
                                             <span x-text="formatDate(plugin.last_update_time)"></span>
                                         </span>
+                                        
+                                        <!-- 显示协议类型 -->
+                                        <span x-show="plugin.license">
+                                            <i class="fas fa-file-contract mr-1"></i>
+                                            <span x-text="plugin.license"></span>
+                                        </span>
+                                        
+                                        <!-- 显示下载量 -->
+                                        <span x-show="plugin.downloads">
+                                            <i class="fas fa-download mr-1"></i>
+                                            <span x-text="formatNumber(plugin.downloads)"></span>
+                                        </span>
                                     </div>
                                     
                                     <div class="mt-4 flex flex-wrap justify-end gap-2">
@@ -590,6 +698,16 @@
                                         >
                                             <i class="fas fa-info-circle mr-1.5"></i>
                                             <span>详情</span>
+                                        </button>
+                                        
+                                        <!-- 查看说明文档按钮 -->
+                                        <button 
+                                            x-show="plugin.readme_url"
+                                            @click="showReadme(plugin)"
+                                            class="inline-flex items-center px-3 py-1.5 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm text-xs font-medium text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none transition-colors"
+                                        >
+                                            <i class="fas fa-book mr-1.5"></i>
+                                            <span>说明文档</span>
                                         </button>
                                         
                                         <button 
@@ -995,6 +1113,149 @@
                         <div class="modal-footer">
                             <button 
                                 @click="closeRepoModal()" 
+                                class="inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm text-sm font-medium text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none"
+                            >
+                                <span>关闭</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- README模态窗口 -->
+                <div x-show="showReadmeModal" x-transition.opacity class="modal-backdrop">
+                    <div class="modal-content" style="width: 90%; height: 90%; max-height: 90vh; max-width: 1200px;">
+                        <div class="modal-header">
+                            <h3 class="text-lg font-semibold text-gray-900 dark:text-white" x-text="'说明文档 - ' + (currentReadmePlugin ? currentReadmePlugin.name : '')"></h3>
+                            <div class="flex items-center space-x-2">
+                                <a 
+                                    x-show="currentReadmePlugin && currentReadmePlugin.readme_url"
+                                    :href="currentReadmePlugin ? currentReadmePlugin.readme_url : ''" 
+                                    target="_blank"
+                                    class="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300"
+                                    title="在新标签页中打开"
+                                >
+                                    <i class="fas fa-external-link-alt"></i>
+                                </a>
+                                <button 
+                                    @click="closeReadmeModal()" 
+                                    class="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+                                >
+                                    <i class="fas fa-times"></i>
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <div class="w-full h-full bg-white dark:bg-gray-800 overflow-hidden" style="height: calc(90vh - 120px);">
+                            <!-- 文档切换按钮组 -->
+                            <div class="flex justify-center mt-4 relative">
+                                <div class="inline-flex rounded-lg p-1 bg-gray-100 dark:bg-gray-700 relative">
+                                    <!-- 滑动背景 -->
+                                    <div
+                                        class="absolute inset-y-1 transition-all duration-200 ease-out rounded-md bg-white dark:bg-gray-600 shadow-sm"
+                                        :style="{ 
+                                            left: readmeType === 'catalogue' ? '4px' : '50%', 
+                                            right: readmeType === 'catalogue' ? '50%' : '4px'
+                                        }"
+                                    ></div>
+                                    
+                                    <!-- 介绍按钮 -->
+                                    <button 
+                                        @click="switchReadmeType('catalogue')" 
+                                        class="relative px-6 py-2 text-sm font-medium transition-colors duration-200"
+                                        :class="{
+                                            'text-gray-900 dark:text-white': readmeType === 'catalogue',
+                                            'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200': readmeType !== 'catalogue',
+                                            'opacity-50 cursor-not-allowed': !catalogueUrl
+                                        }"
+                                        :disabled="!catalogueUrl"
+                                    >
+                                        <div class="flex items-center space-x-1">
+                                            <i class="fas fa-book-open text-xs"></i>
+                                            <span>介绍</span>
+                                            <!-- 加载指示器 -->
+                                            <i 
+                                                x-show="readmeLoading && readmeType === 'catalogue'"
+                                                class="fas fa-circle-notch fa-spin ml-1 text-xs"
+                                            ></i>
+                                        </div>
+                                    </button>
+                                    
+                                    <!-- 自述文件按钮 -->
+                                    <button 
+                                        @click="switchReadmeType('readme')" 
+                                        class="relative px-6 py-2 text-sm font-medium transition-colors duration-200"
+                                        :class="{
+                                            'text-gray-900 dark:text-white': readmeType === 'readme',
+                                            'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200': readmeType !== 'readme'
+                                        }"
+                                    >
+                                        <div class="flex items-center space-x-1">
+                                            <i class="fas fa-file-alt text-xs"></i>
+                                            <span>自述文件</span>
+                                            <!-- 加载指示器 -->
+                                            <i 
+                                                x-show="readmeLoading && readmeType === 'readme'"
+                                                class="fas fa-circle-notch fa-spin ml-1 text-xs"
+                                            ></i>
+                                        </div>
+                                    </button>
+                                </div>
+                            </div>
+                            
+                            <!-- 加载状态 -->
+                            <div 
+                                x-show="readmeLoading" 
+                                x-transition:enter="transition-opacity duration-300"
+                                x-transition:enter-start="opacity-0"
+                                x-transition:enter-end="opacity-100"
+                                x-transition:leave="transition-opacity duration-300"
+                                x-transition:leave-start="opacity-100"
+                                x-transition:leave-end="opacity-0"
+                                class="flex flex-col justify-center items-center h-full"
+                            >
+                                <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
+                                <span class="mt-4 text-gray-600 dark:text-gray-400" x-text="readmeType === 'catalogue' ? '加载介绍文档中...' : '加载自述文件中...'"></span>
+                            </div>
+                            
+                            <!-- 错误提示 -->
+                            <div 
+                                x-show="readmeError" 
+                                x-transition:enter="transition-opacity duration-300"
+                                x-transition:enter-start="opacity-0"
+                                x-transition:enter-end="opacity-100"
+                                x-transition:leave="transition-opacity duration-300"
+                                x-transition:leave-start="opacity-100"
+                                x-transition:leave-end="opacity-0"
+                                class="flex flex-col justify-center items-center h-full p-8 text-center"
+                            >
+                                <i class="fas fa-exclamation-circle text-4xl text-red-500 mb-4"></i>
+                                <p class="text-gray-700 dark:text-gray-300 mb-2" x-text="readmeErrorMessage"></p>
+                                <button 
+                                    @click="retryLoadReadme()" 
+                                    class="mt-4 inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none transition-colors duration-200"
+                                >
+                                    <i class="fas fa-redo mr-2"></i>
+                                    <span>重试</span>
+                                </button>
+                            </div>
+                            
+                            <!-- README内容 -->
+                            <div 
+                                x-show="!readmeLoading && !readmeError" 
+                                x-transition:enter="transition-opacity duration-300"
+                                x-transition:enter-start="opacity-0"
+                                x-transition:enter-end="opacity-100"
+                                x-transition:leave="transition-opacity duration-300"
+                                x-transition:leave-start="opacity-100"
+                                x-transition:leave-end="opacity-0"
+                                id="vditor" 
+                                class="h-full overflow-auto p-4"
+                            ></div>
+                        </div>
+                        
+                        <div class="modal-footer">
+                            <button 
+                                @click="closeReadmeModal()" 
                                 class="inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm text-sm font-medium text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none"
                             >
                                 <span>关闭</span>

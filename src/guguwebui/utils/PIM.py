@@ -7,6 +7,7 @@ import time
 import sys
 import requests
 import lzma
+import uuid
 from typing import List, Dict, Optional, Union, Tuple, Any, Set
 from dataclasses import dataclass
 
@@ -28,6 +29,12 @@ PLUGIN_METADATA = {
 
 # 添加待删除文件的全局变量
 PENDING_DELETE_FILES = {}  # {plugin_id: [file_paths]}
+
+# 添加全局插件安装器变量
+plugin_installer = None
+
+# 全局元数据注册表
+_global_registry = None
 
 # 自定义实现，替代MCDR内部模块
 class PluginRequirementSource:
@@ -197,17 +204,58 @@ class MetaRegistry:
         if not keyword:
             return list(self.plugins.keys())
         
-        keyword = keyword.lower()
+        # 先尝试直接匹配ID
         for plugin_id, plugin_data in self.plugins.items():
-            if (keyword in plugin_id.lower() or 
-                keyword in plugin_data.name.lower() or
-                any(keyword in str(desc).lower() for desc in plugin_data.description.values())):
+            if keyword.lower() in plugin_id.lower():
                 result.append(plugin_id)
+            # 然后尝试匹配名称
+            elif plugin_data.name and keyword.lower() in plugin_data.name.lower():
+                result.append(plugin_id)
+            # 最后尝试匹配描述
+            elif plugin_data.description:
+                for lang, desc in plugin_data.description.items():
+                    if desc and keyword.lower() in desc.lower():
+                        result.append(plugin_id)
+                        break
         
         return result
 
+def get_global_registry() -> MetaRegistry:
+    """
+    获取全局元数据注册表
+    如果不存在，则创建一个新的，加载 everything_slim.json 数据
+    
+    Returns:
+        MetaRegistry: 全局元数据注册表
+    """
+    global _global_registry
+    
+    if _global_registry is None:
+        # 使用缓存目录存放缓存
+        cache_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "static", "cache")
+        cache_file = os.path.join(cache_dir, "everything_slim.json")
+        
+        # 创建缓存目录
+        os.makedirs(cache_dir, exist_ok=True)
+        
+        # 如果缓存文件存在，读取并解析
+        if os.path.exists(cache_file):
+            try:
+                with open(cache_file, 'r', encoding='utf-8') as f:
+                    everything_data = json.load(f)
+                # 创建元数据注册表
+                _global_registry = MetaRegistry(everything_data)
+            except Exception:
+                # 解析失败，返回空注册表
+                _global_registry = EmptyMetaRegistry()
+        else:
+            # 缓存文件不存在，返回空注册表
+            _global_registry = EmptyMetaRegistry()
+    
+    return _global_registry
+
 class PluginCatalogueAccess:
-    """目录访问类，负责获取和缓存插件元数据"""
+    """插件目录访问实现，替代MCDR内部实现"""
     @staticmethod
     def filter_sort(plugins: List[PluginData], keyword: str = None) -> List[PluginData]:
         """筛选并排序插件"""
@@ -1969,53 +2017,88 @@ class PIMHelper:
         os.makedirs(temp_dir_path, exist_ok=True)
         return temp_dir_path
 
+    def get_plugin_versions(self, plugin_id: str) -> List[Dict[str, Any]]:
+        """
+        获取指定插件的所有可用版本
+        
+        Args:
+            plugin_id: 插件ID
+            
+        Returns:
+            包含版本信息的列表，每个版本包含版本号、发布日期、下载次数等信息
+        """
+        try:
+            # 使用全局元数据注册表
+            global_registry = get_global_registry()
+            
+            # 查找插件数据
+            plugin_data = global_registry.get_plugin_data(plugin_id)
+            if not plugin_data or not plugin_data.releases:
+                return []
+            
+            # 获取当前已安装版本（如果有）
+            installed_version = None
+            if self.server:
+                plugin_manager = getattr(self.server, "_PluginServerInterface__plugin", None)
+                if plugin_manager:
+                    plugin_manager = getattr(plugin_manager, "plugin_manager", None)
+                    if plugin_manager:
+                        installed_plugin = plugin_manager.get_plugin_from_id(plugin_id)
+                        if installed_plugin:
+                            installed_version = str(installed_plugin.get_version())
+            
+            # 收集所有版本信息
+            versions = []
+            for release in plugin_data.releases:
+                version = release.tag_name.lstrip('v') if release.tag_name else ""
+                if not version:
+                    continue
+                
+                version_info = {
+                    'version': version,
+                    'release_date': release.created_at,
+                    'download_count': release.download_count,
+                    'download_url': release.browser_download_url,
+                    'description': release.description,
+                    'prerelease': release.prerelease,
+                    'installed': version == installed_version
+                }
+                versions.append(version_info)
+            
+            # 按发布日期排序（最新的在前）
+            versions.sort(key=lambda x: x.get('release_date', ''), reverse=True)
+            
+            return versions
+            
+        except Exception as e:
+            self.logger.error(f"获取插件 {plugin_id} 版本信息失败: {e}")
+            return []
+
+    def get_plugin_dir(self) -> str:
+        """获取插件目录路径"""
+        # 获取MCDR配置
+        mcdr_config = self.server.get_mcdr_config()
+        plugin_dirs = []
+        
+        # 获取配置中的插件目录，如果有多个，使用第一个
+        if 'plugin_directories' in mcdr_config and mcdr_config['plugin_directories']:
+            plugin_dirs = mcdr_config['plugin_directories']
+            return plugin_dirs[0]  # 返回第一个插件目录
+        else:
+            # 使用默认插件目录
+            default_plugin_dir = os.path.join(os.getcwd(), 'plugins')
+            return default_plugin_dir
+
 # 插件实例
 pim_helper: Optional[PIMHelper] = None
 
 class PluginInstaller:
     """
-    插件安装器类，用于调用 PIMHelper 进行插件的安装和卸载，并支持定时获取进度
-    
-    使用示例:
-    
-    方式一：直接导入
-    ```python
-    from test.PIM import PluginInstaller, get_installer
-    
-    # 获取已初始化的实例
-    installer = get_installer()
-    if installer:
-        task_id = installer.install_plugin('example_plugin')
-        print(f'开始安装插件，任务ID: {task_id}')
-    ```
-    
-    方式二：从模块导入
-    ```python
-    from test import PluginInstaller, get_installer
-    
-    # 获取已初始化的实例
-    installer = get_installer()
-    if installer:
-        task_id = installer.uninstall_plugin('example_plugin')
-        print(f'开始卸载插件，任务ID: {task_id}')
-    ```
-    
-    方式三：创建新实例
-    ```python
-    from test import create_installer
-    
-    def on_load(server, prev_module):
-        # 创建新的安装器实例
-        installer = create_installer(server)
-        
-        # 使用安装器安装插件
-        task_id = installer.install_plugin('example_plugin')
-        server.logger.info(f'开始安装插件，任务ID: {task_id}')
-    ```
+    插件安装器，用于异步安装和卸载插件，并管理任务状态
     """
-    # 类级别的任务计数器，确保所有实例共享
+    # 任务计数器，用于生成唯一任务ID
     _task_counter = 0
-    # 类级别的任务字典，确保所有实例共享
+    # 共享的任务字典，所有实例共享
     _all_tasks = {}
     # 类级别的锁，确保线程安全
     _global_lock = threading.Lock()
@@ -2026,12 +2109,35 @@ class PluginInstaller:
         self.install_tasks = PluginInstaller._all_tasks  # 使用类共享的任务字典
         self._lock = PluginInstaller._global_lock  # 使用类共享的锁
         
-    def install_plugin(self, plugin_id: str) -> str:
+    def get_plugin_versions(self, plugin_id: str) -> List[Dict[str, Any]]:
+        """
+        获取指定插件的所有可用版本
+        
+        Args:
+            plugin_id: 插件ID
+            
+        Returns:
+            包含版本信息的列表，每个版本包含版本号、发布日期、下载次数等信息
+        """
+        try:
+            # 获取 PIMHelper 实例
+            global pim_helper
+            if pim_helper is None:
+                pim_helper = PIMHelper(self.server)
+                
+            # 调用 PIMHelper 的 get_plugin_versions 方法
+            return pim_helper.get_plugin_versions(plugin_id)
+        except Exception as e:
+            self.logger.error(f"获取插件 {plugin_id} 版本信息失败: {e}")
+            return []
+        
+    def install_plugin(self, plugin_id: str, version: str = None) -> str:
         """
         异步安装插件
         
         Args:
             plugin_id: 插件ID
+            version: 可选的指定版本号
             
         Returns:
             任务ID
@@ -2042,22 +2148,24 @@ class PluginInstaller:
             
             self.install_tasks[task_id] = {
                 'plugin_id': plugin_id,
+                'version': version,  # 记录指定的版本号
                 'action': 'install',
                 'status': 'running',
                 'progress': 0.0,
-                'message': f"初始化安装 {plugin_id}",
+                'message': f"初始化安装 {plugin_id}" + (f" v{version}" if version else ""),
                 'start_time': time.time(),
                 'end_time': None,
                 'access_time': time.time()  # 添加访问时间戳
             }
             
             # 保存到日志，便于调试
-            self.logger.info(f"创建安装任务 {task_id} 用于插件 {plugin_id}")
+            version_info = f" v{version}" if version else ""
+            self.logger.info(f"创建安装任务 {task_id} 用于插件 {plugin_id}{version_info}")
             
         # 创建线程运行安装
         thread = threading.Thread(
             target=self._install_plugin_thread,
-            args=(task_id, plugin_id),
+            args=(task_id, plugin_id, version),
             daemon=True
         )
         thread.start()
@@ -2140,6 +2248,10 @@ class PluginInstaller:
             # 更新访问时间
             self.install_tasks[task_id]['access_time'] = current_time
             
+            # 确保all_messages字段始终存在
+            if 'all_messages' not in self.install_tasks[task_id]:
+                self.install_tasks[task_id]['all_messages'] = []
+            
             return self.install_tasks[task_id].copy()
             
     def get_all_tasks(self) -> Dict[str, Dict[str, Any]]:
@@ -2150,6 +2262,11 @@ class PluginInstaller:
             所有任务的状态信息
         """
         with self._lock:
+            # 确保每个任务都有all_messages字段
+            for task_id, task_info in self.install_tasks.items():
+                if 'all_messages' not in task_info:
+                    task_info['all_messages'] = []
+                    
             return {task_id: task_info.copy() for task_id, task_info in self.install_tasks.items()}
             
     def _create_command_source(self, task_id: str) -> 'CustomCommandSource':
@@ -2190,6 +2307,13 @@ class PluginInstaller:
                 with self.installer._lock:
                     # 更新最新消息
                     task_info['message'] = message
+                    
+                    # 确保 all_messages 字段存在并更新
+                    if 'all_messages' not in task_info:
+                        task_info['all_messages'] = []
+                    # 避免重复消息
+                    if message not in task_info['all_messages']:
+                        task_info['all_messages'].append(message)
                     
                     # 根据操作类型和消息内容更新进度
                     if task_info['action'] == 'install':
@@ -2259,27 +2383,202 @@ class PluginInstaller:
                 
         return CustomCommandSource(self, task_id)
         
-    def _install_plugin_thread(self, task_id: str, plugin_id: str):
+    def _install_plugin_thread(self, task_id: str, plugin_id: str, version: str = None):
         """安装插件的线程函数"""
         try:
             # 创建自定义的 CommandSource 来捕获输出
             source = self._create_command_source(task_id)
             
             # 更新初始消息
+            version_info = f" v{version}" if version else ""
             with self._lock:
                 if task_id in self.install_tasks:
-                    self.install_tasks[task_id]['message'] = f"开始安装插件 {plugin_id}"
+                    self.install_tasks[task_id]['message'] = f"开始安装插件 {plugin_id}{version_info}"
                     # 设置详细信息记录
                     self.install_tasks[task_id]['error_messages'] = []
                     self.install_tasks[task_id]['all_messages'] = []
             
             # 记录详细日志
-            self.logger.info(f"开始异步安装插件 {plugin_id} (任务ID: {task_id})")
+            self.logger.info(f"开始异步安装插件 {plugin_id}{version_info} (任务ID: {task_id})")
             
-            # 创建本地的PIMHelper实例，而不是依赖全局变量
+            # 创建任务日志记录器
+            class TaskLogger:
+                def __init__(self, task):
+                    self.task = task
+                    self.messages = []
+                
+                def reply(self, message):
+                    # 将消息添加到本地消息列表
+                    message_str = str(message)
+                    self.messages.append(message_str)
+                    
+                    # 确保 'logs' 字段存在并更新
+                    self.task['logs'] = self.messages
+                    
+                    # 确保 'all_messages' 字段存在并更新
+                    if 'all_messages' not in self.task:
+                        self.task['all_messages'] = []
+                    
+                    # 只有当消息不在 all_messages 中时才添加，避免重复
+                    if message_str not in self.task['all_messages']:
+                        self.task['all_messages'].append(message_str)
+            
+            # 创建本地的PIMHelper实例
             local_pim_helper = PIMHelper(self.server)
             
-            # 调用PIMHelper安装插件
+            # 记录日志，同时更新任务进度
+            source.reply(f"开始安装插件 {plugin_id}{version_info}")
+            
+            # 如果指定了版本，使用新的实现
+            if version:
+                # 创建任务记录器
+                task_logger = TaskLogger(self.install_tasks.get(task_id, {}))
+                
+                # 以下使用新的实现，直接从元数据获取特定版本并安装
+                start_time = time.time()
+                
+                # 获取元数据
+                meta = local_pim_helper.get_cata_meta(task_logger)
+                if not meta:
+                    source.reply(f"获取插件元数据失败")
+                    with self._lock:
+                        if task_id in self.install_tasks:
+                            self.install_tasks[task_id]['status'] = 'failed'
+                            self.install_tasks[task_id]['message'] = "获取插件元数据失败"
+                            self.install_tasks[task_id]['end_time'] = time.time()
+                            self.install_tasks[task_id]['all_messages'] = source.messages
+                    return
+                
+                # 获取插件数据
+                plugin_data = meta.get_plugin_data(plugin_id)
+                if not plugin_data:
+                    source.reply(f"未找到插件 '{plugin_id}'")
+                    with self._lock:
+                        if task_id in self.install_tasks:
+                            self.install_tasks[task_id]['status'] = 'failed'
+                            self.install_tasks[task_id]['message'] = f"未找到插件 '{plugin_id}'"
+                            self.install_tasks[task_id]['end_time'] = time.time()
+                            self.install_tasks[task_id]['all_messages'] = source.messages
+                    return
+                
+                # 寻找指定版本
+                target_release = None
+                for release in plugin_data.releases:
+                    # 标准化版本号（去掉 'v' 前缀）
+                    release_version = release.tag_name.lstrip('v') if release.tag_name else ""
+                    version_to_match = version.lstrip('v')
+                    
+                    # 精确匹配
+                    if release_version == version_to_match:
+                        target_release = release
+                        break
+                
+                # 如果没找到精确匹配，尝试前缀匹配
+                if not target_release:
+                    for release in plugin_data.releases:
+                        release_version = release.tag_name.lstrip('v') if release.tag_name else ""
+                        version_to_match = version.lstrip('v')
+                        
+                        if release_version.startswith(version_to_match):
+                            target_release = release
+                            break
+                
+                # 如果仍未找到，使用最新版本
+                if not target_release:
+                    source.reply(f"未找到版本 '{version}'，将使用最新版本")
+                    target_release = plugin_data.get_latest_release()
+                    
+                    if not target_release:
+                        source.reply(f"插件 '{plugin_id}' 没有可用的发布版本")
+                        with self._lock:
+                            if task_id in self.install_tasks:
+                                self.install_tasks[task_id]['status'] = 'failed'
+                                self.install_tasks[task_id]['message'] = f"插件 '{plugin_id}' 没有可用的发布版本"
+                                self.install_tasks[task_id]['end_time'] = time.time()
+                                self.install_tasks[task_id]['all_messages'] = source.messages
+                        return
+                
+                # 先卸载现有版本（如果有）
+                plugin_manager = self.server._PluginServerInterface__plugin.plugin_manager
+                installed_plugin = plugin_manager.get_plugin_from_id(plugin_id)
+                
+                if installed_plugin is not None:
+                    current_version = str(installed_plugin.get_version())
+                    source.reply(f"已安装版本: {current_version}, 将切换到: {target_release.tag_name}")
+                    
+                    # 卸载现有版本
+                    source.reply(f"正在卸载当前版本...")
+                    self.server.unload_plugin(plugin_id)
+                    local_pim_helper.remove_old_plugin(source, plugin_id)
+                
+                # 更新进度到50%
+                with self._lock:
+                    if task_id in self.install_tasks:
+                        self.install_tasks[task_id]['progress'] = 0.5
+                        self.install_tasks[task_id]['message'] = f"正在下载插件 {plugin_id} {target_release.tag_name}..."
+                        if 'all_messages' not in self.install_tasks[task_id]:
+                            self.install_tasks[task_id]['all_messages'] = []
+                        self.install_tasks[task_id]['all_messages'].append(f"正在下载插件 {plugin_id} {target_release.tag_name}...")
+                
+                # 下载插件
+                source.reply(f"正在下载插件 {plugin_id} {target_release.tag_name}...")
+                downloader = ReleaseDownloader(self.server)
+                
+                # 准备目标路径
+                plugin_dir = local_pim_helper.get_plugin_dir()
+                target_path = os.path.join(plugin_dir, target_release.file_name or f"{plugin_id}.mcdr")
+                
+                # 下载插件
+                download_success = downloader.download(target_release.browser_download_url, target_path)
+                
+                if not download_success:
+                    source.reply(f"下载插件 {plugin_id} 失败")
+                    with self._lock:
+                        if task_id in self.install_tasks:
+                            self.install_tasks[task_id]['status'] = 'failed'
+                            self.install_tasks[task_id]['message'] = f"下载插件 {plugin_id} 失败"
+                            self.install_tasks[task_id]['end_time'] = time.time()
+                            self.install_tasks[task_id]['all_messages'] = source.messages
+                    return
+                
+                # 更新进度到80%
+                with self._lock:
+                    if task_id in self.install_tasks:
+                        self.install_tasks[task_id]['progress'] = 0.8
+                        self.install_tasks[task_id]['message'] = f"正在加载插件 {plugin_id}..."
+                        if 'all_messages' not in self.install_tasks[task_id]:
+                            self.install_tasks[task_id]['all_messages'] = []
+                        self.install_tasks[task_id]['all_messages'].append(f"正在加载插件 {plugin_id}...")
+                
+                # 加载插件
+                source.reply(f"正在加载插件 {plugin_id}...")
+                try:
+                    self.server.load_plugin(target_path)
+                    source.reply(f"✓ 插件 {plugin_id} {target_release.tag_name} 已成功安装并加载")
+                    
+                    end_time = time.time()
+                    with self._lock:
+                        if task_id in self.install_tasks:
+                            self.install_tasks[task_id]['status'] = 'completed'
+                            self.install_tasks[task_id]['progress'] = 1.0
+                            self.install_tasks[task_id]['message'] = f"插件 {plugin_id} {target_release.tag_name} 安装成功"
+                            self.install_tasks[task_id]['end_time'] = end_time
+                            # 确保记录所有消息
+                            self.install_tasks[task_id]['all_messages'] = source.messages
+                            
+                    self.logger.info(f"插件 {plugin_id} {target_release.tag_name} 安装成功，耗时 {end_time - start_time:.2f} 秒")
+                except Exception as e:
+                    source.reply(f"加载插件失败: {e}")
+                    with self._lock:
+                        if task_id in self.install_tasks:
+                            self.install_tasks[task_id]['status'] = 'failed'
+                            self.install_tasks[task_id]['message'] = f"加载插件 {plugin_id} 失败: {e}"
+                            self.install_tasks[task_id]['end_time'] = time.time()
+                            # 确保记录所有消息
+                            self.install_tasks[task_id]['all_messages'] = source.messages
+                return
+            
+            # 如果没有指定版本，使用原有的实现
             start_time = time.time()
             result = local_pim_helper.install_plugin(source, plugin_id)
             end_time = time.time()
@@ -2305,7 +2604,6 @@ class PluginInstaller:
                         self.logger.warning(f"插件 {plugin_id} 安装失败，耗时 {end_time - start_time:.2f} 秒")
                         
                     self.install_tasks[task_id]['end_time'] = time.time()
-                    
         except Exception as e:
             self.logger.exception(f"安装插件 {plugin_id} 时出错")
             with self._lock:
@@ -2316,6 +2614,11 @@ class PluginInstaller:
                     if 'error_messages' not in self.install_tasks[task_id]:
                         self.install_tasks[task_id]['error_messages'] = []
                     self.install_tasks[task_id]['error_messages'].append(error_msg)
+                    # 确保all_messages存在，即使出错
+                    if 'all_messages' not in self.install_tasks[task_id]:
+                        self.install_tasks[task_id]['all_messages'] = [f"安装出错: {error_msg}"]
+                    else:
+                        self.install_tasks[task_id]['all_messages'].append(f"安装出错: {error_msg}")
                     self.install_tasks[task_id]['end_time'] = time.time()
                     
     def _uninstall_plugin_thread(self, task_id: str, plugin_id: str):
@@ -2335,7 +2638,7 @@ class PluginInstaller:
             # 记录详细日志
             self.logger.info(f"开始异步卸载插件 {plugin_id} (任务ID: {task_id})")
             
-            # 创建本地的PIMHelper实例，而不是依赖全局变量
+            # 创建本地的PIMHelper实例
             local_pim_helper = PIMHelper(self.server)
             
             # 调用 PIMHelper 卸载插件
@@ -2364,7 +2667,6 @@ class PluginInstaller:
                         self.logger.warning(f"插件 {plugin_id} 卸载失败，耗时 {end_time - start_time:.2f} 秒")
                         
                     self.install_tasks[task_id]['end_time'] = time.time()
-                    
         except Exception as e:
             self.logger.exception(f"卸载插件 {plugin_id} 时出错")
             with self._lock:
@@ -2375,15 +2677,19 @@ class PluginInstaller:
                     if 'error_messages' not in self.install_tasks[task_id]:
                         self.install_tasks[task_id]['error_messages'] = []
                     self.install_tasks[task_id]['error_messages'].append(error_msg)
+                    # 确保all_messages存在，即使出错
+                    if 'all_messages' not in self.install_tasks[task_id]:
+                        self.install_tasks[task_id]['all_messages'] = [f"卸载出错: {error_msg}"]
+                    else:
+                        self.install_tasks[task_id]['all_messages'].append(f"卸载出错: {error_msg}")
                     self.install_tasks[task_id]['end_time'] = time.time()
 
-# 插件安装器实例
-plugin_installer: Optional[PluginInstaller] = None
-
 def on_load(server: PluginServerInterface, prev_module):
-    global pim_helper, plugin_installer, PENDING_DELETE_FILES
+    global pim_helper, plugin_installer, PENDING_DELETE_FILES, _global_registry
     # 重置待删除文件列表
     PENDING_DELETE_FILES = {}
+    # 重置全局注册表
+    _global_registry = None
     
     server.logger.info('PIM辅助工具正在加载...')
     
@@ -2514,11 +2820,12 @@ def on_load(server: PluginServerInterface, prev_module):
         server.logger.exception('详细错误信息:')
 
 def on_unload(server: PluginServerInterface):
-    global pim_helper, plugin_installer, PENDING_DELETE_FILES
+    global pim_helper, plugin_installer, PENDING_DELETE_FILES, _global_registry
     # 重置待删除文件列表
     PENDING_DELETE_FILES = {}
     pim_helper = None
     plugin_installer = None
+    _global_registry = None
     server.logger.info('PIM辅助工具已卸载')
 
 def show_help(source):
@@ -2790,7 +3097,7 @@ def show_task_log(source, task_id: str):
 
 # 在文件最底部添加
 # 导出的类和函数，供其他模块导入
-__all__ = ['PluginInstaller', 'get_installer']
+__all__ = ['PluginInstaller', 'get_installer', 'create_installer', 'get_global_registry']
 
 def get_installer() -> Optional[PluginInstaller]:
     """
@@ -2815,4 +3122,5 @@ def create_installer(server: PluginServerInterface) -> PluginInstaller:
     return PluginInstaller(server)
 
 # 更新 __all__ 列表
-__all__ = ['PluginInstaller', 'get_installer', 'create_installer']
+__all__ = ['PluginInstaller', 'get_installer', 'create_installer', 'get_global_registry']
+
