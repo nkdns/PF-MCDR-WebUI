@@ -1156,7 +1156,7 @@ document.addEventListener('alpine:init', () => {
             this.installedVersion = null;
             
             // 每60秒自动刷新服务器状态
-            setInterval(() => this.checkServerStatus(), 60000);
+            setInterval(() => this.checkServerStatus(), 10001);
             
             // 保存主题设置到本地存储
             this.$watch('darkMode', value => {

@@ -343,7 +343,7 @@
                     this.getVersions();
                     
                     // 每60秒自动刷新服务器状态
-                    setInterval(() => this.checkServerStatus(), 60000);
+                    setInterval(() => this.checkServerStatus(), 10001);
                     
                     // 设置当前年份
                     document.getElementById('year').textContent = new Date().getFullYear();

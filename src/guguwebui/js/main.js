@@ -384,7 +384,7 @@ document.addEventListener('DOMContentLoaded', function() {
         checkServerStatus();
         
         // 定时刷新服务器状态 (每60秒)
-        setInterval(checkServerStatus, 60000);
+        setInterval(checkServerStatus, 10001);
         
         // 定时更新时间显示 (每秒)
         updateTime();
