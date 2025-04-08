@@ -2009,8 +2009,26 @@ class PIMHelper:
         """获取临时目录路径"""
         # 获取MCDR根目录
         mcdr_root = os.getcwd()
-        # 获取当前插件ID
-        plugin_id = PLUGIN_METADATA.get('id', 'pim_helper')
+        
+        # 尝试获取宿主插件的ID，如果是被其他插件内嵌的情况
+        host_plugin_id = None
+        
+        try:
+            # 查找调用栈，尝试找到宿主插件的ID
+            mcdr_config = self.server.get_mcdr_config()
+            plugin_manager = getattr(self.server, "_PluginServerInterface__plugin", None)
+            if plugin_manager:
+                plugin_manager = getattr(plugin_manager, "plugin_manager", None)
+                if plugin_manager:
+                    # 如果当前运行的是WebUI插件
+                    if plugin_manager.get_plugin_from_id("guguwebui"):
+                        host_plugin_id = "guguwebui"
+        except:
+            pass
+        
+        # 确定使用哪个插件ID作为目录名
+        plugin_id = host_plugin_id or "pim_helper"
+        
         # 创建固定的临时目录
         temp_dir_path = os.path.join(mcdr_root, "config", plugin_id, "temp")
         # 确保临时目录存在
@@ -2719,7 +2737,22 @@ def on_load(server: PluginServerInterface, prev_module):
     # 创建固定的临时目录
     try:
         mcdr_root = os.getcwd()
-        plugin_id = PLUGIN_METADATA.get('id', 'pim_helper')
+        
+        # 尝试确定宿主插件ID
+        host_plugin_id = None
+        try:
+            # 如果当前运行的是WebUI插件
+            plugin_manager = getattr(server, "_PluginServerInterface__plugin", None)
+            if plugin_manager:
+                plugin_manager = getattr(plugin_manager, "pim_helper", None)
+                if plugin_manager and plugin_manager.get_plugin_from_id("guguwebui"):
+                    host_plugin_id = "guguwebui"
+        except:
+            pass
+        
+        # 使用确定的插件ID或默认值
+        plugin_id = host_plugin_id or "pim_helper"
+        
         temp_dir_path = os.path.join(mcdr_root, "config", plugin_id, "temp")
         os.makedirs(temp_dir_path, exist_ok=True)
         server.logger.info(f'创建临时目录: {temp_dir_path}')

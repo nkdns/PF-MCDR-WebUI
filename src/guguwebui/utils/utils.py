@@ -171,7 +171,7 @@ def get_plugins_info(server_interface, detail=False):
             plugins = cata_meta.get_plugins()
             return {plugin_id: plugin_data.latest_version for plugin_id, plugin_data in plugins.items()}
         except Exception as e:
-            print(f"Error fetching plugin versions from PIM: {e}")
+            # print(f"Error fetching plugin versions from PIM: {e}")
             return {}
 
     # 获取插件版本
