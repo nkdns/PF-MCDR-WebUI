@@ -97,8 +97,12 @@ function showNoticeModal(title, noticeData) {
                 </button>
             </div>
             <div class="overflow-hidden">
-                ${noticeData.bg ? `<div class="w-full bg-cover bg-center" style="background-image: url('${noticeData.bg}')"></div>` : ''}
-                <div class="p-5 overflow-y-auto" style="max-height: calc(80vh - 180px);">
+                ${noticeData.bg ? `<div class="w-full flex justify-center p-3" id="notice-img-container">
+                    <img src="${noticeData.bg}" alt="${noticeData.bgtitle || '公告图片'}" 
+                        class="max-w-full h-auto rounded-lg shadow-md" 
+                        onerror="this.parentElement.style.display='none'; document.getElementById('notice-content').style.maxHeight = 'calc(80vh - 180px)';" />
+                </div>` : ''}
+                <div id="notice-content" class="p-5 overflow-y-auto" style="max-height: calc(80vh - ${noticeData.bg ? '280' : '180'}px);">
                     <div class="prose dark:prose-invert prose-sm max-w-none">${markdownToHtml(noticeData.text)}</div>
                 </div>
             </div>
@@ -244,4 +248,4 @@ window.testNotice = function(jsonString) {
 // 页面加载完成后初始化公告
 document.addEventListener('DOMContentLoaded', () => {
     fetchReleases();
-}); 
+});

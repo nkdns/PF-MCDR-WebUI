@@ -179,16 +179,26 @@ document.addEventListener('alpine:init', () => {
                     const repo = urlParts[4];
                     const branch = urlParts[5];
                     
-                    // 构建catalogue_url
-                    return `https://raw.githubusercontent.com/${username}/${repo}/${branch}/README.md`;
+                    // 构建catalogue_url - 保持原始URL的分支名和大小写风格
+                    const lastPart = urlParts[urlParts.length - 1];
+                    const readmeFileName = lastPart.toLowerCase() === 'readme.md' ? 'README.md' : 'readme.md';
+                    
+                    return `https://raw.githubusercontent.com/${username}/${repo}/${branch}/${readmeFileName}`;
                 }
                 
                 // 如果不是GitHub的raw内容URL，尝试构建
                 if (readmeUrl.includes('github.com')) {
-                    // 将blob/master/README.md转换为raw/master/README.md
-                    return readmeUrl.replace('github.com', 'raw.githubusercontent.com')
-                        .replace('/blob/', '/')
-                        .replace('/README.md', '/catalogue.md');
+                    // 将github.com转换为raw.githubusercontent.com
+                    let url = readmeUrl.replace('github.com', 'raw.githubusercontent.com').replace('/blob/', '/');
+                    
+                    // 确保README文件名匹配
+                    if (url.toLowerCase().endsWith('/readme.md')) {
+                        const basePath = url.substring(0, url.toLowerCase().lastIndexOf('/readme.md'));
+                        const readmeFileName = url.toLowerCase().endsWith('/readme.md') ? 'README.md' : 'readme.md';
+                        url = `${basePath}/${readmeFileName}`;
+                    }
+                    
+                    return url;
                 }
                 
                 return '';
@@ -202,7 +212,53 @@ document.addEventListener('alpine:init', () => {
         async loadReadmeContent(url) {
             try {
                 // 直接从url获取内容
-                const response = await fetch(url);
+                let response = await fetch(url);
+                
+                // 如果获取失败，尝试不同的文件名和分支名组合
+                if (!response.ok) {
+                    console.log(`初始URL获取失败: ${url}, 尝试其他路径组合`);
+                    
+                    // 生成备选URL
+                    let alternativeUrls = [];
+                    
+                    if (url.includes('githubusercontent.com')) {
+                        // 提取URL的各个部分
+                        const parts = url.split('/');
+                        if (parts.length >= 7) {
+                            const username = parts[3];
+                            const repo = parts[4];
+                            const branch = parts[5];
+                            const originalFilename = parts[parts.length - 1]; // 保持原始文件名，不转换大小写
+                            
+                            // 创建备选分支和文件名组合
+                            const branches = ['master', 'main']; // 尝试所有可能的分支名
+                            const filenames = ['README.md', 'readme.md']; // 尝试所有可能的文件名
+                            
+                            // 生成所有可能的组合
+                            for (const altBranch of branches) {
+                                for (const altFilename of filenames) {
+                                    // 跳过原始URL的组合(已经尝试过了)
+                                    if (altBranch === branch && altFilename === originalFilename) {
+                                        continue;
+                                    }
+                                    const altUrl = `https://raw.githubusercontent.com/${username}/${repo}/${altBranch}/${altFilename}`;
+                                    alternativeUrls.push(altUrl);
+                                }
+                            }
+                        }
+                    }
+                    
+                    // 依次尝试备选URL
+                    for (const altUrl of alternativeUrls) {
+                        // console.log(`尝试备选URL: ${altUrl}`);
+                        response = await fetch(altUrl);
+                        if (response.ok) {
+                            // console.log(`成功获取内容: ${altUrl}`);
+                            break;
+                        }
+                    }
+                }
+                
                 if (!response.ok) {
                     throw new Error(`获取文档失败: ${response.status} ${response.statusText}`);
                 }
