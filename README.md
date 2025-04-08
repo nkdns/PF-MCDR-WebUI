@@ -133,6 +133,10 @@ AI分析![image](https://github.com/user-attachments/assets/91276765-ec5b-47eb-8
 | [CodeMirror](https://codemirror.net/) | 在线编辑器 | 目前使用 |
 | [MC-Server-Info](https://github.com/Spark-Code-China/MC-Server-Info) | Python Minecraft 服务器信息查询 | 仓库被作者删除 |
 | [DeepSeek AI](https://deepseek.com/) | AI辅助功能接口支持 | |
+| [Vditor](https://vditor.b3log.org/) | Markdown编辑器 | |
+| [TailwindCSS](https://tailwindcss.com/) | CSS框架 | |
+| [Alpine.js](https://alpinejs.dev/) | JS框架 | |
+| [Font Awesome](https://fontawesome.com/) | 图标库 | |
 
 
 | 特别鸣谢 | 说明 |
