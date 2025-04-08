@@ -19,6 +19,9 @@ jobs:
         zip -r ../guguweb_beta.mcdr .
         cd ..
         echo "Packaged src contents into guguweb_beta.mcdr"
+        mkdir -p build
+        cp guguweb_beta.mcdr build/
+        echo "Copied guguweb_beta.mcdr to build directory"
 
     - name: Upload artifact
       uses: actions/upload-artifact@v4
