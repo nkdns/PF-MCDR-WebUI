@@ -16,24 +16,41 @@
 
 ## 插件说明
 
-- [x] **主要功能:** 为MCDR提供一个 `在线WebUI管理界面` 和 `MCDR插件管理` 和 `表单配置功能`（可选使用在线编辑器）。
-- [x] **本地插件管理:** 提供列出全部插件、一键更新 、启动插件、停止插件、重载插件、插件配置修改（需要符合格式）。
-- [x] **配置修改:** 使用在线表单 **或** 在线编辑器进行配置文件的修改（在 **`所有插件`** 选项卡处修改）。
-- [x] **支持的配置:** `yaml` 格式或者 `json` 文件。
+### 主要功能
+> 为MCDR提供一个 `在线WebUI管理界面` 和 `MCDR插件管理` 和 `表单配置功能`（可选使用在线编辑器）。
+
+
+- [x] **本地插件管理:** 
+  - 列出全部插件
+  - 一键更新
+  - 启动插件
+  - 停止插件
+  - 重载插件
+  - 切换插件版本
+  - 插件配置文件的在线编辑器
+- [x] **配置修改:**
+  - 使用在线表单 **或** 在线编辑器进行配置文件的修改（在 **`所有插件`** 选项卡处修改）。
+- [x] **支持的配置:**
   - `yml文件` 识别每项上一行注释作为中文标题，使用 `::` 分割，第二项为副标题，例 `标题::副标题` ，请注意，使用的是英文的符号；
   - `json文件` 需要创建同级文件 `需要加标题的配置文件名_lang.josn` 例如 `abc_lang.json` 则会为 `abc.json` 创建中文标题，使用 `[标题,副标题]` 创建标题和副标题，参考示例: [config_lang.json](https://github.com/LoosePrince/PF-MCDR-WebUI/blob/main/config_lang.json)
   - `html格式`, 使用 `main.json` 在其中使用键对值的方式指定每个配置文件对应的 `html文件` ，届时加载时会加载 `html文件内容` ，如果您有样式请不要使用外链式加载本地css和js，请使用 `style` 和 `script` 标签。
-- [x] **服务器终端:** 提供服务器命令执行界面，支持RCON实时反馈和命令历史记录。
-- [x] **AI辅助:** 集成DeepSeek AI接口，支持日志分析和问题解答，减少您的反复横跳。
-- [x] **主题切换:** 支持`浅色主题`、`深色主题`，默认为浅色，您可以在右上角切换显示模式
-- [x] **在线插件安装仓库:** 提供一个插件安装管理器，支持插件搜索、安装、卸载、更新、查看插件信息。
-<!-- - [x] **自定义:** 支持 `全局css和js配置文件` ，在首页提供在线编辑。 -->
+- [x] **服务器终端:**
+  - 提供服务器命令执行界面
+  - 支持RCON实时反馈和命令历史记录。
+- [x] **AI辅助:**
+  - 终端集成DeepSeek AI接口
+  - 支持日志分析和问题解答，减少您的反复横跳。
+- [x] **主题切换:**
+  - 支持`浅色主题`、`深色主题`，默认为浅色，您可以在右上角切换显示模式
+- [x] **在线插件安装仓库:**
+  - 提供一个插件安装管理器
+  - 插件搜索、安装、卸载、更新、查看插件信息。
 
 > [!IMPORTANT]
 > **关于数据:** 重载插件 *本插件* **会** 自动更新 `guguwebui_static` 文件夹中的内容，如果您修改过内部的文件请自行保存，以防您的数据丢失。
 
 > [!IMPORTANT]
-> **关于V1.3.0版本:** 本项目于v1.3.0版本重构前端，更新请删除 `guguwebui_static` 文件夹中的内容，保留 `db.json` 即可。
+> **关于V1.3.0版本:** 本项目于v1.3.0版本重构前端，如您是从v1.3.0版本之前升级的，请删除 `guguwebui_static` 文件夹中的内容，保留 `db.json` 即可。
 
 
 ## 依赖配置
@@ -75,26 +92,26 @@ Q:会支持MC服务器管理的功能吗？如模组管理，玩家管理，白�
 A:并不会深入涉及管理MC服务器，如有这方面的需求请查询MC服务器面板，仅可能会支持很小一部分，例如终端、重启服务器，更多的不在我们的范畴中。
 
 Q:可以加入开发吗？<br>
-A:当然可以，您可以提交 pr 或者 参与交流 来参与开发。
+A:当然可以，您可以提交 [pr](https://github.com/LoosePrince/PF-MCDR-WebUI/pulls) 或者 参与交流 来参与开发。
 
 Q:会支持多语言吗。<br>
 A:我只会中文，你要是愿意可以参与。
 
 Q:为什么有私货（有未使用的插件，如gugubot等）。<br>
-A:因为这就是为它所开发。
+A:因为这就是为它所开发（虽然GUGUbot的配置一直不完善[doge]）。
 
 Q:如何获取实时最新版<br>
-A:自己打包`src`中的文件到`zip`，修改后缀为`.mcdr`，或者前往 [actions](https://github.com/LoosePrince/PF-MCDR-WebUI/actions/workflows/package-src.yml) 下载
+A:自己打包`src`中的文件到`zip`，修改后缀为`.mcdr`，或者前往 [actions](https://github.com/LoosePrince/PF-MCDR-WebUI/actions/workflows/package-src.yml) 下载，解压提取其中的mcdr文件即可。
 
 Q:我有个插件，我觉得很适合WebUI，可以作为WebUI的前置吗？<br>
 A:WebUI不打算使用任何插件前置，如果有好的方案我们会考虑直接加入WebUI并在关于页感谢贡献。
 
-Q:PIM插件是什么？<br>
-A:PIM插件是WebUI的插件安装管理器，它可以帮助您安装、卸载、更新插件，并且可以查看插件信息。
+Q:[PIM插件](https://github.com/LoosePrince/PF-MCDR-WebUI/blob/main/src/guguwebui/utils/PIM.py)是什么？<br>
+A:[PIM插件](https://github.com/LoosePrince/PF-MCDR-WebUI/blob/main/src/guguwebui/utils/PIM.py)是WebUI的插件安装管理器，它可以帮助您安装、卸载、更新插件，并且可以查看插件信息。
 
 ## 示例图
 
-> 截图来源本地测试
+> 截图来源v1.3.0本地测试
 
 登录页![image](https://github.com/user-attachments/assets/3439beb0-4325-406f-9443-9a6015edb2c6)
 仪表盘![image](https://github.com/user-attachments/assets/1ac6c44d-fec1-4d94-ade2-31eac56d8500)
