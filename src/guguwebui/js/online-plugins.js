@@ -351,7 +351,7 @@ document.addEventListener('alpine:init', () => {
                         const vditorElement = document.getElementById('vditor');
                         if (vditorElement) {
                             vditorElement.style.overflow = 'auto';
-                            vditorElement.style.maxHeight = 'calc(90vh - 120px)';
+                            vditorElement.style.maxHeight = 'calc(90vh - 165px)';
                         }
                     }
                 });
@@ -406,7 +406,7 @@ document.addEventListener('alpine:init', () => {
                             const vditorElement = document.getElementById('vditor');
                             if (vditorElement) {
                                 vditorElement.style.overflow = 'auto';
-                                vditorElement.style.maxHeight = 'calc(90vh - 120px)';
+                                vditorElement.style.maxHeight = 'calc(90vh - 165px)';
                             }
                         }
                     });
@@ -421,7 +421,7 @@ document.addEventListener('alpine:init', () => {
                     const vditorElement = document.getElementById('vditor');
                     if (vditorElement) {
                         vditorElement.style.overflow = 'auto';
-                        vditorElement.style.maxHeight = 'calc(90vh - 120px)';
+                        vditorElement.style.maxHeight = 'calc(90vh - 165px)';
                     }
                 }
             }
