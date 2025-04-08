@@ -21,8 +21,14 @@ document.addEventListener('alpine:init', () => {
         pluginHistory: [],
         showRepoModal: false,
         currentRepoUrl: '',
-        sortMethod: 'time', // 'name', 'time'
+        sortMethod: 'time', // 'name', 'time', 'downloads'
         sortDirection: 'desc', // 'asc', 'desc'
+        
+        // 协议模态框相关属性
+        showLicenseModal: false,
+        currentLicense: null,
+        licenseFetching: false,
+        licenseError: false,
         
         // README相关属性
         showReadmeModal: false,
@@ -429,6 +435,15 @@ document.addEventListener('alpine:init', () => {
                         ? timeA - timeB 
                         : timeB - timeA;
                 });
+            } else if (this.sortMethod === 'downloads') {
+                sorted.sort((a, b) => {
+                    if (!a || !b) return 0;
+                    const downloadsA = a.downloads || 0;
+                    const downloadsB = b.downloads || 0;
+                    return this.sortDirection === 'asc' 
+                        ? downloadsA - downloadsB 
+                        : downloadsB - downloadsA;
+                });
             }
             
             return sorted;
@@ -439,7 +454,8 @@ document.addEventListener('alpine:init', () => {
                 this.sortDirection = this.sortDirection === 'asc' ? 'desc' : 'asc';
             } else {
                 this.sortMethod = method;
-                this.sortDirection = method === 'time' ? 'desc' : 'asc'; // 默认时间是最新的在前
+                // 默认排序方向：名称升序，时间和下载量降序
+                this.sortDirection = (method === 'time' || method === 'downloads') ? 'desc' : 'asc';
             }
             this.currentPage = 1; // 重置到第一页
         },
@@ -824,6 +840,84 @@ document.addEventListener('alpine:init', () => {
             } catch (e) {
                 return dateString;
             }
+        },
+        
+        // 显示许可证详情
+        async showLicenseDetails(licenseKey, licenseUrl) {
+            if (!licenseKey && !licenseUrl) return;
+            
+            this.showLicenseModal = true;
+            this.licenseFetching = true;
+            this.licenseError = false;
+            
+            // 立即创建一个基本许可证对象，以防在异步操作完成前访问属性
+            this.currentLicense = {
+                key: licenseKey || '',
+                name: licenseKey ? `${licenseKey.toUpperCase()} 协议` : '加载中...',
+                description: '加载中...',
+                body: '',
+                html_url: '',
+                permissions: [],
+                conditions: [],
+                limitations: []
+            };
+            
+            try {
+                // 尝试从URL获取许可证信息
+                const apiUrl = licenseUrl || `https://api.github.com/licenses/${licenseKey}`;
+                console.log(`正在获取协议信息，URL: ${apiUrl}`);
+                
+                // 设置超时
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 10000); // 10秒超时
+                
+                const response = await fetch(apiUrl, {
+                    signal: controller.signal,
+                    headers: {
+                        'Accept': 'application/json'
+                    }
+                });
+                
+                clearTimeout(timeoutId);
+                
+                if (!response.ok) {
+                    throw new Error(`获取许可证信息失败: ${response.status} ${response.statusText}`);
+                }
+                
+                const licenseData = await response.json();
+                
+                // 验证许可证数据的必要字段
+                if (!licenseData) {
+                    throw new Error('获取到的许可证数据为空');
+                }
+                
+                // 合并返回的数据与基本对象
+                this.currentLicense = {...this.currentLicense, ...licenseData};
+                
+                console.log('获取到许可证信息:', this.currentLicense);
+                this.licenseFetching = false;
+            } catch (error) {
+                console.error('Error loading license information:', error);
+                
+                // 更新许可证对象以显示错误状态
+                this.currentLicense = {
+                    ...this.currentLicense,
+                    name: licenseKey ? `${licenseKey.toUpperCase()} 协议` : '未知协议',
+                    description: '无法获取详细描述',
+                };
+                
+                this.licenseError = true;
+                this.licenseFetching = false;
+                this.showNotificationMsg(`获取协议信息失败: ${error.message}`, 'error');
+            }
+        },
+        
+        // 关闭许可证模态框
+        closeLicenseModal() {
+            this.showLicenseModal = false;
+            this.currentLicense = null;
+            this.licenseFetching = false;
+            this.licenseError = false;
         },
         
         init() {

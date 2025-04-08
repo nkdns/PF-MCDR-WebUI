@@ -421,6 +421,19 @@ async def get_online_plugins(request: Request):
                         except Exception as version_error:
                             server.logger.error(f"处理插件 {plugin_id} 的版本信息时出错: {version_error}")
                             latest_version = None
+
+                        # 获取协议链接
+                        license_info = repository.get('license', {}) or {}
+                        license_url = ''
+                        if license_info:
+                            # 优先使用license中的url字段
+                            if 'url' in license_info:
+                                license_url = license_info.get('url', '')
+                            # 如果没有url字段，根据key构建GitHub许可证URL
+                            elif 'key' in license_info:
+                                license_key = license_info.get('key', '')
+                                if license_key:
+                                    license_url = f"https://github.com/licenses/{license_key}"
                         
                         # 创建与旧格式兼容的结构
                         try:
@@ -436,6 +449,7 @@ async def get_online_plugins(request: Request):
                                 "update_time": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
                                 "latest_version": release.get('latest_version', meta.get('version', '')),
                                 "license": (repository.get('license', {}) or {}).get('spdx_id', '未知'),
+                                "license_url": license_url,
                                 "downloads": 0,  # 初始化下载计数
                                 "readme_url": repository.get('readme_url', '') or plugin_data.get('readme_url', '') or '',
                             }

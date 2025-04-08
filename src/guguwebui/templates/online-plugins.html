@@ -582,6 +582,16 @@
                                         <i class="ml-1 fas" :class="sortDirection === 'asc' ? 'fa-sort-numeric-down' : 'fa-sort-numeric-up'"></i>
                                     </template>
                                 </button>
+                                <button 
+                                    @click="toggleSortMethod('downloads')" 
+                                    class="inline-flex items-center px-2 py-1 text-xs rounded border"
+                                    :class="sortMethod === 'downloads' ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 border-blue-200 dark:border-blue-800' : 'border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300'"
+                                >
+                                    <span>按下载量</span>
+                                    <template x-if="sortMethod === 'downloads'">
+                                        <i class="ml-1 fas" :class="sortDirection === 'asc' ? 'fa-sort-numeric-down' : 'fa-sort-numeric-up'"></i>
+                                    </template>
+                                </button>
                             </div>
                         
                             <!-- 搜索栏 -->
@@ -681,7 +691,12 @@
                                         <!-- 显示协议类型 -->
                                         <span x-show="plugin.license">
                                             <i class="fas fa-file-contract mr-1"></i>
-                                            <span x-text="plugin.license"></span>
+                                            <template x-if="plugin.license_url">
+                                                <a href="javascript:void(0)" @click="showLicenseDetails(null, plugin.license_url)" class="text-blue-500 hover:underline" x-text="plugin.license"></a>
+                                            </template>
+                                            <template x-if="!plugin.license_url">
+                                                <a href="javascript:void(0)" @click="showLicenseDetails(plugin.license.toLowerCase().replace(/(-|\.)/g, ''), null)" class="text-blue-500 hover:underline" x-text="plugin.license"></a>
+                                            </template>
                                         </span>
                                         
                                         <!-- 显示下载量 -->
@@ -961,6 +976,23 @@
                                                     </span>
                                                 </template>
                                             </p>
+                                        </div>
+                                        <!-- 协议信息 -->
+                                        <div x-show="currentPlugin && currentPlugin.license">
+                                            <p class="text-sm text-gray-500 dark:text-gray-400">协议:</p>
+                                            <p class="text-sm text-gray-800 dark:text-gray-200">
+                                                <template x-if="currentPlugin && currentPlugin.license_url">
+                                                    <a href="javascript:void(0)" @click="showLicenseDetails(null, currentPlugin.license_url)" class="text-blue-500 hover:underline" x-text="currentPlugin && currentPlugin.license ? currentPlugin.license : '未知'"></a>
+                                                </template>
+                                                <template x-if="currentPlugin && currentPlugin.license && !currentPlugin.license_url">
+                                                    <a href="javascript:void(0)" @click="showLicenseDetails(currentPlugin.license.toLowerCase().replace(/(-|\.)/g, ''), null)" class="text-blue-500 hover:underline" x-text="currentPlugin.license"></a>
+                                                </template>
+                                            </p>
+                                        </div>
+                                        <!-- 下载量信息 -->
+                                        <div x-show="currentPlugin?.downloads">
+                                            <p class="text-sm text-gray-500 dark:text-gray-400">下载量:</p>
+                                            <p class="text-sm text-gray-800 dark:text-gray-200" x-text="formatNumber(currentPlugin?.downloads || 0)"></p>
                                         </div>
                                     </div>
                                 </div>
@@ -1256,6 +1288,118 @@
                         <div class="modal-footer">
                             <button 
                                 @click="closeReadmeModal()" 
+                                class="inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm text-sm font-medium text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none"
+                            >
+                                <span>关闭</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 协议详情模态窗口 -->
+                <div x-show="showLicenseModal" x-transition.opacity class="modal-backdrop">
+                    <div class="modal-content" style="max-width: 800px;" @click.away="closeLicenseModal()">
+                        <div class="modal-header">
+                            <h3 class="text-lg font-semibold text-gray-900 dark:text-white">
+                                <span x-text="currentLicense ? (currentLicense.name || '协议详情') : '协议详情'"></span>
+                                <template x-if="currentLicense && currentLicense.spdx_id">
+                                    <span class="ml-2 text-sm text-gray-600 dark:text-gray-400" x-text="currentLicense.spdx_id"></span>
+                                </template>
+                            </h3>
+                            <button @click="closeLicenseModal()" class="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        </div>
+                        
+                        <div class="modal-body">
+                            <!-- 加载状态 -->
+                            <div x-show="licenseFetching" class="py-10 flex justify-center items-center">
+                                <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
+                                <span class="ml-3 text-gray-600 dark:text-gray-400">加载协议信息中...</span>
+                            </div>
+                            
+                            <!-- 错误状态 -->
+                            <div x-show="licenseError" class="py-8 text-center">
+                                <i class="fas fa-exclamation-circle text-4xl text-red-500 mb-4"></i>
+                                <p class="text-gray-700 dark:text-gray-300">获取协议信息失败，请稍后再试</p>
+                            </div>
+                            
+                            <!-- 协议信息 -->
+                            <div x-show="currentLicense && !licenseFetching && !licenseError" class="space-y-6">
+                                <!-- 简介 -->
+                                <div x-show="currentLicense && currentLicense.description" class="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg border border-gray-200 dark:border-gray-700">
+                                    <p class="text-gray-700 dark:text-gray-300" x-text="currentLicense && currentLicense.description ? currentLicense.description : ''"></p>
+                                </div>
+                                
+                                <!-- 使用方法 -->
+                                <div x-show="currentLicense && currentLicense.implementation" class="space-y-2">
+                                    <h4 class="font-medium text-gray-900 dark:text-white">实施方法</h4>
+                                    <p class="text-gray-700 dark:text-gray-300" x-text="currentLicense && currentLicense.implementation ? currentLicense.implementation : ''"></p>
+                                </div>
+                                
+                                <!-- 权限、条件和限制 -->
+                                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                    <!-- 权限 -->
+                                    <div x-show="currentLicense && currentLicense.permissions && currentLicense.permissions.length" class="space-y-2">
+                                        <h4 class="font-medium text-gray-900 dark:text-white flex items-center">
+                                            <i class="fas fa-check-circle text-green-500 mr-2"></i>
+                                            <span>权限</span>
+                                        </h4>
+                                        <ul class="space-y-1 pl-5 list-disc">
+                                            <template x-for="permission in currentLicense && currentLicense.permissions ? currentLicense.permissions : []" :key="permission">
+                                                <li class="text-gray-700 dark:text-gray-300" x-text="permission ? permission.replace(/-/g, ' ') : ''"></li>
+                                            </template>
+                                        </ul>
+                                    </div>
+                                    
+                                    <!-- 条件 -->
+                                    <div x-show="currentLicense && currentLicense.conditions && currentLicense.conditions.length" class="space-y-2">
+                                        <h4 class="font-medium text-gray-900 dark:text-white flex items-center">
+                                            <i class="fas fa-exclamation-circle text-blue-500 mr-2"></i>
+                                            <span>条件</span>
+                                        </h4>
+                                        <ul class="space-y-1 pl-5 list-disc">
+                                            <template x-for="condition in currentLicense && currentLicense.conditions ? currentLicense.conditions : []" :key="condition">
+                                                <li class="text-gray-700 dark:text-gray-300" x-text="condition ? condition.replace(/-/g, ' ') : ''"></li>
+                                            </template>
+                                        </ul>
+                                    </div>
+                                    
+                                    <!-- 限制 -->
+                                    <div x-show="currentLicense && currentLicense.limitations && currentLicense.limitations.length" class="space-y-2">
+                                        <h4 class="font-medium text-gray-900 dark:text-white flex items-center">
+                                            <i class="fas fa-ban text-red-500 mr-2"></i>
+                                            <span>限制</span>
+                                        </h4>
+                                        <ul class="space-y-1 pl-5 list-disc">
+                                            <template x-for="limitation in currentLicense && currentLicense.limitations ? currentLicense.limitations : []" :key="limitation">
+                                                <li class="text-gray-700 dark:text-gray-300" x-text="limitation ? limitation.replace(/-/g, ' ') : ''"></li>
+                                            </template>
+                                        </ul>
+                                    </div>
+                                </div>
+                                
+                                <!-- 协议正文 -->
+                                <div x-show="currentLicense && currentLicense.body">
+                                    <h4 class="font-medium text-gray-900 dark:text-white">协议正文</h4>
+                                    <div class="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg border border-gray-200 dark:border-gray-700 overflow-auto max-h-96">
+                                        <pre class="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap font-mono" x-text="currentLicense && currentLicense.body ? currentLicense.body : ''"></pre>
+                                    </div>
+                                </div>
+                                
+                                <!-- 链接 -->
+                                <div x-show="currentLicense && currentLicense.html_url">
+                                    <a :href="currentLicense && currentLicense.html_url ? currentLicense.html_url : '#'" target="_blank" class="inline-flex items-center text-blue-600 dark:text-blue-400 hover:underline">
+                                        <i class="fas fa-external-link-alt mr-1.5"></i>
+                                        <span>查看完整协议页面</span>
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="modal-footer">
+                            <button 
+                                @click="closeLicenseModal()" 
                                 class="inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm text-sm font-medium text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none"
                             >
                                 <span>关闭</span>
