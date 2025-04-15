@@ -527,12 +527,13 @@ class PIMHelper:
         
     def get_local_plugins(self) -> Dict[str, List[str]]:
         """
-        获取本地插件信息，包括已加载和未加载的
-        返回: Dict[str, List[str]] - {plugin_id: [file_paths]}
+        获取本地插件信息，包括已加载、未加载和禁用的
+        返回: Dict[str, List[str]] - 包含插件路径的字典
         """
         result = {
             'loaded': {},    # 已加载插件 {id: path}
-            'unloaded': []   # 未加载的 .mcdr 文件路径
+            'unloaded': [],  # 未加载的 .mcdr 文件路径
+            'disabled': []   # 禁用的插件文件路径
         }
         
         # 获取已加载的插件信息
@@ -554,17 +555,36 @@ class PIMHelper:
             if os.path.isdir(default_plugin_dir):
                 plugin_dirs = [default_plugin_dir]
         
-        # 扫描所有.mcdr文件
+        # 获取禁用的插件列表
+        disabled_plugins = []
+        try:
+            # 从MCDR获取禁用的插件列表
+            disabled_plugins = self.server.get_disabled_plugin_list()
+        except:
+            self.logger.debug("无法获取禁用插件列表")
+        
+        # 扫描所有.mcdr和.py文件
         for plugin_dir in plugin_dirs:
             if not os.path.isdir(plugin_dir):
                 continue
                 
             for file_name in os.listdir(plugin_dir):
-                if file_name.endswith('.mcdr'):
+                if file_name.endswith('.mcdr') or file_name.endswith('.py'):
                     file_path = os.path.join(plugin_dir, file_name)
+                    
                     # 检查是否已加载
                     if file_path not in result['loaded'].values():
-                        result['unloaded'].append(file_path)
+                        # 检查是否为禁用插件
+                        is_disabled = False
+                        plugin_id = self.detect_unloaded_plugin_id(file_path)
+                        
+                        if plugin_id and plugin_id in disabled_plugins:
+                            result['disabled'].append(file_path)
+                            is_disabled = True
+                            
+                        # 如果不是禁用的，则添加到未加载列表
+                        if not is_disabled:
+                            result['unloaded'].append(file_path)
         
         return result
         
@@ -577,16 +597,49 @@ class PIMHelper:
             import json
             from pathlib import Path
             
-            if not os.path.exists(plugin_path) or not zipfile.is_zipfile(plugin_path):
+            if not os.path.exists(plugin_path):
+                return None
+            
+            # 处理.py文件
+            if plugin_path.endswith('.py'):
+                try:
+                    with open(plugin_path, 'r', encoding='utf-8') as f:
+                        content = f.read()
+                        
+                        # 尝试查找PLUGIN_METADATA定义
+                        import re
+                        metadata_match = re.search(r'PLUGIN_METADATA\s*=\s*({[^}]+})', content)
+                        if metadata_match:
+                            metadata_str = metadata_match.group(1)
+                            # 将单引号替换为双引号，以便json解析
+                            metadata_str = metadata_str.replace("'", '"')
+                            try:
+                                metadata = json.loads(metadata_str)
+                                if 'id' in metadata:
+                                    return metadata['id']
+                            except:
+                                pass
+                except:
+                    pass
+                
+                # 尝试直接从文件名中提取ID
+                basename = os.path.basename(plugin_path)
+                if basename.endswith('.py'):
+                    return basename[:-3]  # 移除.py后缀
+                    
+                return None
+            
+            # 处理zip或mcdr文件
+            if not zipfile.is_zipfile(plugin_path):
                 return None
                 
             with zipfile.ZipFile(plugin_path, 'r') as zip_ref:
                 file_list = zip_ref.namelist()
                 
-                # 寻找mcdr_plugin.json
+                # 寻找mcdr_plugin.json或mcdreforged.plugin.json
                 json_file = None
                 for f in file_list:
-                    if f.endswith('mcdr_plugin.json') or f == 'mcdr_plugin.json':
+                    if f.endswith('mcdr_plugin.json') or f == 'mcdr_plugin.json' or f.endswith('mcdreforged.plugin.json') or f == 'mcdreforged.plugin.json':
                         json_file = f
                         break
                 
@@ -2027,10 +2080,12 @@ class PIMHelper:
             # 获取插件管理器
             plugin_manager = self.server._PluginServerInterface__plugin.plugin_manager
             removed_files = []
+            plugin_found = False
             
             # 检查插件是否已加载
             plugin = plugin_manager.get_plugin_from_id(plugin_id)
             if plugin is not None:
+                plugin_found = True
                 # 获取插件文件路径
                 plugin_path = getattr(plugin, 'file_path', None)
                 if plugin_path:
@@ -2057,18 +2112,32 @@ class PIMHelper:
                             source.reply(RText(f"⚠ 强制删除失败，请手动删除", color=RColor.red))
             
             # 查找未加载的插件文件
+            source.reply(RText(f"正在搜索未加载的插件文件: {plugin_id}", color=RColor.aqua))
+            
             # 扫描所有本地插件文件
             local_plugins = self.get_local_plugins()
             unloaded_plugin_files = []
             
+            # 检查未加载的插件
             for file_path in local_plugins['unloaded']:
                 detected_id = self.detect_unloaded_plugin_id(file_path)
                 if detected_id == plugin_id:
+                    plugin_found = True
                     unloaded_plugin_files.append(file_path)
+                    source.reply(RText(f"找到未加载的插件文件: {file_path}", color=RColor.aqua))
+            
+            # 检查禁用的插件
+            if 'disabled' in local_plugins:
+                for file_path in local_plugins['disabled']:
+                    detected_id = self.detect_unloaded_plugin_id(file_path)
+                    if detected_id == plugin_id:
+                        plugin_found = True
+                        unloaded_plugin_files.append(file_path)
+                        source.reply(RText(f"找到禁用的插件文件: {file_path}", color=RColor.aqua))
                     
             # 如果找到未加载的插件文件
             if unloaded_plugin_files:
-                source.reply(RText(f"找到 {len(unloaded_plugin_files)} 个未加载的插件文件", color=RColor.aqua))
+                source.reply(RText(f"找到 {len(unloaded_plugin_files)} 个未加载/禁用的插件文件", color=RColor.aqua))
                 for file_path in unloaded_plugin_files:
                     try:
                         source.reply(RText(f"正在删除文件: {file_path}", color=RColor.aqua))
@@ -2082,6 +2151,63 @@ class PIMHelper:
                             removed_files.append(file_path)
                         else:
                             source.reply(RText(f"⚠ 强制删除失败，请手动删除", color=RColor.red))
+            
+            # 如果没有找到任何插件（既没有加载也没有未加载），尝试通过插件ID匹配所有可能的文件
+            if not plugin_found:
+                source.reply(RText(f"未找到已加载或未加载的插件 {plugin_id}，尝试查找所有可能的文件...", color=RColor.yellow))
+                
+                # 获取所有插件目录
+                plugin_dirs = self.get_plugin_directories()
+                possible_files = []
+                
+                # 遍历所有插件目录，查找可能与插件ID相关的文件
+                for plugin_dir in plugin_dirs:
+                    if os.path.exists(plugin_dir) and os.path.isdir(plugin_dir):
+                        for file_name in os.listdir(plugin_dir):
+                            file_path = os.path.join(plugin_dir, file_name)
+                            # 检查文件名是否包含插件ID
+                            if plugin_id.lower() in file_name.lower() and os.path.isfile(file_path):
+                                possible_files.append(file_path)
+                                source.reply(RText(f"找到可能的插件文件: {file_path}", color=RColor.aqua))
+                                
+                            # 如果是zip文件，检查其内容
+                            if os.path.isfile(file_path) and (file_path.endswith('.zip') or file_path.endswith('.mcdr')):
+                                try:
+                                    import zipfile
+                                    import json
+                                    
+                                    with zipfile.ZipFile(file_path, 'r') as zip_ref:
+                                        # 查找mcdr_plugin.json
+                                        for zip_path in zip_ref.namelist():
+                                            if zip_path.endswith('mcdr_plugin.json') or zip_path == 'mcdr_plugin.json' or zip_path.endswith('mcdreforged.plugin.json'):
+                                                try:
+                                                    with zip_ref.open(zip_path) as f:
+                                                        meta = json.loads(f.read().decode('utf-8'))
+                                                        if 'id' in meta and meta['id'] == plugin_id:
+                                                            possible_files.append(file_path)
+                                                            source.reply(RText(f"找到可能的插件文件: {file_path}", color=RColor.aqua))
+                                                            break
+                                                except:
+                                                    pass
+                                except:
+                                    pass
+                
+                # 删除找到的可能文件
+                if possible_files:
+                    source.reply(RText(f"找到 {len(possible_files)} 个可能的插件文件", color=RColor.aqua))
+                    for file_path in possible_files:
+                        try:
+                            source.reply(RText(f"正在删除文件: {file_path}", color=RColor.aqua))
+                            os.remove(file_path)
+                            removed_files.append(file_path)
+                        except Exception as e:
+                            source.reply(RText(f"⚠ 删除文件失败: {e}", color=RColor.red))
+                            # 尝试强制删除
+                            if self.force_delete_file(file_path):
+                                source.reply(RText(f"✓ 强制删除成功: {file_path}", color=RColor.green))
+                                removed_files.append(file_path)
+                            else:
+                                source.reply(RText(f"⚠ 强制删除失败，请手动删除", color=RColor.red))
             
             # 显示结果
             if removed_files:

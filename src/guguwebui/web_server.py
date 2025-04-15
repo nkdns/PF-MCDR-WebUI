@@ -1645,7 +1645,7 @@ async def api_uninstall_plugin(
     token_valid: bool = Depends(verify_token)
 ):
     """
-    卸载指定的插件
+    卸载指定的插件，支持卸载并删除未加载的插件
     """
     if not token_valid:
         return JSONResponse(
@@ -1666,7 +1666,7 @@ async def api_uninstall_plugin(
         # 创建安装器实例
         installer = create_installer(server)
         
-        # 启动异步卸载
+        # 启动异步卸载，同时处理已加载和未加载的插件
         task_id = installer.uninstall_plugin(plugin_id)
         
         return JSONResponse(

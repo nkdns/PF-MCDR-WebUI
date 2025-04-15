@@ -827,7 +827,7 @@ document.addEventListener('alpine:init', () => {
                 'uninstall', 
                 pluginId,
                 '卸载插件',
-                `确定要卸载插件 ${pluginId} 吗？此操作不可恢复，将彻底删除插件文件。`,
+                `确定要卸载插件 ${pluginId} 吗？此操作不可恢复，将彻底删除插件文件。\n支持卸载已加载和未加载的插件。`,
                 async (id) => {
                     this.processingPlugins[id] = true;
                     
