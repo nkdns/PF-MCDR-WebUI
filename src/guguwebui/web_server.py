@@ -2,12 +2,20 @@ import datetime
 import javaproperties
 import secrets
 import aiohttp
+import asyncio
 import requests
 import os
 import json
 import lzma
 import time
 import io
+import importlib
+import uuid
+import logging
+import inspect
+import subprocess
+import sys
+from typing import Dict, List, Any, Optional, Union, Tuple
 
 from pathlib import Path
 
@@ -46,6 +54,9 @@ templates = Jinja2Templates(directory=f"{STATIC_PATH}/templates")
 
 # 全局LogWatcher实例
 log_watcher = LogWatcher()
+
+# 用于保存pip任务状态的字典
+pip_tasks = {}
 
 # 初始化函数，在应用程序启动时调用
 def init_app(server_instance):
@@ -1924,3 +1935,169 @@ async def api_get_plugin_versions_v2(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             content={"success": False, "error": f"获取插件版本失败: {str(e)}"}
         )
+
+# Pip包管理相关模型
+class PipPackageRequest(BaseModel):
+    package: str
+
+# 定义一个函数用于获取已安装的pip包
+def get_installed_pip_packages():
+    try:
+        process = subprocess.Popen(
+            [sys.executable, "-m", "pip", "list", "--format=json"],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True
+        )
+        stdout, stderr = process.communicate()
+        
+        if process.returncode != 0:
+            return {"status": "error", "message": f"获取包列表失败: {stderr}"}
+        
+        packages = json.loads(stdout)
+        return {"status": "success", "packages": packages}
+    except Exception as e:
+        return {"status": "error", "message": f"获取包列表时出错: {str(e)}"}
+
+# pip操作的异步任务
+async def pip_task(task_id, action, package):
+    try:
+        output = []
+        
+        if action == "install":
+            cmd = [sys.executable, "-m", "pip", "install", package]
+            output.append(f"正在安装包: {package}")
+        elif action == "uninstall":
+            cmd = [sys.executable, "-m", "pip", "uninstall", "-y", package]
+            output.append(f"正在卸载包: {package}")
+        else:
+            pip_tasks[task_id] = {
+                "completed": True,
+                "success": False,
+                "output": ["不支持的操作类型"],
+            }
+            return
+        
+        process = subprocess.Popen(
+            cmd,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+            bufsize=1
+        )
+        
+        # 更新初始状态
+        pip_tasks[task_id] = {
+            "completed": False,
+            "success": False,
+            "output": output.copy(),
+        }
+        
+        # 读取输出
+        while True:
+            stdout_line = process.stdout.readline()
+            if stdout_line:
+                output.append(stdout_line.strip())
+                pip_tasks[task_id]["output"] = output.copy()
+            
+            stderr_line = process.stderr.readline()
+            if stderr_line:
+                output.append(stderr_line.strip())
+                pip_tasks[task_id]["output"] = output.copy()
+            
+            if not stdout_line and not stderr_line and process.poll() is not None:
+                break
+        
+        # 获取最终退出码
+        exit_code = process.wait()
+        success = exit_code == 0
+        
+        if success:
+            output.append(f"操作成功完成")
+        else:
+            output.append(f"操作失败，退出码: {exit_code}")
+        
+        # 更新最终状态
+        pip_tasks[task_id] = {
+            "completed": True,
+            "success": success,
+            "output": output,
+        }
+    except Exception as e:
+        error_msg = f"执行pip操作时出错: {str(e)}"
+        output.append(error_msg)
+        pip_tasks[task_id] = {
+            "completed": True,
+            "success": False,
+            "output": output,
+        }
+
+@app.get("/api/pip/list")
+async def api_pip_list(request: Request, token_valid: bool = Depends(verify_token)):
+    """获取已安装的pip包列表"""
+    if not token_valid:
+        return {"status": "error", "message": "未授权访问"}
+    
+    return get_installed_pip_packages()
+
+@app.post("/api/pip/install")
+async def api_pip_install(
+    request: Request, 
+    package_req: PipPackageRequest,
+    token_valid: bool = Depends(verify_token)
+):
+    """安装pip包"""
+    if not token_valid:
+        return {"status": "error", "message": "未授权访问"}
+    
+    package = package_req.package.strip()
+    if not package:
+        return {"status": "error", "message": "包名不能为空"}
+    
+    # 创建任务ID并启动异步任务
+    task_id = str(uuid.uuid4())
+    asyncio.create_task(pip_task(task_id, "install", package))
+    
+    return {"status": "success", "task_id": task_id, "message": f"开始安装 {package}"}
+
+@app.post("/api/pip/uninstall")
+async def api_pip_uninstall(
+    request: Request, 
+    package_req: PipPackageRequest,
+    token_valid: bool = Depends(verify_token)
+):
+    """卸载pip包"""
+    if not token_valid:
+        return {"status": "error", "message": "未授权访问"}
+    
+    package = package_req.package.strip()
+    if not package:
+        return {"status": "error", "message": "包名不能为空"}
+    
+    # 创建任务ID并启动异步任务
+    task_id = str(uuid.uuid4())
+    asyncio.create_task(pip_task(task_id, "uninstall", package))
+    
+    return {"status": "success", "task_id": task_id, "message": f"开始卸载 {package}"}
+
+@app.get("/api/pip/task_status")
+async def api_pip_task_status(
+    request: Request, 
+    task_id: str,
+    token_valid: bool = Depends(verify_token)
+):
+    """获取pip任务状态"""
+    if not token_valid:
+        return {"status": "error", "message": "未授权访问"}
+    
+    if not task_id or task_id not in pip_tasks:
+        return {"status": "error", "message": "无效的任务ID"}
+    
+    task_info = pip_tasks[task_id]
+    
+    return {
+        "status": "success",
+        "completed": task_info["completed"],
+        "success": task_info["success"],
+        "output": task_info["output"]
+    }

@@ -504,6 +504,77 @@
                     </div>
                 </div>
                 
+                <!-- pip管理卡片 -->
+                <div class="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6 border border-gray-200 dark:border-gray-700 mt-8">
+                    <div class="flex items-center justify-between mb-6">
+                        <h2 class="text-lg font-semibold text-gray-800 dark:text-white">pip包管理</h2>
+                        <div class="flex space-x-2">
+                            <button @click="refreshPipPackages()" class="text-xs px-3 py-1.5 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded hover:bg-blue-200 dark:hover:bg-blue-800/30 transition flex items-center">
+                                <i class="fas fa-sync-alt mr-1"></i> 刷新
+                            </button>
+                            <button @click="showInstallPipModal = true" class="text-xs px-3 py-1.5 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 rounded hover:bg-green-200 dark:hover:bg-green-800/30 transition flex items-center">
+                                <i class="fas fa-plus mr-1"></i> 安装
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <!-- 包列表 -->
+                    <div class="bg-gray-50 dark:bg-gray-700/30 rounded-lg p-4 mb-4 max-h-64 overflow-y-auto">
+                        <div x-show="loadingPipPackages" class="flex justify-center py-4">
+                            <i class="fas fa-circle-notch fa-spin text-blue-500 dark:text-blue-400 text-xl"></i>
+                        </div>
+                        <div x-show="!loadingPipPackages && pipPackages.length === 0" class="text-center py-4 text-gray-500 dark:text-gray-400">
+                            <p>暂无已安装的包信息</p>
+                        </div>
+                        <table x-show="!loadingPipPackages && pipPackages.length > 0" class="min-w-full">
+                            <thead>
+                                <tr class="text-xs font-medium text-gray-500 dark:text-gray-400 border-b border-gray-200 dark:border-gray-700">
+                                    <th class="text-left pb-2">包名</th>
+                                    <th class="text-left pb-2">版本</th>
+                                    <th class="text-right pb-2">操作</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <template x-for="pkg in pipPackages" :key="pkg.name">
+                                    <tr class="text-sm border-b border-gray-100 dark:border-gray-700/50">
+                                        <td class="py-2 text-gray-800 dark:text-gray-200" x-text="pkg.name"></td>
+                                        <td class="py-2 text-gray-600 dark:text-gray-400" x-text="pkg.version"></td>
+                                        <td class="py-2 text-right">
+                                            <button @click="uninstallPipPackage(pkg.name)" class="text-xs px-2 py-1 bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 rounded hover:bg-red-200 dark:hover:bg-red-800/30 transition">
+                                                卸载
+                                            </button>
+                                        </td>
+                                    </tr>
+                                </template>
+                            </tbody>
+                        </table>
+                    </div>
+                    
+                    <!-- 输出窗口 -->
+                    <div x-show="pipOutput.length > 0" class="bg-gray-900 text-gray-200 rounded-lg p-3 font-mono text-xs h-48 overflow-y-auto">
+                        <div x-html="formatPipOutput(pipOutput)"></div>
+                    </div>
+                </div>
+                
+                <!-- 安装pip包弹窗 -->
+                <div x-show="showInstallPipModal" class="fixed inset-0 z-50 overflow-auto bg-black bg-opacity-50 flex items-center justify-center" @click.self="showInstallPipModal = false">
+                    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-xl p-6 max-w-md w-full mx-4" @click.stop>
+                        <h3 class="text-lg font-semibold text-gray-800 dark:text-white mb-4">安装pip包</h3>
+                        <div class="mb-4">
+                            <label for="pipPackageName" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">包名</label>
+                            <input type="text" id="pipPackageName" x-model="newPipPackage" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-600 focus:border-blue-500 dark:focus:border-blue-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white" placeholder="例如: requests==2.28.1 或 requests">
+                        </div>
+                        <div class="flex justify-end gap-2">
+                            <button @click="showInstallPipModal = false" class="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded hover:bg-gray-300 dark:hover:bg-gray-600 transition">
+                                取消
+                            </button>
+                            <button @click="installPipPackage()" class="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition">
+                                安装
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
                 <!-- 页脚 -->
                 <footer class="mt-12 text-center text-sm text-gray-500 dark:text-gray-400">
                     <p>MCDR WebUI &copy; <span id="year"></span></p>

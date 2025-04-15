@@ -1475,6 +1475,8 @@ class PIMHelper:
             import re
             import time
             import os
+            import sys
+            import subprocess
             from pathlib import Path
             
             # 直接尝试从输出中解析错误信息
@@ -1515,7 +1517,11 @@ class PIMHelper:
             error_patterns = [
                 (r'卸载插件 (\w+)@([\d\.]+)，原因: 依赖项 (\w+)@([\d\.]+) 不满足版本约束 ([\>\<\=\d\.]+)', 'version_mismatch'),
                 (r'卸载插件 (\w+)@([\d\.]+)，原因: 缺少依赖项: (\w+)', 'missing_dependency'),
-                (r'插件 (\w+)@([\d\.]+) \([^)]+\) 拥有与已存在插件 (\w+)@([\d\.]+) \([^)]+\) 相同的 id，已移除', 'duplicate_id')
+                (r'插件 (\w+)@([\d\.]+) \([^)]+\) 拥有与已存在插件 (\w+)@([\d\.]+) \([^)]+\) 相同的 id，已移除', 'duplicate_id'),
+                # 添加新的模式：检测缺少pip包的错误
+                (r'ModuleNotFoundError: No module named \'([^\']+)\'', 'missing_pip_package'),
+                (r'ImportError: No module named ([^\'"\s]+)', 'missing_pip_package'),
+                (r'ImportError: cannot import name \'([^\']+)\'', 'import_error')
             ]
             
             # 查找匹配的错误模式
@@ -1599,7 +1605,215 @@ class PIMHelper:
                         else:
                             source.reply(RText(f"⚠ 插件 {plugin_name}@{plugin_version} 无法加载，可能存在其他问题", color=RColor.red))
                         return
+                        
+                    elif error_type == 'missing_pip_package':
+                        # 处理缺少pip包的错误
+                        package_name = match.group(1)
+                        
+                        source.reply(RText(f"📋 插件 {plugin_id} 加载失败: 缺少Python包", color=RColor.yellow))
+                        source.reply(RText(f"缺少Python包: {package_name}", color=RColor.red))
+                        
+                        # 尝试使用pip安装缺失的包
+                        source.reply(RText(f"📥 正在尝试安装缺失的Python包: {package_name}...", color=RColor.aqua))
+                        
+                        # 执行pip安装
+                        try:
+                            # 构建pip命令
+                            pip_cmd = [sys.executable, "-m", "pip", "install", "--upgrade", package_name]
+                            
+                            # 检查是否有pip额外参数
+                            mcdr_config = self.server.get_mcdr_config()
+                            pip_extra_args = mcdr_config.get('plugin_pip_install_extra_args', '')
+                            if pip_extra_args:
+                                pip_cmd.extend(pip_extra_args.split())
+                                
+                            source.reply(f"执行命令: {' '.join(pip_cmd)}")
+                            
+                            # 执行安装
+                            result = subprocess.run(
+                                pip_cmd,
+                                stdout=subprocess.PIPE,
+                                stderr=subprocess.PIPE,
+                                text=True,
+                                check=True
+                            )
+                            
+                            # 输出安装日志摘要
+                            if result.stdout:
+                                lines = result.stdout.splitlines()
+                                if len(lines) > 5:
+                                    source.reply("安装输出 (部分):")
+                                    for line in lines[-5:]:
+                                        source.reply(f"> {line}")
+                                else:
+                                    source.reply("安装输出:")
+                                    for line in lines:
+                                        source.reply(f"> {line}")
+                            
+                            # 刷新模块缓存
+                            import importlib
+                            importlib.invalidate_caches()
+                            
+                            source.reply(RText(f"✓ Python包 {package_name} 安装成功", color=RColor.green))
+                            
+                            # 重新加载插件
+                            source.reply(RText(f"正在重新加载插件 {plugin_id}...", color=RColor.aqua))
+                            if self.server.load_plugin(str(plugin_path)):
+                                source.reply(RText(f"✓ 插件 {plugin_id} 加载成功!", color=RColor.green))
+                                return
+                            else:
+                                # 如果仍然加载失败，递归调用此方法以处理可能的其他错误
+                                source.reply(RText(f"⚠ 插件仍然无法加载，检查是否还有其他问题", color=RColor.yellow))
+                                self._check_load_failure(source, plugin_path)
+                                return
+                                
+                        except subprocess.CalledProcessError as e:
+                            source.reply(RText(f"⚠ 安装Python包 {package_name} 失败!", color=RColor.red))
+                            
+                            # 输出错误信息
+                            if e.stderr:
+                                error_lines = e.stderr.splitlines()
+                                source.reply("错误信息:")
+                                for line in error_lines[-5:]:  # 只显示最后5行错误
+                                    source.reply(RText(f"> {line}", color=RColor.red))
+                                    
+                            # 可能需要尝试其他类似的包名
+                            alternate_names = []
+                            if '.' in package_name:
+                                # 尝试获取顶级包名
+                                top_package = package_name.split('.')[0]
+                                alternate_names.append(top_package)
+                            
+                            # 尝试使用小写名
+                            if package_name != package_name.lower():
+                                alternate_names.append(package_name.lower())
+                            
+                            # 尝试常见的误写修正
+                            common_mistakes = {
+                                "PIL": "pillow",
+                                "yaml": "pyyaml",
+                                "bs4": "beautifulsoup4",
+                                "cv2": "opencv-python",
+                                "sklearn": "scikit-learn",
+                                "wx": "wxpython",
+                                "tk": "tkinter",
+                                "tkinter": "python-tk",
+                                "colorama": "colorama"
+                            }
+                            
+                            if package_name in common_mistakes:
+                                alternate_names.append(common_mistakes[package_name])
+                            
+                            # 尝试安装备选包名
+                            for alt_name in alternate_names:
+                                source.reply(RText(f"尝试安装备选包名: {alt_name}", color=RColor.yellow))
+                                try:
+                                    alt_pip_cmd = [sys.executable, "-m", "pip", "install", "--upgrade", alt_name]
+                                    if pip_extra_args:
+                                        alt_pip_cmd.extend(pip_extra_args.split())
+                                        
+                                    alt_result = subprocess.run(
+                                        alt_pip_cmd,
+                                        stdout=subprocess.PIPE,
+                                        stderr=subprocess.PIPE,
+                                        text=True,
+                                        check=True
+                                    )
+                                    
+                                    # 刷新模块缓存
+                                    import importlib
+                                    importlib.invalidate_caches()
+                                    
+                                    source.reply(RText(f"✓ 备选Python包 {alt_name} 安装成功", color=RColor.green))
+                                    
+                                    # 重新加载插件
+                                    source.reply(RText(f"正在重新加载插件 {plugin_id}...", color=RColor.aqua))
+                                    if self.server.load_plugin(str(plugin_path)):
+                                        source.reply(RText(f"✓ 插件 {plugin_id} 加载成功!", color=RColor.green))
+                                        return
+                                except subprocess.CalledProcessError:
+                                    continue
+                            
+                            source.reply(RText(f"⚠ 所有尝试都失败了，插件 {plugin_id} 无法加载", color=RColor.red))
+                        return
+                        
+                    elif error_type == 'import_error':
+                        # 处理导入错误
+                        import_name = match.group(1)
+                        source.reply(RText(f"📋 插件 {plugin_id} 加载失败: 导入错误", color=RColor.yellow))
+                        source.reply(RText(f"无法导入: {import_name}", color=RColor.red))
+                        source.reply(RText(f"这可能是由于Python包版本不兼容或包不完整导致的", color=RColor.yellow))
+                        return
                 
+            # 检查是否存在requirements.txt，如果存在，尝试重新安装所有依赖
+            try:
+                with zipfile.ZipFile(plugin_path, 'r') as zip_ref:
+                    has_requirements = any(f == 'requirements.txt' for f in zip_ref.namelist())
+                    
+                    if has_requirements:
+                        source.reply(RText(f"检测到requirements.txt文件，尝试重新安装所有依赖", color=RColor.yellow))
+                        
+                        # 在临时目录中提取requirements.txt
+                        import tempfile
+                        with tempfile.TemporaryDirectory() as temp_dir:
+                            # 提取requirements.txt到临时目录
+                            zip_ref.extract('requirements.txt', temp_dir)
+                            req_path = os.path.join(temp_dir, 'requirements.txt')
+                            
+                            # 读取requirements.txt内容
+                            with open(req_path, 'r') as f:
+                                requirements = [line.strip() for line in f if line.strip() and not line.startswith('#')]
+                            
+                            if requirements:
+                                source.reply(f"找到依赖项: {', '.join(requirements)}")
+                                
+                                # 安装所有依赖
+                                try:
+                                    pip_cmd = [sys.executable, "-m", "pip", "install", "--upgrade"]
+                                    
+                                    # 检查是否有pip额外参数
+                                    mcdr_config = self.server.get_mcdr_config()
+                                    pip_extra_args = mcdr_config.get('plugin_pip_install_extra_args', '')
+                                    if pip_extra_args:
+                                        pip_cmd.extend(pip_extra_args.split())
+                                        
+                                    pip_cmd.extend(requirements)
+                                    
+                                    source.reply(f"执行命令: {' '.join(pip_cmd)}")
+                                    
+                                    result = subprocess.run(
+                                        pip_cmd,
+                                        stdout=subprocess.PIPE,
+                                        stderr=subprocess.PIPE,
+                                        text=True,
+                                        check=True
+                                    )
+                                    
+                                    # 刷新模块缓存
+                                    import importlib
+                                    importlib.invalidate_caches()
+                                    
+                                    source.reply(RText(f"✓ 依赖项安装成功", color=RColor.green))
+                                    
+                                    # 重新加载插件
+                                    source.reply(RText(f"正在重新加载插件 {plugin_id}...", color=RColor.aqua))
+                                    if self.server.load_plugin(str(plugin_path)):
+                                        source.reply(RText(f"✓ 插件 {plugin_id} 加载成功!", color=RColor.green))
+                                        return
+                                    
+                                    source.reply(RText(f"⚠ 安装依赖后插件仍然无法加载", color=RColor.red))
+                                    
+                                except subprocess.CalledProcessError as e:
+                                    source.reply(RText(f"⚠ 安装依赖项失败!", color=RColor.red))
+                                    # 输出错误信息
+                                    if e.stderr:
+                                        error_lines = e.stderr.splitlines()
+                                        source.reply("错误信息:")
+                                        for line in error_lines[-5:]:
+                                            source.reply(RText(f"> {line}", color=RColor.red))
+            except Exception as e:
+                source.reply(RText(f"检查requirements.txt时出错: {e}", color=RColor.red))
+            
             source.reply(RText("未能识别具体错误原因，请查看服务器日志获取更多信息", color=RColor.yellow))
             
         except Exception as e:
@@ -2093,19 +2307,32 @@ class PIMHelper:
             return []
 
     def get_plugin_dir(self) -> str:
-        """获取插件目录路径"""
-        # 获取MCDR配置
-        mcdr_config = self.server.get_mcdr_config()
-        plugin_dirs = []
+        """获取插件目录"""
+        # 获取MCDR配置中的插件目录列表
+        plugin_directories = self.get_plugin_directories()
         
-        # 获取配置中的插件目录，如果有多个，使用第一个
+        # 使用第一个目录
+        if plugin_directories:
+            return plugin_directories[0]
+        
+        # 兜底：使用当前工作目录下的plugins文件夹
+        return os.path.join(os.getcwd(), 'plugins')
+        
+    def get_plugin_directories(self) -> List[str]:
+        """获取插件目录列表"""
+        # 尝试从MCDR配置获取插件目录列表
+        mcdr_config = self.server.get_mcdr_config()
+        plugin_directories = []
+        
         if 'plugin_directories' in mcdr_config and mcdr_config['plugin_directories']:
-            plugin_dirs = mcdr_config['plugin_directories']
-            return plugin_dirs[0]  # 返回第一个插件目录
+            plugin_directories = mcdr_config['plugin_directories']
         else:
-            # 使用默认插件目录
+            # 兜底：使用当前工作目录下的plugins文件夹
             default_plugin_dir = os.path.join(os.getcwd(), 'plugins')
-            return default_plugin_dir
+            if os.path.isdir(default_plugin_dir):
+                plugin_directories = [default_plugin_dir]
+                
+        return plugin_directories
 
 # 插件实例
 pim_helper: Optional[PIMHelper] = None
@@ -2587,13 +2814,36 @@ class PluginInstaller:
                     self.logger.info(f"插件 {plugin_id} {target_release.tag_name} 安装成功，耗时 {end_time - start_time:.2f} 秒")
                 except Exception as e:
                     source.reply(f"加载插件失败: {e}")
-                    with self._lock:
-                        if task_id in self.install_tasks:
-                            self.install_tasks[task_id]['status'] = 'failed'
-                            self.install_tasks[task_id]['message'] = f"加载插件 {plugin_id} 失败: {e}"
-                            self.install_tasks[task_id]['end_time'] = time.time()
-                            # 确保记录所有消息
-                            self.install_tasks[task_id]['all_messages'] = source.messages
+                    # 检查是否是由于缺少pip包导致的加载失败
+                    source.reply(f"正在检查加载失败原因并尝试修复...")
+                    
+                    # 创建PIMHelper实例用于检查加载失败原因
+                    helper = PIMHelper(self.server)
+                    helper._check_load_failure(source, target_path)
+                    
+                    # 再次检查插件是否已成功加载
+                    plugin_manager = self.server._PluginServerInterface__plugin.plugin_manager
+                    if plugin_manager.get_plugin_from_id(plugin_id) is not None:
+                        source.reply(f"✓ 插件 {plugin_id} {target_release.tag_name} 修复后成功加载")
+                        end_time = time.time()
+                        with self._lock:
+                            if task_id in self.install_tasks:
+                                self.install_tasks[task_id]['status'] = 'completed'
+                                self.install_tasks[task_id]['progress'] = 1.0
+                                self.install_tasks[task_id]['message'] = f"插件 {plugin_id} {target_release.tag_name} 修复后安装成功"
+                                self.install_tasks[task_id]['end_time'] = end_time
+                                # 确保记录所有消息
+                                self.install_tasks[task_id]['all_messages'] = source.messages
+                        
+                        self.logger.info(f"插件 {plugin_id} {target_release.tag_name} 修复后安装成功，耗时 {end_time - start_time:.2f} 秒")
+                    else:
+                        with self._lock:
+                            if task_id in self.install_tasks:
+                                self.install_tasks[task_id]['status'] = 'failed'
+                                self.install_tasks[task_id]['message'] = f"加载插件 {plugin_id} 失败: {e}"
+                                self.install_tasks[task_id]['end_time'] = time.time()
+                                # 确保记录所有消息
+                                self.install_tasks[task_id]['all_messages'] = source.messages
                 return
             
             # 如果没有指定版本，使用原有的实现
@@ -2613,6 +2863,45 @@ class PluginInstaller:
                         self.install_tasks[task_id]['message'] = f"插件 {plugin_id} 安装成功"
                         self.logger.info(f"插件 {plugin_id} 安装成功，耗时 {end_time - start_time:.2f} 秒")
                     else:
+                        # 尝试处理失败原因，特别是检测缺少的pip包并安装
+                        plugin_manager = self.server._PluginServerInterface__plugin.plugin_manager
+                        last_failed_plugin_path = None
+                        
+                        # 尝试查找插件的文件路径
+                        try:
+                            # 获取插件目录
+                            plugin_directories = local_pim_helper.get_plugin_directories()
+                            target_dir = plugin_directories[0] if plugin_directories else None
+                            
+                            if target_dir:
+                                # 查找与插件ID匹配的文件
+                                for file_name in os.listdir(target_dir):
+                                    if file_name.startswith(f"{plugin_id}-") or file_name == f"{plugin_id}.mcdr" or \
+                                    file_name.startswith(f"{plugin_id}."):
+                                        last_failed_plugin_path = os.path.join(target_dir, file_name)
+                                        break
+                        except Exception as e:
+                            self.logger.debug(f"搜索失败插件路径时出错: {e}")
+                        
+                        # 如果找到了插件路径，尝试检查失败原因
+                        if last_failed_plugin_path and os.path.exists(last_failed_plugin_path):
+                            source.reply(f"正在检查插件加载失败原因并尝试修复...")
+                            # 创建PIMHelper实例用于检查加载失败原因
+                            helper = PIMHelper(self.server)
+                            helper._check_load_failure(source, last_failed_plugin_path)
+                            
+                            # 再次检查插件是否已成功加载
+                            if plugin_manager.get_plugin_from_id(plugin_id) is not None:
+                                source.reply(f"✓ 插件 {plugin_id} 修复后成功加载")
+                                with self._lock:
+                                    if task_id in self.install_tasks:
+                                        self.install_tasks[task_id]['status'] = 'completed'
+                                        self.install_tasks[task_id]['progress'] = 1.0
+                                        self.install_tasks[task_id]['message'] = f"插件 {plugin_id} 修复后安装成功"
+                                        self.logger.info(f"插件 {plugin_id} 修复后安装成功，耗时 {time.time() - start_time:.2f} 秒")
+                                        return
+                        
+                        # 如果修复尝试失败或无法找到插件路径，标记为失败
                         self.install_tasks[task_id]['status'] = 'failed'
                         error_msg = f"插件 {plugin_id} 安装失败"
                         if source.error_messages:
