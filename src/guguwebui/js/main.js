@@ -61,6 +61,153 @@ function toggleTheme() {
     }
 }
 
+// 检查外部资源（CSS和JS）加载状态
+function checkExternalResources() {
+    // 获取所有外部CSS和JS资源
+    const cssLinks = Array.from(document.querySelectorAll('link[rel="stylesheet"]'));
+    const scriptTags = Array.from(document.querySelectorAll('script[src]'));
+    
+    const failedResources = [];
+    let checksRemaining = cssLinks.length + scriptTags.length;
+    
+    // 如果没有外部资源需要检查
+    if (checksRemaining === 0) {
+        return;
+    }
+    
+    // 检查是否所有检查都已完成
+    function checkComplete() {
+        checksRemaining--;
+        if (checksRemaining === 0 && failedResources.length > 0) {
+            showResourceErrorModal(failedResources);
+        }
+    }
+    
+    // 检查CSS文件
+    cssLinks.forEach(link => {
+        // 创建一个新的link元素进行测试
+        const testLink = document.createElement('link');
+        testLink.href = link.href;
+        testLink.rel = 'stylesheet';
+        testLink.onload = () => {
+            testLink.remove();
+            checkComplete();
+        };
+        testLink.onerror = () => {
+            testLink.remove();
+            failedResources.push(link.href);
+            checkComplete();
+        };
+        document.head.appendChild(testLink);
+    });
+    
+    // 检查JS文件
+    scriptTags.forEach(script => {
+        // 跳过内联脚本或已经失败的脚本
+        if (!script.src) {
+            checkComplete();
+            return;
+        }
+        
+        // 创建一个新的script元素进行测试
+        const testScript = document.createElement('script');
+        testScript.src = script.src;
+        testScript.async = true;
+        testScript.onload = () => {
+            testScript.remove();
+            checkComplete();
+        };
+        testScript.onerror = () => {
+            testScript.remove();
+            failedResources.push(script.src);
+            checkComplete();
+        };
+        document.head.appendChild(testScript);
+    });
+}
+
+// 显示资源加载错误的模态窗口
+function showResourceErrorModal(failedResources) {
+    // 创建模态窗口容器
+    const modal = document.createElement('div');
+    modal.classList.add('resource-error-modal');
+    modal.style.position = 'fixed';
+    modal.style.top = '0';
+    modal.style.left = '0';
+    modal.style.width = '100%';
+    modal.style.height = '100%';
+    modal.style.backgroundColor = 'rgba(0, 0, 0, 0.5)';
+    modal.style.display = 'flex';
+    modal.style.justifyContent = 'center';
+    modal.style.alignItems = 'center';
+    modal.style.zIndex = '9999';
+    
+    // 创建模态窗口内容
+    const modalContent = document.createElement('div');
+    modalContent.style.backgroundColor = document.documentElement.classList.contains('dark') ? '#374151' : '#ffffff';
+    modalContent.style.color = document.documentElement.classList.contains('dark') ? '#e5e7eb' : '#1f2937';
+    modalContent.style.padding = '20px';
+    modalContent.style.borderRadius = '8px';
+    modalContent.style.boxShadow = '0 4px 6px rgba(0, 0, 0, 0.1)';
+    modalContent.style.maxWidth = '500px';
+    modalContent.style.width = '90%';
+    
+    // 添加标题
+    const title = document.createElement('h3');
+    title.textContent = '资源加载错误';
+    title.style.fontSize = '1.25rem';
+    title.style.fontWeight = 'bold';
+    title.style.marginBottom = '10px';
+    
+    // 添加描述
+    const description = document.createElement('p');
+    description.textContent = '以下资源加载失败，这可能会导致页面功能异常。请检查您的网络连接或联系管理员。';
+    description.style.marginBottom = '15px';
+    
+    // 添加资源列表
+    const resourceList = document.createElement('ul');
+    resourceList.style.marginBottom = '20px';
+    resourceList.style.backgroundColor = document.documentElement.classList.contains('dark') ? '#4b5563' : '#f3f4f6';
+    resourceList.style.padding = '10px';
+    resourceList.style.borderRadius = '4px';
+    resourceList.style.maxHeight = '150px';
+    resourceList.style.overflowY = 'auto';
+    
+    failedResources.forEach(resource => {
+        const item = document.createElement('li');
+        item.textContent = resource;
+        item.style.marginBottom = '5px';
+        item.style.wordBreak = 'break-all';
+        resourceList.appendChild(item);
+    });
+    
+    // 添加关闭按钮
+    const closeButton = document.createElement('button');
+    closeButton.textContent = '关闭';
+    closeButton.style.backgroundColor = '#3b82f6';
+    closeButton.style.color = 'white';
+    closeButton.style.border = 'none';
+    closeButton.style.borderRadius = '4px';
+    closeButton.style.padding = '8px 16px';
+    closeButton.style.cursor = 'pointer';
+    closeButton.style.float = 'right';
+    
+    // 关闭按钮点击事件
+    closeButton.addEventListener('click', () => {
+        document.body.removeChild(modal);
+    });
+    
+    // 组装模态窗口
+    modalContent.appendChild(title);
+    modalContent.appendChild(description);
+    modalContent.appendChild(resourceList);
+    modalContent.appendChild(closeButton);
+    modal.appendChild(modalContent);
+    
+    // 添加到页面
+    document.body.appendChild(modal);
+}
+
 // 检查登录状态
 async function checkLoginStatus() {
     try {
@@ -372,6 +519,9 @@ function updateTime() {
 document.addEventListener('DOMContentLoaded', function() {
     // 初始化主题
     initTheme();
+    
+    // 检查外部资源加载状态
+    checkExternalResources();
     
     // 初始化登录表单验证
     validateLoginForm();
