@@ -19,7 +19,7 @@ from mcdreforged.minecraft.rtext.text import RText, RTextList
 # 添加元数据信息
 PLUGIN_METADATA = {
     'id': 'pim_helper',
-    'version': '1.0.0',
+    'version': '1.1.0',
     'name': 'PIM Helper',
     'description': '自定义的安装MCDR插件的辅助工具',
     'author': 'LoosePrince',
