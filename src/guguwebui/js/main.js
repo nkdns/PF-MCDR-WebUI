@@ -251,6 +251,10 @@ async function fetchQQInfo(qqNumber) {
             return;
         }
 
+        // 先用QQ号更新UI，确保头像显示
+        console.log('Updating UI initially with QQ number for', qqNumber);
+        updateUIWithQQInfo(qqNumber, qqNumber);
+
         const apiEndpoints = [
             `https://api.leafone.cn/api/qqnick?qq=${qqNumber}`,
             `https://api.mmp.cc/api/qqname?qq=${qqNumber}`
@@ -296,21 +300,23 @@ async function fetchQQInfo(qqNumber) {
             }
         }
 
+        // 如果成功获取到昵称，则更新UI
         if (success && nickname) {
+            console.log('Updating UI with fetched nickname for', qqNumber);
             // 缓存昵称信息
             saveQQInfoToCache(qqNumber, nickname);
             // 更新UI
             updateUIWithQQInfo(qqNumber, nickname);
         } else {
              console.error('Failed to fetch QQ info from all available APIs for QQ:', qqNumber);
-             // 可选：如果所有API都失败，可以使用QQ号本身作为后备显示
-             updateUIWithQQInfo(qqNumber, qqNumber);
+             // 不需要再次调用 updateUIWithQQInfo，因为初始调用已经显示了QQ号
         }
 
     } catch (error) {
         console.error('Error in fetchQQInfo function:', error);
-        // 出现意外错误，也使用QQ号作为后备
-        updateUIWithQQInfo(qqNumber, qqNumber);
+        // 确保即使发生意外错误，头像和QQ号也已初步显示
+        // 如果错误发生在初始 updateUIWithQQInfo 之前，这里可以加一个后备调用
+        // 但通常，初始调用应该已经执行
     }
 }
 
