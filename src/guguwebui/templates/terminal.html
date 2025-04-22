@@ -637,13 +637,13 @@
                 <div id="terminal" class="h-[65vh] terminal rounded-lg p-4 overflow-auto">
                     <template x-if="logs.length === 0 && !isLoading">
                         <div class="text-center text-gray-500 h-full flex items-center justify-center">
-                            <span>无日志记录或日志已被清空</span>
+                            <span class="whitespace-pre-wrap">无日志记录或日志已被清空</span>
                         </div>
                     </template>
                     
                     <template x-for="(log, index) in logs" :key="index">
                         <div x-show="!filterText || log.content.toLowerCase().includes(filterText.toLowerCase())" :class="highlightLog(log)" class="leading-relaxed">
-                            <span x-text="log.content"></span> 
+                            <span x-text="log.content" class="whitespace-pre-wrap"></span> 
                         </div>
                     </template>
                 </div>

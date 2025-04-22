@@ -403,7 +403,7 @@ class PIMHelper:
         # 获取内部的MetaRegistryHolder
         try:
             # 尝试直接获取 plugin_manager
-            plugin_manager = server._PluginServerInterface__plugin.plugin_manager
+            # plugin_manager = server._PluginServerInterface__plugin.plugin_manager
             # self.logger.info("成功获取plugin_manager")
             
             # 不再尝试获取 pim_ext 对象，直接使用其他可用API
@@ -537,12 +537,14 @@ class PIMHelper:
         }
         
         # 获取已加载的插件信息
-        plugin_manager = self.server._PluginServerInterface__plugin.plugin_manager
-        for plugin in plugin_manager.get_regular_plugins():
-            plugin_id = plugin.get_id()
-            plugin_path = getattr(plugin, 'file_path', None)
-            if plugin_path:
-                result['loaded'][plugin_id] = str(plugin_path)
+        loaded_plugin_ids = self.server.get_plugin_list()
+        for plugin_id in loaded_plugin_ids:
+            plugin_instance = self.server.get_plugin_instance(plugin_id)
+            if plugin_instance:
+                # Try to get path, might still rely on internal attribute
+                plugin_path = getattr(plugin_instance, 'file_path', None)
+                if plugin_path:
+                    result['loaded'][plugin_id] = str(plugin_path)
         
         # 获取配置中的插件目录
         mcdr_config = self.server.get_mcdr_config()
@@ -673,8 +675,11 @@ class PIMHelper:
             return [], {}
             
         # 获取已安装的插件
-        plugin_manager = self.server._PluginServerInterface__plugin.plugin_manager
-        installed_plugins = {p.get_id(): p for p in plugin_manager.get_all_plugins()}
+        installed_plugins = {}
+        for pid in self.server.get_plugin_list():
+            instance = self.server.get_plugin_instance(pid)
+            if instance:
+                installed_plugins[pid] = instance
         
         # 检查依赖
         missing_deps = []
@@ -692,11 +697,12 @@ class PIMHelper:
                 else:
                     # 检查版本是否符合要求
                     installed_plugin = installed_plugins[dep_id]
-                    installed_version = str(installed_plugin.get_version())
+                    installed_metadata = self.server.get_plugin_metadata(dep_id)
+                    installed_version = str(installed_metadata.version) if installed_metadata else 'unknown'
                     
                     # 解析版本需求
                     try:
-                        if not version_req.accept(installed_version):
+                        if not VersionRequirement(version_req).accept(Version(installed_version)):
                             source.reply(RText(f"依赖版本不满足: {dep_id}@{installed_version} 不满足 {version_req}", color=RColor.yellow))
                             outdated_deps[dep_id] = str(version_req)
                         else:
@@ -740,8 +746,8 @@ class PIMHelper:
                         if 'dependencies' in meta:
                             deps = meta['dependencies']
                             for dep_id, version_req in deps.items():
-                                # 跳过MCDR本身
-                                if dep_id.lower() == 'mcdreforged':
+                                # 跳过MCDR本身和Python版本要求
+                                if dep_id.lower() == 'mcdreforged' or dep_id.lower() == 'python':
                                     continue
                                 
                                 # 检查依赖是否已安装
@@ -751,11 +757,12 @@ class PIMHelper:
                                 else:
                                     # 检查版本是否符合要求
                                     installed_plugin = installed_plugins[dep_id]
-                                    installed_version = str(installed_plugin.get_version())
+                                    installed_metadata = self.server.get_plugin_metadata(dep_id)
+                                    installed_version = str(installed_metadata.version) if installed_metadata else 'unknown'
                                     
                                     try:
                                         version_requirement = VersionRequirement(version_req)
-                                        if not version_requirement.accept(installed_plugin.get_version()):
+                                        if not version_requirement.accept(Version(installed_version)):
                                             source.reply(RText(f"依赖版本不满足: {dep_id}@{installed_version} 不满足 {version_req}", color=RColor.yellow))
                                             outdated_deps[dep_id] = version_req
                                         else:
@@ -904,11 +911,8 @@ class PIMHelper:
         try:
             global PENDING_DELETE_FILES
             
-            # 获取插件管理器
-            plugin_manager = self.server._PluginServerInterface__plugin.plugin_manager
-            
             # 检查插件是否已加载
-            plugin = plugin_manager.get_plugin_from_id(plugin_id)
+            plugin = self.server.get_plugin_instance(plugin_id)
             old_path = None
             pending_files = []
             
@@ -1072,12 +1076,14 @@ class PIMHelper:
                 
             # 检查插件是否已存在
             latest_version = plugin_data.latest_version
-            plugin_manager = self.server._PluginServerInterface__plugin.plugin_manager
-            installed_plugin = plugin_manager.get_plugin_from_id(plugin_id)
+            installed_plugin = self.server.get_plugin_instance(plugin_id)
             
             # 如果插件已加载，检查版本
             if installed_plugin is not None:
-                current_version = str(installed_plugin.get_version())
+                # current_version = str(installed_plugin.get_version()) # Removed
+                metadata = self.server.get_plugin_metadata(plugin_id)
+                current_version = str(metadata.version) if metadata else 'unknown'
+                
                 if current_version == latest_version:
                     source.reply(RText(f"插件 {plugin_id}@{current_version} 已安装且是最新版本", color=RColor.green))
                     return True
@@ -1147,15 +1153,18 @@ class PIMHelper:
                                 outdated_deps = {}
                                 
                                 # 获取已安装的插件
-                                plugin_manager = self.server._PluginServerInterface__plugin.plugin_manager
-                                installed_plugins = {p.get_id(): p for p in plugin_manager.get_all_plugins()}
+                                installed_plugins = {}
+                                for pid in self.server.get_plugin_list():
+                                    instance = self.server.get_plugin_instance(pid)
+                                    if instance:
+                                        installed_plugins[pid] = instance
                                 
                                 # 检查MCDR插件依赖
                                 if 'dependencies' in meta:
                                     deps = meta['dependencies']
                                     for dep_id, version_req in deps.items():
-                                        # 跳过MCDR本身
-                                        if dep_id.lower() == 'mcdreforged':
+                                        # 跳过MCDR本身和Python版本要求
+                                        if dep_id.lower() == 'mcdreforged' or dep_id.lower() == 'python':
                                             continue
                                         
                                         # 检查依赖是否已安装
@@ -1165,12 +1174,13 @@ class PIMHelper:
                                         else:
                                             # 检查版本是否符合要求
                                             installed_plugin = installed_plugins[dep_id]
-                                            installed_version = str(installed_plugin.get_version())
+                                            installed_metadata = self.server.get_plugin_metadata(dep_id)
+                                            installed_version = str(installed_metadata.version) if installed_metadata else 'unknown'
                                             
                                             try:
-                                                from mcdreforged.plugin.meta.version import VersionRequirement
+                                                from mcdreforged.plugin.meta.version import VersionRequirement, Version
                                                 version_requirement = VersionRequirement(version_req)
-                                                if not version_requirement.accept(installed_plugin.get_version()):
+                                                if not version_requirement.accept(Version(installed_version)):
                                                     source.reply(RText(f"依赖版本不满足: {dep_id}@{installed_version} 不满足 {version_req}", color=RColor.yellow))
                                                     outdated_deps[dep_id] = version_req
                                                 else:
@@ -1193,6 +1203,11 @@ class PIMHelper:
                                     
                                     for dep_id in missing_deps:
                                         try:
+                                            # 跳过 python 和 mcdreforged
+                                            if dep_id.lower() in ('python', 'mcdreforged'):
+                                                source.reply(RText(f"忽略依赖: {dep_id} (非插件依赖)", color=RColor.gray))
+                                                continue
+                                            
                                             source.reply(RText(f"⏳ 开始安装依赖: {dep_id}", color=RColor.yellow))
                                             success = self.install_plugin(source, dep_id)
                                             if success:
@@ -1330,6 +1345,11 @@ class PIMHelper:
                 
                 for dep_id in missing_deps:
                     try:
+                        # 跳过 python 和 mcdreforged
+                        if dep_id.lower() in ('python', 'mcdreforged'):
+                            source.reply(RText(f"忽略依赖: {dep_id} (非插件依赖)", color=RColor.gray))
+                            continue
+                        
                         source.reply(RText(f"⏳ 开始安装依赖: {dep_id}", color=RColor.yellow))
                         success = self.install_plugin(source, dep_id)
                         if success:
@@ -1380,8 +1400,7 @@ class PIMHelper:
             self.remove_old_plugin(source, plugin_id)
                     
             # 获取安装目录
-            plugin_manager = self.server._PluginServerInterface__plugin.plugin_manager
-            plugin_directories = plugin_manager.plugin_directories
+            plugin_directories = self.get_plugin_directories()
             
             if not plugin_directories:
                 # 如果插件目录列表为空，尝试从配置获取
@@ -1457,12 +1476,18 @@ class PIMHelper:
                             # 检查是否还有未安装的依赖
                             if 'dependencies' in meta:
                                 # 获取已安装的插件
-                                plugin_manager = self.server._PluginServerInterface__plugin.plugin_manager
-                                installed_plugins = {p.get_id(): str(p.get_version()) for p in plugin_manager.get_all_plugins()}
+                                installed_plugins = {}
+                                for pid in self.server.get_plugin_list():
+                                    instance = self.server.get_plugin_instance(pid)
+                                    if instance:
+                                        # installed_plugins[pid] = str(instance.get_version()) # Removed
+                                        metadata = self.server.get_plugin_metadata(pid)
+                                        version = str(metadata.version) if metadata else 'unknown'
+                                        installed_plugins[pid] = version
                                 
                                 for dep_id, version_req in meta['dependencies'].items():
-                                    # 跳过MCDR本身
-                                    if dep_id.lower() == 'mcdreforged':
+                                    # 跳过MCDR本身和Python版本要求
+                                    if dep_id.lower() == 'mcdreforged' or dep_id.lower() == 'python':
                                         continue
                                     
                                     # 检查依赖是否已安装
@@ -1872,6 +1897,507 @@ class PIMHelper:
         except Exception as e:
             source.reply(f"分析加载失败原因时出错: {e}")
             self.logger.exception("分析加载失败原因时出错")
+        
+    def find_dependent_plugins(self, source, plugin_id: str) -> List[str]:
+        """查找依赖于指定插件的其他插件"""
+        dependent_plugins = []
+        
+        try:
+            # 获取已加载的插件
+            loaded_plugin_ids = self.server.get_plugin_list()
+            loaded_plugins = []
+            for pid in loaded_plugin_ids:
+                 instance = self.server.get_plugin_instance(pid)
+                 if instance:
+                     loaded_plugins.append(instance)
+
+            for plugin in loaded_plugins:
+                try:
+                    plugin_dependencies = {}
+                    
+                    # 获取插件的mcdr_plugin.json声明的依赖
+                    plugin_path = getattr(plugin, 'file_path', None)
+                    if not plugin_path or not os.path.exists(plugin_path):
+                        continue
+                        
+                    # 检查是否为插件包
+                    import zipfile
+                    import json
+                    
+                    if not zipfile.is_zipfile(plugin_path):
+                        continue
+                        
+                    with zipfile.ZipFile(plugin_path, 'r') as zip_ref:
+                        # 查找mcdr_plugin.json
+                        mcdr_plugin_json = None
+                        for file_path in zip_ref.namelist():
+                            if file_path.endswith('mcdr_plugin.json') or file_path == 'mcdr_plugin.json' or file_path.endswith('mcdreforged.plugin.json'):
+                                mcdr_plugin_json = file_path
+                                break
+                                
+                        if not mcdr_plugin_json:
+                            continue
+                            
+                        # 读取元数据中的依赖
+                        with zip_ref.open(mcdr_plugin_json) as f:
+                            meta = json.loads(f.read().decode('utf-8'))
+                            if 'dependencies' in meta and meta['dependencies']:
+                                plugin_dependencies = meta['dependencies']
+                            
+                    # 检查依赖
+                    if plugin_id in plugin_dependencies:
+                        dependent_plugins.append(plugin.get_id())
+                        
+                except Exception as e:
+                    self.logger.debug(f"检查插件 {plugin.get_id()} 的依赖时出错: {e}")
+                    continue
+                    
+            # 同样检查未加载插件的依赖
+            local_plugins = self.get_local_plugins()
+            for file_path in local_plugins['unloaded']:
+                try:
+                    detected_id = self.detect_unloaded_plugin_id(file_path)
+                    if not detected_id or detected_id == plugin_id:
+                        continue
+                        
+                    import zipfile
+                    import json
+                    
+                    if not zipfile.is_zipfile(file_path):
+                        continue
+                        
+                    with zipfile.ZipFile(file_path, 'r') as zip_ref:
+                        # 查找mcdr_plugin.json
+                        mcdr_plugin_json = None
+                        for zip_path in zip_ref.namelist():
+                            if zip_path.endswith('mcdr_plugin.json') or zip_path == 'mcdr_plugin.json' or zip_path.endswith('mcdreforged.plugin.json'):
+                                mcdr_plugin_json = zip_path
+                                break
+                                
+                        if not mcdr_plugin_json:
+                            continue
+                            
+                        # 读取元数据中的依赖
+                        with zip_ref.open(mcdr_plugin_json) as f:
+                            meta = json.loads(f.read().decode('utf-8'))
+                            if 'dependencies' in meta and meta['dependencies']:
+                                if plugin_id in meta['dependencies']:
+                                    dependent_plugins.append(detected_id)
+                except Exception as e:
+                    self.logger.debug(f"检查未加载插件 {file_path} 的依赖时出错: {e}")
+                    continue
+            
+            return dependent_plugins
+            
+        except Exception as e:
+            source.reply(f"查找依赖插件时出错: {e}")
+            self.logger.exception(f"查找依赖于插件 {plugin_id} 的其他插件时出错")
+            return []
+
+    def get_temp_dir(self) -> str:
+        """获取临时目录路径"""
+        # 获取MCDR根目录
+        mcdr_root = os.getcwd()
+        
+        # 尝试获取宿主插件的ID，如果是被其他插件内嵌的情况
+        host_plugin_id = None
+        
+        try:
+            if self.server.get_plugin_instance("guguwebui"): # Use public API
+                host_plugin_id = "guguwebui"
+        except:
+            pass
+        
+        # 确定使用哪个插件ID作为目录名
+        plugin_id = host_plugin_id or "pim_helper"
+        
+        # 创建固定的临时目录
+        temp_dir_path = os.path.join(mcdr_root, "config", plugin_id, "temp")
+        # 确保临时目录存在
+        os.makedirs(temp_dir_path, exist_ok=True)
+        return temp_dir_path
+
+    def get_plugin_versions(self, plugin_id: str) -> List[Dict[str, Any]]:
+        """
+        获取指定插件的所有可用版本
+        
+        Args:
+            plugin_id: 插件ID
+            
+        Returns:
+            包含版本信息的列表，每个版本包含版本号、发布日期、下载次数等信息
+        """
+        try:
+            # 使用全局元数据注册表
+            global_registry = get_global_registry()
+            
+            # 查找插件数据
+            plugin_data = global_registry.get_plugin_data(plugin_id)
+            if not plugin_data or not plugin_data.releases:
+                return []
+            
+            # 获取当前已安装版本（如果有）
+            installed_version = None
+            if self.server:
+                installed_plugin = self.server.get_plugin_instance(plugin_id)
+                if installed_plugin:
+                    metadata = self.server.get_plugin_metadata(plugin_id)
+                    installed_version = str(metadata.version) if metadata else 'unknown'
+            
+            # 收集所有版本信息
+            versions = []
+            for release in plugin_data.releases:
+                version = release.tag_name.lstrip('v') if release.tag_name else ""
+                if not version:
+                    continue
+                
+                version_info = {
+                    'version': version,
+                    'release_date': release.created_at,
+                    'download_count': release.download_count,
+                    'download_url': release.browser_download_url,
+                    'description': release.description,
+                    'prerelease': release.prerelease,
+                    'installed': version == installed_version
+                }
+                versions.append(version_info)
+            
+            # 按发布日期排序（最新的在前）
+            versions.sort(key=lambda x: x.get('release_date', ''), reverse=True)
+            
+            return versions
+            
+        except Exception as e:
+            self.logger.error(f"获取插件 {plugin_id} 版本信息失败: {e}")
+            return []
+
+    def get_plugin_dir(self) -> str:
+        """获取插件目录"""
+        # 获取MCDR配置中的插件目录列表
+        plugin_directories = self.get_plugin_directories()
+        
+        # 使用第一个目录
+        if plugin_directories:
+            return plugin_directories[0]
+        
+        # 兜底：使用当前工作目录下的plugins文件夹
+        return os.path.join(os.getcwd(), 'plugins')
+        
+    def get_plugin_directories(self) -> List[str]:
+        """获取插件目录列表"""
+        # 尝试从MCDR配置获取插件目录列表
+        mcdr_config = self.server.get_mcdr_config()
+        plugin_directories = []
+        
+        if 'plugin_directories' in mcdr_config and mcdr_config['plugin_directories']:
+            plugin_directories = mcdr_config['plugin_directories']
+        else:
+            # 兜底：使用当前工作目录下的plugins文件夹
+            default_plugin_dir = os.path.join(os.getcwd(), 'plugins')
+            if os.path.isdir(default_plugin_dir):
+                plugin_directories = [default_plugin_dir]
+                
+        return plugin_directories
+
+    def uninstall_plugin(self, source, plugin_id: str, skip_dependents_check: bool = False) -> bool:
+        """
+        完全卸载插件并删除本地文件
+        skip_dependents_check: 是否跳过检查依赖该插件的其他插件（用于避免循环调用）
+        """
+        try:
+            source.reply(RText(f"开始卸载插件: {plugin_id}", color=RColor.yellow))
+            
+            # 首先检查是否有其他插件依赖于此插件
+            if not skip_dependents_check:
+                dependent_plugins = self.find_dependent_plugins(source, plugin_id)
+                if dependent_plugins:
+                    source.reply(RText(f"警告: 以下插件依赖于 {plugin_id}:", color=RColor.red))
+                    for dep_id in dependent_plugins:
+                        source.reply(RText(f"  - {dep_id}", color=RColor.red))
+                    
+                    # 提示用户是否继续卸载
+                    source.reply(RTextList(
+                        RText("如果卸载此插件，依赖它的插件可能无法正常工作。", color=RColor.yellow),
+                        RText(" [一并卸载所有]", color=RColor.red)
+                            .h("点击卸载此插件及所有依赖它的插件")
+                            .c(RAction.run_command, f"!!pim_helper uninstall_with_dependents {plugin_id}")
+                    ))
+                    source.reply(RTextList(
+                        RText(" [仅卸载此插件]", color=RColor.yellow)
+                            .h("点击仅卸载此插件")
+                            .c(RAction.run_command, f"!!pim_helper uninstall_force {plugin_id}")
+                    ))
+                    return False
+            
+            removed_files = []
+            plugin_found = False
+            
+            # 检查插件是否已加载
+            plugin = self.server.get_plugin_instance(plugin_id)
+            if plugin is not None:
+                plugin_found = True
+                # 获取插件文件路径
+                plugin_path = getattr(plugin, 'file_path', None)
+                if plugin_path:
+                    source.reply(RText(f"已找到已加载的插件: {plugin_id} ({plugin_path})", color=RColor.aqua))
+                
+                # 卸载插件
+                source.reply(RText(f"正在卸载插件: {plugin_id}", color=RColor.aqua))
+                self.server.unload_plugin(plugin_id)
+                time.sleep(1)  # 给一点时间让卸载完成
+                
+                # 删除文件
+                if plugin_path and os.path.exists(plugin_path):
+                    try:
+                        source.reply(RText(f"正在删除文件: {plugin_path}", color=RColor.aqua))
+                        os.remove(plugin_path)
+                        removed_files.append(plugin_path)
+                    except Exception as e:
+                        source.reply(RText(f"⚠ 删除文件失败: {e}", color=RColor.red))
+                        # 尝试强制删除
+                        if self.force_delete_file(plugin_path):
+                            source.reply(RText(f"✓ 强制删除成功: {plugin_path}", color=RColor.green))
+                            removed_files.append(plugin_path)
+                        else:
+                            source.reply(RText(f"⚠ 强制删除失败，请手动删除", color=RColor.red))
+            
+            # 查找未加载的插件文件
+            source.reply(RText(f"正在搜索未加载的插件文件: {plugin_id}", color=RColor.aqua))
+            
+            # 扫描所有本地插件文件
+            local_plugins = self.get_local_plugins()
+            unloaded_plugin_files = []
+            
+            # 检查未加载的插件
+            for file_path in local_plugins['unloaded']:
+                detected_id = self.detect_unloaded_plugin_id(file_path)
+                if detected_id == plugin_id:
+                    plugin_found = True
+                    unloaded_plugin_files.append(file_path)
+                    source.reply(RText(f"找到未加载的插件文件: {file_path}", color=RColor.aqua))
+            
+            # 检查禁用的插件
+            if 'disabled' in local_plugins:
+                for file_path in local_plugins['disabled']:
+                    detected_id = self.detect_unloaded_plugin_id(file_path)
+                    if detected_id == plugin_id:
+                        plugin_found = True
+                        unloaded_plugin_files.append(file_path)
+                        source.reply(RText(f"找到禁用的插件文件: {file_path}", color=RColor.aqua))
+                    
+            # 如果找到未加载的插件文件
+            if unloaded_plugin_files:
+                source.reply(RText(f"找到 {len(unloaded_plugin_files)} 个未加载/禁用的插件文件", color=RColor.aqua))
+                for file_path in unloaded_plugin_files:
+                    try:
+                        source.reply(RText(f"正在删除文件: {file_path}", color=RColor.aqua))
+                        os.remove(file_path)
+                        removed_files.append(file_path)
+                    except Exception as e:
+                        source.reply(RText(f"⚠ 删除文件失败: {e}", color=RColor.red))
+                        # 尝试强制删除
+                        if self.force_delete_file(file_path):
+                            source.reply(RText(f"✓ 强制删除成功: {file_path}", color=RColor.green))
+                            removed_files.append(file_path)
+                        else:
+                            source.reply(RText(f"⚠ 强制删除失败，请手动删除", color=RColor.red))
+            
+            # 如果没有找到任何插件（既没有加载也没有未加载），尝试通过插件ID匹配所有可能的文件
+            if not plugin_found:
+                source.reply(RText(f"未找到已加载或未加载的插件 {plugin_id}，尝试查找所有可能的文件...", color=RColor.yellow))
+                
+                # 获取所有插件目录
+                plugin_dirs = self.get_plugin_directories()
+                possible_files = []
+                
+                # 遍历所有插件目录，查找可能与插件ID相关的文件
+                for plugin_dir in plugin_dirs:
+                    if os.path.exists(plugin_dir) and os.path.isdir(plugin_dir):
+                        for file_name in os.listdir(plugin_dir):
+                            file_path = os.path.join(plugin_dir, file_name)
+                            # 检查文件名是否包含插件ID
+                            if plugin_id.lower() in file_name.lower() and os.path.isfile(file_path):
+                                possible_files.append(file_path)
+                                source.reply(RText(f"找到可能的插件文件: {file_path}", color=RColor.aqua))
+                                
+                            # 如果是zip文件，检查其内容
+                            if os.path.isfile(file_path) and (file_path.endswith('.zip') or file_path.endswith('.mcdr')):
+                                try:
+                                    import zipfile
+                                    import json
+                                    
+                                    with zipfile.ZipFile(file_path, 'r') as zip_ref:
+                                        # 查找mcdr_plugin.json
+                                        for zip_path in zip_ref.namelist():
+                                            if zip_path.endswith('mcdr_plugin.json') or zip_path == 'mcdr_plugin.json' or zip_path.endswith('mcdreforged.plugin.json'):
+                                                try:
+                                                    with zip_ref.open(zip_path) as f:
+                                                        meta = json.loads(f.read().decode('utf-8'))
+                                                        if 'id' in meta and meta['id'] == plugin_id:
+                                                            possible_files.append(file_path)
+                                                            source.reply(RText(f"找到可能的插件文件: {file_path}", color=RColor.aqua))
+                                                            break
+                                                except:
+                                                    pass
+                                except:
+                                    pass
+                
+                # 删除找到的可能文件
+                if possible_files:
+                    source.reply(RText(f"找到 {len(possible_files)} 个可能的插件文件", color=RColor.aqua))
+                    for file_path in possible_files:
+                        try:
+                            source.reply(RText(f"正在删除文件: {file_path}", color=RColor.aqua))
+                            os.remove(file_path)
+                            removed_files.append(file_path)
+                        except Exception as e:
+                            source.reply(RText(f"⚠ 删除文件失败: {e}", color=RColor.red))
+                            # 尝试强制删除
+                            if self.force_delete_file(file_path):
+                                source.reply(RText(f"✓ 强制删除成功: {file_path}", color=RColor.green))
+                                removed_files.append(file_path)
+                            else:
+                                source.reply(RText(f"⚠ 强制删除失败，请手动删除", color=RColor.red))
+            
+            # 显示结果
+            if removed_files:
+                source.reply(RText(f"✓ 已成功删除以下文件:", color=RColor.green))
+                for file_path in removed_files:
+                    source.reply(RText(f"  - {file_path}", color=RColor.green))
+                source.reply(RText(f"插件 {plugin_id} 已完全卸载", color=RColor.green))
+                return True
+            else:
+                # 未找到任何文件
+                source.reply(RText(f"⚠ 未找到插件 {plugin_id} 的任何文件", color=RColor.red))
+                return False
+                
+        except Exception as e:
+            source.reply(RText(f"卸载插件时发生错误: {e}", color=RColor.red))
+            self.logger.exception(f"卸载插件 {plugin_id} 时出错")
+            return False
+            
+    def uninstall_with_dependents(self, source, plugin_id: str) -> bool:
+        """卸载插件及其所有依赖它的插件"""
+        try:
+            dependent_plugins = self.find_dependent_plugins(source, plugin_id)
+            
+            if dependent_plugins:
+                source.reply(RText(f"将卸载 {plugin_id} 及以下依赖它的插件:", color=RColor.yellow))
+                for dep_id in dependent_plugins:
+                    source.reply(RText(f"  - {dep_id}", color=RColor.yellow))
+                
+                # 先卸载依赖该插件的插件（避免检查循环）
+                for dep_id in dependent_plugins:
+                    source.reply(RText(f"正在卸载依赖 {plugin_id} 的插件: {dep_id}", color=RColor.aqua))
+                    self.uninstall_plugin(source, dep_id, skip_dependents_check=True)
+            
+            # 最后卸载主插件
+            return self.uninstall_plugin(source, plugin_id, skip_dependents_check=True)
+        
+        except Exception as e:
+            source.reply(RText(f"批量卸载插件时发生错误: {e}", color=RColor.red))
+            self.logger.exception(f"批量卸载插件 {plugin_id} 及其依赖时出错")
+            return False
+    
+    def uninstall_force(self, source, plugin_id: str) -> bool:
+        """强制卸载插件，忽略依赖检查"""
+        return self.uninstall_plugin(source, plugin_id, skip_dependents_check=True)
+
+    def find_dependent_plugins(self, source, plugin_id: str) -> List[str]:
+        """查找依赖于指定插件的其他插件"""
+        dependent_plugins = []
+        
+        try:
+            # 获取已加载的插件
+            loaded_plugin_ids = self.server.get_plugin_list()
+            loaded_plugins = []
+            for pid in loaded_plugin_ids:
+                 instance = self.server.get_plugin_instance(pid)
+                 if instance:
+                     loaded_plugins.append(instance)
+
+            for plugin in loaded_plugins:
+                try:
+                    plugin_dependencies = {}
+                    
+                    # 获取插件的mcdr_plugin.json声明的依赖
+                    plugin_path = getattr(plugin, 'file_path', None)
+                    if not plugin_path or not os.path.exists(plugin_path):
+                        continue
+                        
+                    # 检查是否为插件包
+                    import zipfile
+                    import json
+                    
+                    if not zipfile.is_zipfile(plugin_path):
+                        continue
+                        
+                    with zipfile.ZipFile(plugin_path, 'r') as zip_ref:
+                        # 查找mcdr_plugin.json
+                        mcdr_plugin_json = None
+                        for file_path in zip_ref.namelist():
+                            if file_path.endswith('mcdr_plugin.json') or file_path == 'mcdr_plugin.json' or file_path.endswith('mcdreforged.plugin.json'):
+                                mcdr_plugin_json = file_path
+                                break
+                                
+                        if not mcdr_plugin_json:
+                            continue
+                            
+                        # 读取元数据中的依赖
+                        with zip_ref.open(mcdr_plugin_json) as f:
+                            meta = json.loads(f.read().decode('utf-8'))
+                            if 'dependencies' in meta and meta['dependencies']:
+                                plugin_dependencies = meta['dependencies']
+                            
+                    # 检查依赖
+                    if plugin_id in plugin_dependencies:
+                        dependent_plugins.append(plugin.get_id())
+                        
+                except Exception as e:
+                    self.logger.debug(f"检查插件 {plugin.get_id()} 的依赖时出错: {e}")
+                    continue
+                    
+            # 同样检查未加载插件的依赖
+            local_plugins = self.get_local_plugins()
+            for file_path in local_plugins['unloaded']:
+                try:
+                    detected_id = self.detect_unloaded_plugin_id(file_path)
+                    if not detected_id or detected_id == plugin_id:
+                        continue
+                        
+                    import zipfile
+                    import json
+                    
+                    if not zipfile.is_zipfile(file_path):
+                        continue
+                        
+                    with zipfile.ZipFile(file_path, 'r') as zip_ref:
+                        # 查找mcdr_plugin.json
+                        mcdr_plugin_json = None
+                        for zip_path in zip_ref.namelist():
+                            if zip_path.endswith('mcdr_plugin.json') or zip_path == 'mcdr_plugin.json' or zip_path.endswith('mcdreforged.plugin.json'):
+                                mcdr_plugin_json = zip_path
+                                break
+                                
+                        if not mcdr_plugin_json:
+                            continue
+                            
+                        # 读取元数据中的依赖
+                        with zip_ref.open(mcdr_plugin_json) as f:
+                            meta = json.loads(f.read().decode('utf-8'))
+                            if 'dependencies' in meta and meta['dependencies']:
+                                if plugin_id in meta['dependencies']:
+                                    dependent_plugins.append(detected_id)
+                except Exception as e:
+                    self.logger.debug(f"检查未加载插件 {file_path} 的依赖时出错: {e}")
+                    continue
+            
+            return dependent_plugins
+            
+        except Exception as e:
+            source.reply(f"查找依赖插件时出错: {e}")
+            self.logger.exception(f"查找依赖于插件 {plugin_id} 的其他插件时出错")
+            return []
 
     def _install_dependencies(self, source, plugin_path: str) -> bool:
         """安装插件依赖"""
@@ -2046,419 +2572,6 @@ class PIMHelper:
             self.logger.exception("安装依赖时出错")
             source.reply("将继续尝试加载插件...")
             return True  # 继续尝试加载插件
-
-    def uninstall_plugin(self, source, plugin_id: str, skip_dependents_check: bool = False) -> bool:
-        """
-        完全卸载插件并删除本地文件
-        skip_dependents_check: 是否跳过检查依赖该插件的其他插件（用于避免循环调用）
-        """
-        try:
-            source.reply(RText(f"开始卸载插件: {plugin_id}", color=RColor.yellow))
-            
-            # 首先检查是否有其他插件依赖于此插件
-            if not skip_dependents_check:
-                dependent_plugins = self.find_dependent_plugins(source, plugin_id)
-                if dependent_plugins:
-                    source.reply(RText(f"警告: 以下插件依赖于 {plugin_id}:", color=RColor.red))
-                    for dep_id in dependent_plugins:
-                        source.reply(RText(f"  - {dep_id}", color=RColor.red))
-                    
-                    # 提示用户是否继续卸载
-                    source.reply(RTextList(
-                        RText("如果卸载此插件，依赖它的插件可能无法正常工作。", color=RColor.yellow),
-                        RText(" [一并卸载所有]", color=RColor.red)
-                            .h("点击卸载此插件及所有依赖它的插件")
-                            .c(RAction.run_command, f"!!pim_helper uninstall_with_dependents {plugin_id}")
-                    ))
-                    source.reply(RTextList(
-                        RText(" [仅卸载此插件]", color=RColor.yellow)
-                            .h("点击仅卸载此插件")
-                            .c(RAction.run_command, f"!!pim_helper uninstall_force {plugin_id}")
-                    ))
-                    return False
-            
-            # 获取插件管理器
-            plugin_manager = self.server._PluginServerInterface__plugin.plugin_manager
-            removed_files = []
-            plugin_found = False
-            
-            # 检查插件是否已加载
-            plugin = plugin_manager.get_plugin_from_id(plugin_id)
-            if plugin is not None:
-                plugin_found = True
-                # 获取插件文件路径
-                plugin_path = getattr(plugin, 'file_path', None)
-                if plugin_path:
-                    source.reply(RText(f"已找到已加载的插件: {plugin_id} ({plugin_path})", color=RColor.aqua))
-                
-                # 卸载插件
-                source.reply(RText(f"正在卸载插件: {plugin_id}", color=RColor.aqua))
-                self.server.unload_plugin(plugin_id)
-                time.sleep(1)  # 给一点时间让卸载完成
-                
-                # 删除文件
-                if plugin_path and os.path.exists(plugin_path):
-                    try:
-                        source.reply(RText(f"正在删除文件: {plugin_path}", color=RColor.aqua))
-                        os.remove(plugin_path)
-                        removed_files.append(plugin_path)
-                    except Exception as e:
-                        source.reply(RText(f"⚠ 删除文件失败: {e}", color=RColor.red))
-                        # 尝试强制删除
-                        if self.force_delete_file(plugin_path):
-                            source.reply(RText(f"✓ 强制删除成功: {plugin_path}", color=RColor.green))
-                            removed_files.append(plugin_path)
-                        else:
-                            source.reply(RText(f"⚠ 强制删除失败，请手动删除", color=RColor.red))
-            
-            # 查找未加载的插件文件
-            source.reply(RText(f"正在搜索未加载的插件文件: {plugin_id}", color=RColor.aqua))
-            
-            # 扫描所有本地插件文件
-            local_plugins = self.get_local_plugins()
-            unloaded_plugin_files = []
-            
-            # 检查未加载的插件
-            for file_path in local_plugins['unloaded']:
-                detected_id = self.detect_unloaded_plugin_id(file_path)
-                if detected_id == plugin_id:
-                    plugin_found = True
-                    unloaded_plugin_files.append(file_path)
-                    source.reply(RText(f"找到未加载的插件文件: {file_path}", color=RColor.aqua))
-            
-            # 检查禁用的插件
-            if 'disabled' in local_plugins:
-                for file_path in local_plugins['disabled']:
-                    detected_id = self.detect_unloaded_plugin_id(file_path)
-                    if detected_id == plugin_id:
-                        plugin_found = True
-                        unloaded_plugin_files.append(file_path)
-                        source.reply(RText(f"找到禁用的插件文件: {file_path}", color=RColor.aqua))
-                    
-            # 如果找到未加载的插件文件
-            if unloaded_plugin_files:
-                source.reply(RText(f"找到 {len(unloaded_plugin_files)} 个未加载/禁用的插件文件", color=RColor.aqua))
-                for file_path in unloaded_plugin_files:
-                    try:
-                        source.reply(RText(f"正在删除文件: {file_path}", color=RColor.aqua))
-                        os.remove(file_path)
-                        removed_files.append(file_path)
-                    except Exception as e:
-                        source.reply(RText(f"⚠ 删除文件失败: {e}", color=RColor.red))
-                        # 尝试强制删除
-                        if self.force_delete_file(file_path):
-                            source.reply(RText(f"✓ 强制删除成功: {file_path}", color=RColor.green))
-                            removed_files.append(file_path)
-                        else:
-                            source.reply(RText(f"⚠ 强制删除失败，请手动删除", color=RColor.red))
-            
-            # 如果没有找到任何插件（既没有加载也没有未加载），尝试通过插件ID匹配所有可能的文件
-            if not plugin_found:
-                source.reply(RText(f"未找到已加载或未加载的插件 {plugin_id}，尝试查找所有可能的文件...", color=RColor.yellow))
-                
-                # 获取所有插件目录
-                plugin_dirs = self.get_plugin_directories()
-                possible_files = []
-                
-                # 遍历所有插件目录，查找可能与插件ID相关的文件
-                for plugin_dir in plugin_dirs:
-                    if os.path.exists(plugin_dir) and os.path.isdir(plugin_dir):
-                        for file_name in os.listdir(plugin_dir):
-                            file_path = os.path.join(plugin_dir, file_name)
-                            # 检查文件名是否包含插件ID
-                            if plugin_id.lower() in file_name.lower() and os.path.isfile(file_path):
-                                possible_files.append(file_path)
-                                source.reply(RText(f"找到可能的插件文件: {file_path}", color=RColor.aqua))
-                                
-                            # 如果是zip文件，检查其内容
-                            if os.path.isfile(file_path) and (file_path.endswith('.zip') or file_path.endswith('.mcdr')):
-                                try:
-                                    import zipfile
-                                    import json
-                                    
-                                    with zipfile.ZipFile(file_path, 'r') as zip_ref:
-                                        # 查找mcdr_plugin.json
-                                        for zip_path in zip_ref.namelist():
-                                            if zip_path.endswith('mcdr_plugin.json') or zip_path == 'mcdr_plugin.json' or zip_path.endswith('mcdreforged.plugin.json'):
-                                                try:
-                                                    with zip_ref.open(zip_path) as f:
-                                                        meta = json.loads(f.read().decode('utf-8'))
-                                                        if 'id' in meta and meta['id'] == plugin_id:
-                                                            possible_files.append(file_path)
-                                                            source.reply(RText(f"找到可能的插件文件: {file_path}", color=RColor.aqua))
-                                                            break
-                                                except:
-                                                    pass
-                                except:
-                                    pass
-                
-                # 删除找到的可能文件
-                if possible_files:
-                    source.reply(RText(f"找到 {len(possible_files)} 个可能的插件文件", color=RColor.aqua))
-                    for file_path in possible_files:
-                        try:
-                            source.reply(RText(f"正在删除文件: {file_path}", color=RColor.aqua))
-                            os.remove(file_path)
-                            removed_files.append(file_path)
-                        except Exception as e:
-                            source.reply(RText(f"⚠ 删除文件失败: {e}", color=RColor.red))
-                            # 尝试强制删除
-                            if self.force_delete_file(file_path):
-                                source.reply(RText(f"✓ 强制删除成功: {file_path}", color=RColor.green))
-                                removed_files.append(file_path)
-                            else:
-                                source.reply(RText(f"⚠ 强制删除失败，请手动删除", color=RColor.red))
-            
-            # 显示结果
-            if removed_files:
-                source.reply(RText(f"✓ 已成功删除以下文件:", color=RColor.green))
-                for file_path in removed_files:
-                    source.reply(RText(f"  - {file_path}", color=RColor.green))
-                source.reply(RText(f"插件 {plugin_id} 已完全卸载", color=RColor.green))
-                return True
-            else:
-                # 未找到任何文件
-                source.reply(RText(f"⚠ 未找到插件 {plugin_id} 的任何文件", color=RColor.red))
-                return False
-                
-        except Exception as e:
-            source.reply(RText(f"卸载插件时发生错误: {e}", color=RColor.red))
-            self.logger.exception(f"卸载插件 {plugin_id} 时出错")
-            return False
-            
-    def uninstall_with_dependents(self, source, plugin_id: str) -> bool:
-        """卸载插件及其所有依赖它的插件"""
-        try:
-            dependent_plugins = self.find_dependent_plugins(source, plugin_id)
-            
-            if dependent_plugins:
-                source.reply(RText(f"将卸载 {plugin_id} 及以下依赖它的插件:", color=RColor.yellow))
-                for dep_id in dependent_plugins:
-                    source.reply(RText(f"  - {dep_id}", color=RColor.yellow))
-                
-                # 先卸载依赖该插件的插件（避免检查循环）
-                for dep_id in dependent_plugins:
-                    source.reply(RText(f"正在卸载依赖 {plugin_id} 的插件: {dep_id}", color=RColor.aqua))
-                    self.uninstall_plugin(source, dep_id, skip_dependents_check=True)
-            
-            # 最后卸载主插件
-            return self.uninstall_plugin(source, plugin_id, skip_dependents_check=True)
-        
-        except Exception as e:
-            source.reply(RText(f"批量卸载插件时发生错误: {e}", color=RColor.red))
-            self.logger.exception(f"批量卸载插件 {plugin_id} 及其依赖时出错")
-            return False
-    
-    def uninstall_force(self, source, plugin_id: str) -> bool:
-        """强制卸载插件，忽略依赖检查"""
-        return self.uninstall_plugin(source, plugin_id, skip_dependents_check=True)
-        
-    def find_dependent_plugins(self, source, plugin_id: str) -> List[str]:
-        """查找依赖于指定插件的其他插件"""
-        dependent_plugins = []
-        
-        try:
-            # 获取已加载的插件
-            plugin_manager = self.server._PluginServerInterface__plugin.plugin_manager
-            loaded_plugins = list(plugin_manager.get_all_plugins())
-            
-            for plugin in loaded_plugins:
-                try:
-                    plugin_dependencies = {}
-                    
-                    # 获取插件的mcdr_plugin.json声明的依赖
-                    plugin_path = getattr(plugin, 'file_path', None)
-                    if not plugin_path or not os.path.exists(plugin_path):
-                        continue
-                        
-                    # 检查是否为插件包
-                    import zipfile
-                    import json
-                    
-                    if not zipfile.is_zipfile(plugin_path):
-                        continue
-                        
-                    with zipfile.ZipFile(plugin_path, 'r') as zip_ref:
-                        # 查找mcdr_plugin.json
-                        mcdr_plugin_json = None
-                        for file_path in zip_ref.namelist():
-                            if file_path.endswith('mcdr_plugin.json') or file_path == 'mcdr_plugin.json' or file_path.endswith('mcdreforged.plugin.json'):
-                                mcdr_plugin_json = file_path
-                                break
-                                
-                        if not mcdr_plugin_json:
-                            continue
-                            
-                        # 读取元数据中的依赖
-                        with zip_ref.open(mcdr_plugin_json) as f:
-                            meta = json.loads(f.read().decode('utf-8'))
-                            if 'dependencies' in meta and meta['dependencies']:
-                                plugin_dependencies = meta['dependencies']
-                            
-                    # 检查依赖
-                    if plugin_id in plugin_dependencies:
-                        dependent_plugins.append(plugin.get_id())
-                        
-                except Exception as e:
-                    self.logger.debug(f"检查插件 {plugin.get_id()} 的依赖时出错: {e}")
-                    continue
-                    
-            # 同样检查未加载插件的依赖
-            local_plugins = self.get_local_plugins()
-            for file_path in local_plugins['unloaded']:
-                try:
-                    detected_id = self.detect_unloaded_plugin_id(file_path)
-                    if not detected_id or detected_id == plugin_id:
-                        continue
-                        
-                    import zipfile
-                    import json
-                    
-                    if not zipfile.is_zipfile(file_path):
-                        continue
-                        
-                    with zipfile.ZipFile(file_path, 'r') as zip_ref:
-                        # 查找mcdr_plugin.json
-                        mcdr_plugin_json = None
-                        for zip_path in zip_ref.namelist():
-                            if zip_path.endswith('mcdr_plugin.json') or zip_path == 'mcdr_plugin.json' or zip_path.endswith('mcdreforged.plugin.json'):
-                                mcdr_plugin_json = zip_path
-                                break
-                                
-                        if not mcdr_plugin_json:
-                            continue
-                            
-                        # 读取元数据中的依赖
-                        with zip_ref.open(mcdr_plugin_json) as f:
-                            meta = json.loads(f.read().decode('utf-8'))
-                            if 'dependencies' in meta and meta['dependencies']:
-                                if plugin_id in meta['dependencies']:
-                                    dependent_plugins.append(detected_id)
-                except Exception as e:
-                    self.logger.debug(f"检查未加载插件 {file_path} 的依赖时出错: {e}")
-                    continue
-            
-            return dependent_plugins
-            
-        except Exception as e:
-            source.reply(f"查找依赖插件时出错: {e}")
-            self.logger.exception(f"查找依赖于插件 {plugin_id} 的其他插件时出错")
-            return []
-
-    def get_temp_dir(self) -> str:
-        """获取临时目录路径"""
-        # 获取MCDR根目录
-        mcdr_root = os.getcwd()
-        
-        # 尝试获取宿主插件的ID，如果是被其他插件内嵌的情况
-        host_plugin_id = None
-        
-        try:
-            # 查找调用栈，尝试找到宿主插件的ID
-            mcdr_config = self.server.get_mcdr_config()
-            plugin_manager = getattr(self.server, "_PluginServerInterface__plugin", None)
-            if plugin_manager:
-                plugin_manager = getattr(plugin_manager, "plugin_manager", None)
-                if plugin_manager:
-                    # 如果当前运行的是WebUI插件
-                    if plugin_manager.get_plugin_from_id("guguwebui"):
-                        host_plugin_id = "guguwebui"
-        except:
-            pass
-        
-        # 确定使用哪个插件ID作为目录名
-        plugin_id = host_plugin_id or "pim_helper"
-        
-        # 创建固定的临时目录
-        temp_dir_path = os.path.join(mcdr_root, "config", plugin_id, "temp")
-        # 确保临时目录存在
-        os.makedirs(temp_dir_path, exist_ok=True)
-        return temp_dir_path
-
-    def get_plugin_versions(self, plugin_id: str) -> List[Dict[str, Any]]:
-        """
-        获取指定插件的所有可用版本
-        
-        Args:
-            plugin_id: 插件ID
-            
-        Returns:
-            包含版本信息的列表，每个版本包含版本号、发布日期、下载次数等信息
-        """
-        try:
-            # 使用全局元数据注册表
-            global_registry = get_global_registry()
-            
-            # 查找插件数据
-            plugin_data = global_registry.get_plugin_data(plugin_id)
-            if not plugin_data or not plugin_data.releases:
-                return []
-            
-            # 获取当前已安装版本（如果有）
-            installed_version = None
-            if self.server:
-                plugin_manager = getattr(self.server, "_PluginServerInterface__plugin", None)
-                if plugin_manager:
-                    plugin_manager = getattr(plugin_manager, "plugin_manager", None)
-                    if plugin_manager:
-                        installed_plugin = plugin_manager.get_plugin_from_id(plugin_id)
-                        if installed_plugin:
-                            installed_version = str(installed_plugin.get_version())
-            
-            # 收集所有版本信息
-            versions = []
-            for release in plugin_data.releases:
-                version = release.tag_name.lstrip('v') if release.tag_name else ""
-                if not version:
-                    continue
-                
-                version_info = {
-                    'version': version,
-                    'release_date': release.created_at,
-                    'download_count': release.download_count,
-                    'download_url': release.browser_download_url,
-                    'description': release.description,
-                    'prerelease': release.prerelease,
-                    'installed': version == installed_version
-                }
-                versions.append(version_info)
-            
-            # 按发布日期排序（最新的在前）
-            versions.sort(key=lambda x: x.get('release_date', ''), reverse=True)
-            
-            return versions
-            
-        except Exception as e:
-            self.logger.error(f"获取插件 {plugin_id} 版本信息失败: {e}")
-            return []
-
-    def get_plugin_dir(self) -> str:
-        """获取插件目录"""
-        # 获取MCDR配置中的插件目录列表
-        plugin_directories = self.get_plugin_directories()
-        
-        # 使用第一个目录
-        if plugin_directories:
-            return plugin_directories[0]
-        
-        # 兜底：使用当前工作目录下的plugins文件夹
-        return os.path.join(os.getcwd(), 'plugins')
-        
-    def get_plugin_directories(self) -> List[str]:
-        """获取插件目录列表"""
-        # 尝试从MCDR配置获取插件目录列表
-        mcdr_config = self.server.get_mcdr_config()
-        plugin_directories = []
-        
-        if 'plugin_directories' in mcdr_config and mcdr_config['plugin_directories']:
-            plugin_directories = mcdr_config['plugin_directories']
-        else:
-            # 兜底：使用当前工作目录下的plugins文件夹
-            default_plugin_dir = os.path.join(os.getcwd(), 'plugins')
-            if os.path.isdir(default_plugin_dir):
-                plugin_directories = [default_plugin_dir]
-                
-        return plugin_directories
 
 # 插件实例
 pim_helper: Optional[PIMHelper] = None
@@ -2870,11 +2983,11 @@ class PluginInstaller:
                         return
                 
                 # 先卸载现有版本（如果有）
-                plugin_manager = self.server._PluginServerInterface__plugin.plugin_manager
-                installed_plugin = plugin_manager.get_plugin_from_id(plugin_id)
+                installed_plugin = self.server.get_plugin_instance(plugin_id)
                 
                 if installed_plugin is not None:
-                    current_version = str(installed_plugin.get_version())
+                    metadata = self.server.get_plugin_metadata(plugin_id)
+                    current_version = str(metadata.version) if metadata else 'unknown'
                     source.reply(f"已安装版本: {current_version}, 将切换到: {target_release.tag_name}")
                     
                     # 卸载现有版本
@@ -2948,8 +3061,7 @@ class PluginInstaller:
                     helper._check_load_failure(source, target_path)
                     
                     # 再次检查插件是否已成功加载
-                    plugin_manager = self.server._PluginServerInterface__plugin.plugin_manager
-                    if plugin_manager.get_plugin_from_id(plugin_id) is not None:
+                    if self.server.get_plugin_instance(plugin_id) is not None:
                         source.reply(f"✓ 插件 {plugin_id} {target_release.tag_name} 修复后成功加载")
                         end_time = time.time()
                         with self._lock:
@@ -2990,7 +3102,6 @@ class PluginInstaller:
                         self.logger.info(f"插件 {plugin_id} 安装成功，耗时 {end_time - start_time:.2f} 秒")
                     else:
                         # 尝试处理失败原因，特别是检测缺少的pip包并安装
-                        plugin_manager = self.server._PluginServerInterface__plugin.plugin_manager
                         last_failed_plugin_path = None
                         
                         # 尝试查找插件的文件路径
@@ -3017,7 +3128,7 @@ class PluginInstaller:
                             helper._check_load_failure(source, last_failed_plugin_path)
                             
                             # 再次检查插件是否已成功加载
-                            if plugin_manager.get_plugin_from_id(plugin_id) is not None:
+                            if self.server.get_plugin_instance(plugin_id) is not None:
                                 source.reply(f"✓ 插件 {plugin_id} 修复后成功加载")
                                 with self._lock:
                                     if task_id in self.install_tasks:
@@ -3157,11 +3268,8 @@ def on_load(server: PluginServerInterface, prev_module):
         host_plugin_id = None
         try:
             # 如果当前运行的是WebUI插件
-            plugin_manager = getattr(server, "_PluginServerInterface__plugin", None)
-            if plugin_manager:
-                plugin_manager = getattr(plugin_manager, "pim_helper", None)
-                if plugin_manager and plugin_manager.get_plugin_from_id("guguwebui"):
-                    host_plugin_id = "guguwebui"
+            if server.get_plugin_instance("guguwebui"):
+                host_plugin_id = "guguwebui"
         except:
             pass
         
