@@ -251,19 +251,66 @@ async function fetchQQInfo(qqNumber) {
             return;
         }
 
-        // 获取QQ昵称
-        const response = await fetch(`https://api.leafone.cn/api/qqnick?qq=${qqNumber}`);
-        const data = await response.json();
-        
-        if (data.code === 200 && data.data) {
-            // 缓存昵称信息
-            saveQQInfoToCache(qqNumber, data.data.nickname);
-            
-            // 更新UI
-            updateUIWithQQInfo(qqNumber, data.data.nickname);
+        const apiEndpoints = [
+            `https://api.leafone.cn/api/qqnick?qq=${qqNumber}`,
+            `https://api.mmp.cc/api/qqname?qq=${qqNumber}`
+        ];
+
+        let nickname = null;
+        let success = false;
+
+        for (const endpoint of apiEndpoints) {
+            try {
+                console.log(`Attempting to fetch QQ info from: ${endpoint}`);
+                const response = await fetch(endpoint);
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                const data = await response.json();
+
+                // 根据不同API的响应结构提取昵称
+                if (endpoint.includes('leafone.cn')) {
+                    if (data.code === 200 && data.data && data.data.nickname) {
+                        nickname = data.data.nickname;
+                        success = true;
+                    } else {
+                        console.warn(`Failed to get nickname from leafone.cn:`, data);
+                    }
+                } else if (endpoint.includes('mmp.cc')) {
+                    if (data.code === 200 && data.data && data.data.name) {
+                        nickname = data.data.name;
+                        success = true;
+                    } else {
+                        console.warn(`Failed to get nickname from mmp.cc:`, data);
+                    }
+                }
+
+                if (success) {
+                    console.log(`Successfully fetched nickname from ${endpoint}`);
+                    break; // 成功获取到昵称，跳出循环
+                }
+
+            } catch (error) {
+                console.error(`Error fetching from ${endpoint}:`, error);
+                // 继续尝试下一个API
+            }
         }
+
+        if (success && nickname) {
+            // 缓存昵称信息
+            saveQQInfoToCache(qqNumber, nickname);
+            // 更新UI
+            updateUIWithQQInfo(qqNumber, nickname);
+        } else {
+             console.error('Failed to fetch QQ info from all available APIs for QQ:', qqNumber);
+             // 可选：如果所有API都失败，可以使用QQ号本身作为后备显示
+             updateUIWithQQInfo(qqNumber, qqNumber);
+        }
+
     } catch (error) {
-        console.error('Error fetching QQ info:', error);
+        console.error('Error in fetchQQInfo function:', error);
+        // 出现意外错误，也使用QQ号作为后备
+        updateUIWithQQInfo(qqNumber, qqNumber);
     }
 }
 
