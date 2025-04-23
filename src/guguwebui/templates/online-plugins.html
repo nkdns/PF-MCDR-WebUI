@@ -612,6 +612,69 @@
                                 </button>
                             </div>
 
+                            <!-- 仓库选择按钮 - 悬停菜单 -->
+                            <div class="relative" x-data="{ repoMenuOpen: false, tempRepoUrl: '' }">
+                                <button 
+                                    @click="repoMenuOpen = !repoMenuOpen"
+                                    @mouseenter="repoMenuOpen = true"
+                                    class="inline-flex items-center justify-center px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm text-sm font-medium text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none transition-colors"
+                                >
+                                    <i class="fas fa-server mr-2"></i>
+                                    <span x-text="selectedRepository ? selectedRepository.name : '选择仓库'"></span>
+                                    <i class="fas fa-chevron-down ml-2"></i>
+                                </button>
+                                
+                                <!-- 仓库选择悬停菜单 -->
+                                <div 
+                                    x-show="repoMenuOpen"
+                                    @mouseleave="repoMenuOpen = false"
+                                    class="absolute right-0 mt-2 w-64 rounded-md shadow-lg bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 z-50"
+                                    x-transition:enter="transition ease-out duration-100"
+                                    x-transition:enter-start="transform opacity-0 scale-95"
+                                    x-transition:enter-end="transform opacity-100 scale-100"
+                                    x-transition:leave="transition ease-in duration-75"
+                                    x-transition:leave-start="transform opacity-100 scale-100"
+                                    x-transition:leave-end="transform opacity-0 scale-95"
+                                >
+                                    <!-- 临时访问指定仓库 -->
+                                    <div class="p-3 border-b border-gray-200 dark:border-gray-700">
+                                        <div class="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2">临时访问仓库</div>
+                                        <div class="flex items-center">
+                                            <input 
+                                                type="text" 
+                                                x-model="tempRepoUrl"
+                                                placeholder="输入仓库URL..."
+                                                class="w-full text-sm px-2 py-1.5 rounded border dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white"
+                                            >
+                                            <button 
+                                                @click="switchRepository({name: '临时仓库', url: tempRepoUrl}); repoMenuOpen = false;"
+                                                class="ml-2 p-1.5 bg-blue-600 text-white rounded hover:bg-blue-700"
+                                                :disabled="!tempRepoUrl"
+                                            >
+                                                <i class="fas fa-arrow-right text-xs"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- 可用仓库列表 -->
+                                    <div class="max-h-60 overflow-y-auto py-1">
+                                        <div class="text-xs font-medium text-gray-500 dark:text-gray-400 px-4 py-1">选择仓库</div>
+                                        <template x-for="repo in repositories" :key="repo.url">
+                                            <a 
+                                                href="javascript:void(0)" 
+                                                @click="switchRepository(repo); repoMenuOpen = false;"
+                                                class="block px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center space-x-2"
+                                                :class="{'bg-blue-50 dark:bg-blue-900/20': selectedRepository && selectedRepository.url === repo.url}"
+                                            >
+                                                <i class="fas fa-check text-blue-500" x-show="selectedRepository && selectedRepository.url === repo.url"></i>
+                                                <i class="fas fa-server text-gray-400" x-show="!selectedRepository || selectedRepository.url !== repo.url"></i>
+                                                <span x-text="repo.name"></span>
+                                            </a>
+                                        </template>
+                                    </div>
+                                </div>
+                            </div>
+
                             <!-- 刷新按钮 -->
                             <button 
                                 @click="loadPlugins" 
@@ -725,7 +788,9 @@
                                             <span>说明文档</span>
                                         </button>
                                         
+                                        <!-- 查看仓库页按钮 - 仅在官方仓库(repoId为0)显示 -->
                                         <button 
+                                            x-show="selectedRepository && selectedRepository.repoId === 0"
                                             @click="showRepositoryPage(plugin.id)" 
                                             class="inline-flex items-center px-3 py-1.5 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm text-xs font-medium text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none transition-colors"
                                         >
@@ -823,13 +888,20 @@
                     x-transition:leave-start="opacity-100 transform scale-100"
                     x-transition:leave-end="opacity-0 transform scale-90"
                     class="notification"
-                    :class="notificationType === 'success' ? 'bg-green-500' : 'bg-red-500'"
+                    :class="{
+                        'bg-green-500': notificationType === 'success',
+                        'bg-red-500': notificationType === 'error',
+                        'bg-blue-500': notificationType === 'info'
+                    }"
                 >
                     <template x-if="notificationType === 'success'">
                         <i class="fas fa-check-circle mr-2"></i>
                     </template>
                     <template x-if="notificationType === 'error'">
                         <i class="fas fa-exclamation-circle mr-2"></i>
+                    </template>
+                    <template x-if="notificationType === 'info'">
+                        <i class="fas fa-info-circle mr-2"></i>
                     </template>
                     <span x-text="notificationMessage"></span>
                 </div>
@@ -1403,6 +1475,54 @@
                                 class="inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm text-sm font-medium text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none"
                             >
                                 <span>关闭</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 第三方仓库警告模态窗口 -->
+                <div x-show="showRepoWarningModal" x-transition.opacity class="modal-backdrop">
+                    <div class="modal-content" style="max-width: 600px;">
+                        <div class="modal-header bg-yellow-100 dark:bg-yellow-900 border-b border-yellow-200 dark:border-yellow-700">
+                            <h3 class="text-lg font-semibold text-yellow-800 dark:text-yellow-200 flex items-center">
+                                <i class="fas fa-exclamation-triangle mr-2"></i>
+                                <span>第三方仓库安全警告</span>
+                            </h3>
+                            <button @click="cancelRepoWarning()" class="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        </div>
+                        
+                        <div class="modal-body">
+                            <div class="p-2 bg-yellow-50 dark:bg-yellow-900/30 rounded-lg border border-yellow-200 dark:border-yellow-800 mb-4">
+                                <p class="text-yellow-700 dark:text-yellow-200 font-medium">您正在访问第三方插件仓库</p>
+                            </div>
+                            
+                            <div class="space-y-4 text-gray-700 dark:text-gray-300">
+                                <p>请注意：</p>
+                                <ul class="list-disc pl-5 space-y-2">
+                                    <li>这些插件可能没有经过审查，可能存在潜在安全风险。</li>
+                                    <li>安装这些插件可能会影响您的服务器的稳定性和安全性。</li>
+                                    <li>在安装前，请仔细审查插件代码或确认您信任该仓库的维护者。</li>
+                                    <li>第三方插件不会支持版本切换功能，本弹窗在你确认后当天将不再显示。</li>
+                                </ul>
+                                <p>继续访问即表示您了解并接受这些风险。</p>
+                            </div>
+                        </div>
+                        
+                        <div class="modal-footer bg-gray-50 dark:bg-gray-800">
+                            <button 
+                                @click="cancelRepoWarning()" 
+                                class="inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm text-sm font-medium text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none transition-colors"
+                            >
+                                <span>取消</span>
+                            </button>
+                            
+                            <button 
+                                @click="confirmRepoWarning()" 
+                                class="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-yellow-600 hover:bg-yellow-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-yellow-500 transition-colors"
+                            >
+                                <span>我了解风险并继续</span>
                             </button>
                         </div>
                     </div>

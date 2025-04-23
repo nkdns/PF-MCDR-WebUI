@@ -19,7 +19,7 @@ def on_load(server: PluginServerInterface, old):
 
     server.logger.info("[GUGUWebUI] 启动 WebUI 中...")
 
-    plugin_config = server.load_config_simple("config.json", DEFALUT_CONFIG)
+    plugin_config = server.load_config_simple("config.json", DEFALUT_CONFIG, echo_in_console=False)
     host = plugin_config['host']
     port = plugin_config['port']
     register_command(server, host, port) # register MCDR command

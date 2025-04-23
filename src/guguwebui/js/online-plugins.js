@@ -24,6 +24,10 @@ document.addEventListener('alpine:init', () => {
         sortMethod: 'time', // 'name', 'time', 'downloads'
         sortDirection: 'desc', // 'asc', 'desc'
         
+        // 添加第三方仓库警告相关属性
+        showRepoWarningModal: false,
+        pendingRepositorySwitch: null,
+        
         // 协议模态框相关属性
         showLicenseModal: false,
         currentLicense: null,
@@ -51,6 +55,10 @@ document.addEventListener('alpine:init', () => {
         installPluginId: '',
         installLogMessages: [],
         installProgressTimer: null,
+        
+        // 添加仓库选择相关
+        repositories: [],
+        selectedRepository: null,
         
         async checkLoginStatus() {
             try {
@@ -110,15 +118,29 @@ document.addEventListener('alpine:init', () => {
             return plugin && plugin.version === plugin.version_latest && plugin.version === latestVersion;
         },
         
-        async loadPlugins() {
+        async loadPlugins(skipRepositoryLoad = false) {
             try {
                 this.loading = true;
                 
                 // 先加载本地插件信息
                 await this.loadLocalPlugins();
                 
-                // 再加载在线插件信息
-                const response = await fetch('/api/online-plugins');
+                // 保存当前选择的仓库URL
+                const currentRepoUrl = this.selectedRepository ? this.selectedRepository.url : null;
+                
+                // 加载仓库列表，除非明确跳过（如临时仓库模式）
+                if (!skipRepositoryLoad) {
+                    await this.loadRepositories(currentRepoUrl);
+                }
+                
+                // 构建API URL，如果有选择仓库则添加repo_url参数
+                let apiUrl = '/api/online-plugins';
+                if (this.selectedRepository) {
+                    apiUrl += `?repo_url=${encodeURIComponent(this.selectedRepository.url)}`;
+                }
+                
+                // 加载在线插件信息
+                const response = await fetch(apiUrl);
                 const data = await response.json();
                 this.plugins = data || [];
                 this.loading = false;
@@ -136,6 +158,126 @@ document.addEventListener('alpine:init', () => {
                 this.loading = false;
                 this.showNotificationMsg('加载在线插件列表失败', 'error');
             }
+        },
+        
+        // 加载仓库列表
+        async loadRepositories(currentRepoUrl = null) {
+            try {
+                const response = await fetch('/api/get_web_config');
+                const data = await response.json();
+                
+                // 添加官方仓库，编号为0
+                this.repositories = [{
+                    name: '官方仓库',
+                    url: data.mcdr_plugins_url || 'https://api.mcdreforged.com/catalogue/everything_slim.json.xz',
+                    repoId: 0  // 官方仓库编号为0
+                }];
+                
+                // 添加树梢的仓库作为默认的第三方仓库选项
+                const looseRepoUrl = 'https://looseprince.github.io/Plugin-Catalogue/plugins.json';
+                const looseRepo = {
+                    name: '树梢的仓库',
+                    url: looseRepoUrl,
+                    repoId: 1  // 给树梢的仓库一个固定的ID
+                };
+                this.repositories.push(looseRepo);
+                
+                // 添加用户配置的其他仓库，编号从2开始递增
+                if (data.repositories && Array.isArray(data.repositories)) {
+                    // 检查是否已经包含了树梢的仓库，避免重复添加
+                    const otherRepos = data.repositories.filter(repo => repo.url !== looseRepoUrl);
+                    const thirdPartyRepos = otherRepos.map((repo, index) => ({
+                        ...repo,
+                        repoId: index + 2  // 其他第三方仓库编号从2开始递增
+                    }));
+                    this.repositories = [...this.repositories, ...thirdPartyRepos];
+                }
+                
+                // 如果有当前仓库URL，则尝试保持选中状态
+                if (currentRepoUrl) {
+                    const currentRepo = this.repositories.find(repo => repo.url === currentRepoUrl);
+                    if (currentRepo) {
+                        this.selectedRepository = currentRepo;
+                        return;
+                    }
+                    
+                    // 如果找不到匹配的仓库，但有URL，可能是临时仓库
+                    this.selectedRepository = {
+                        name: '临时仓库',
+                        url: currentRepoUrl,
+                        repoId: -1 // 临时仓库使用-1作为ID
+                    };
+                } else {
+                    // 默认选择官方仓库
+                    this.selectedRepository = this.repositories[0];
+                }
+                
+            } catch (error) {
+                console.error('Error loading repositories:', error);
+                this.showNotificationMsg('加载仓库列表失败', 'error');
+            }
+        },
+        
+        // 切换仓库
+        async switchRepository(repo) {
+            if (this.selectedRepository && this.selectedRepository.url === repo.url) {
+                return; // 不需要重新加载相同的仓库
+            }
+            
+            // 检查是否需要显示第三方仓库警告
+            if (repo.repoId !== 0 && this.shouldShowRepoWarning()) {
+                // 保存待切换的仓库，等待用户确认
+                this.pendingRepositorySwitch = repo;
+                this.showRepoWarningModal = true;
+                return;
+            }
+            
+            // 直接切换仓库
+            await this.doSwitchRepository(repo);
+        },
+        
+        // 实际执行仓库切换操作
+        async doSwitchRepository(repo) {
+            this.selectedRepository = repo;
+            this.showNotificationMsg(`正在从 ${repo.name} 加载插件列表...`, 'info');
+            
+            // 使用skipRepositoryLoad=true参数调用loadPlugins，避免覆盖临时仓库设置
+            await this.loadPlugins(true);
+        },
+        
+        // 检查是否应该显示第三方仓库警告
+        shouldShowRepoWarning() {
+            // 获取上次确认的时间戳
+            const lastWarningTime = localStorage.getItem('thirdPartyRepoWarningTime');
+            if (!lastWarningTime) {
+                return true; // 从未确认过，显示警告
+            }
+            
+            // 检查是否是同一天
+            const lastTime = new Date(parseInt(lastWarningTime));
+            const now = new Date();
+            return lastTime.toDateString() !== now.toDateString();
+        },
+        
+        // 确认第三方仓库警告
+        confirmRepoWarning() {
+            // 保存确认时间戳到本地存储
+            localStorage.setItem('thirdPartyRepoWarningTime', Date.now().toString());
+            
+            // 关闭警告模态窗口
+            this.showRepoWarningModal = false;
+            
+            // 如果有待切换的仓库，继续切换
+            if (this.pendingRepositorySwitch) {
+                this.doSwitchRepository(this.pendingRepositorySwitch);
+                this.pendingRepositorySwitch = null;
+            }
+        },
+        
+        // 取消第三方仓库警告
+        cancelRepoWarning() {
+            this.showRepoWarningModal = false;
+            this.pendingRepositorySwitch = null;
         },
         
         // 显示README内容
@@ -664,6 +806,12 @@ document.addEventListener('alpine:init', () => {
                 this.installLogMessages = [];
                 this.showInstallModal = true;
                 
+                // 获取当前选择的仓库URL
+                let repoUrl = null;
+                if (this.selectedRepository) {
+                    repoUrl = this.selectedRepository.url;
+                }
+                
                 // 尝试使用新版PIM安装器API
                 let response = await fetch('/api/pim/install_plugin', {
                     method: 'POST',
@@ -671,7 +819,8 @@ document.addEventListener('alpine:init', () => {
                         'Content-Type': 'application/json'
                     },
                     body: JSON.stringify({
-                        plugin_id: pluginId
+                        plugin_id: pluginId,
+                        repo_url: repoUrl
                     })
                 });
                 
@@ -758,8 +907,8 @@ document.addEventListener('alpine:init', () => {
                         clearInterval(this.installProgressTimer);
                         this.installProgressTimer = null;
                         
-                        // 加载最新的插件列表
-                        await this.loadPlugins();
+                        // 加载最新的插件列表，保持当前仓库
+                        await this.loadPlugins(true);
                         
                         // 设置处理状态
                         this.processingPlugins[this.installPluginId] = false;
@@ -795,8 +944,8 @@ document.addEventListener('alpine:init', () => {
                                 clearInterval(this.installProgressTimer);
                                 this.installProgressTimer = null;
                                 
-                                // 刷新插件列表
-                                await this.loadPlugins();
+                                // 刷新插件列表，保持当前仓库
+                                await this.loadPlugins(true);
                                 
                                 // 设置处理状态
                                 this.processingPlugins[this.installPluginId] = false;
@@ -818,7 +967,7 @@ document.addEventListener('alpine:init', () => {
                     }
                     
                     // 检查插件是否已经安装成功（通过加载插件列表来检查）
-                    await this.loadPlugins();
+                    await this.loadPlugins(true);
                     
                     // 标记为完成
                     this.installStatus = 'completed';

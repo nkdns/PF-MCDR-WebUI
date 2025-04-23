@@ -369,36 +369,137 @@
                 <!-- MCDR插件目录配置 -->
                 <div class="bg-white dark:bg-gray-800 shadow-md rounded-lg p-6 mb-6">
                     <h2 class="text-xl font-semibold mb-4 text-gray-800 dark:text-gray-200 flex items-center">
-                        <i class="fas fa-puzzle-piece mr-2"></i> MCDR插件目录配置
+                        <i class="fas fa-puzzle-piece mr-2"></i> MCDR插件仓库配置
                     </h2>
                     
                     <div class="space-y-4">
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2" for="mcdr_plugins_url">
-                                插件目录URL（如果你不懂，请不要更改）
-                            </label>
-                            <div class="relative">
-                                <input 
-                                    type="text" 
-                                    id="mcdr_plugins_url" 
-                                    x-model="mcdrPluginsUrl"
-                                    class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500" 
-                                    placeholder="https://api.mcdreforged.com/catalogue/everything_slim.json.xz"
-                                >
+                        <div class="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg text-sm text-blue-800 dark:text-blue-300 mb-4">
+                            <div class="flex">
+                                <div class="flex-shrink-0">
+                                    <i class="fas fa-info-circle mt-0.5"></i>
+                                </div>
+                                <div class="ml-3">
+                                    <p>支持多仓库链接，可添加第三方仓库。官方仓库不可删除，作为默认数据源。</p>
+                                </div>
                             </div>
-                            <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                                指定MCDR插件目录的URL地址，用于获取在线插件列表
-                            </p>
+                        </div>
+                        
+                        <!-- 仓库列表 -->
+                        <div class="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
+                            <div class="overflow-x-auto">
+                                <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                                    <thead class="bg-gray-50 dark:bg-gray-800">
+                                        <tr>
+                                            <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                                                名称
+                                            </th>
+                                            <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                                                URL
+                                            </th>
+                                            <th scope="col" class="px-4 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                                                操作
+                                            </th>
+                                        </tr>
+                                    </thead>
+                                    <tbody class="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+                                        <!-- 官方仓库 (不可删除) -->
+                                        <tr class="bg-blue-50 dark:bg-blue-900/10">
+                                            <td class="px-4 py-3 whitespace-nowrap">
+                                                <div class="flex items-center">
+                                                    <i class="fas fa-check-circle text-blue-500 dark:text-blue-400 mr-2"></i>
+                                                    <span class="font-medium text-gray-900 dark:text-white">官方仓库</span>
+                                                </div>
+                                            </td>
+                                            <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-700 dark:text-gray-300 break-all">
+                                                https://api.mcdreforged.com/catalogue/everything_slim.json.xz
+                                            </td>
+                                            <td class="px-4 py-3 whitespace-nowrap text-right text-sm font-medium">
+                                                <span class="text-gray-400 dark:text-gray-500 select-none">
+                                                    <i class="fas fa-lock mr-1"></i>
+                                                    默认仓库
+                                                </span>
+                                            </td>
+                                        </tr>
+                                        <!-- 树梢的仓库 (不可删除) -->
+                                        <tr class="bg-blue-50 dark:bg-blue-900/10">
+                                            <td class="px-4 py-3 whitespace-nowrap">
+                                                <div class="flex items-center">
+                                                    <i class="fas fa-check-circle text-blue-500 dark:text-blue-400 mr-2"></i>
+                                                    <span class="font-medium text-gray-900 dark:text-white">树梢的仓库</span>
+                                                </div>
+                                            </td>
+                                            <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-700 dark:text-gray-300 break-all">
+                                                https://looseprince.github.io/Plugin-Catalogue/plugins.json
+                                            </td>
+                                            <td class="px-4 py-3 whitespace-nowrap text-right text-sm font-medium">
+                                                <span class="text-gray-400 dark:text-gray-500 select-none">
+                                                    <i class="fas fa-lock mr-1"></i>
+                                                    默认仓库
+                                                </span>
+                                            </td>
+                                        </tr>
+                                        
+                                        <!-- 用户添加的仓库 -->
+                                        <template x-for="(repo, index) in repositories" :key="index">
+                                            <tr>
+                                                <td class="px-4 py-3 whitespace-nowrap">
+                                                    <div class="flex items-center">
+                                                        <span class="font-medium text-gray-900 dark:text-white" x-text="repo.name"></span>
+                                                    </div>
+                                                </td>
+                                                <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-700 dark:text-gray-300 break-all" x-text="repo.url">
+                                                </td>
+                                                <td class="px-4 py-3 whitespace-nowrap text-right text-sm font-medium">
+                                                    <button @click="deleteRepository(index)" class="text-red-600 hover:text-red-900 dark:text-red-400 dark:hover:text-red-300 focus:outline-none">
+                                                        <i class="fas fa-trash-alt mr-1"></i>
+                                                        删除
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                        </template>
+                                        
+                                        <!-- 添加新仓库 -->
+                                        <tr class="bg-gray-50 dark:bg-gray-700/50">
+                                            <td class="px-4 py-3">
+                                                <input 
+                                                    type="text" 
+                                                    x-model="newRepo.name"
+                                                    placeholder="仓库名称" 
+                                                    class="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                                >
+                                            </td>
+                                            <td class="px-4 py-3">
+                                                <input 
+                                                    type="text" 
+                                                    x-model="newRepo.url"
+                                                    placeholder="仓库URL地址" 
+                                                    class="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                                >
+                                            </td>
+                                            <td class="px-4 py-3 text-right">
+                                                <button 
+                                                    @click="addRepository" 
+                                                    class="px-3 py-2 bg-blue-500 text-white text-sm rounded-md hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:focus:ring-offset-gray-800 disabled:opacity-50 disabled:cursor-not-allowed"
+                                                    :disabled="!newRepo.name || !newRepo.url"
+                                                >
+                                                    <i class="fas fa-plus mr-1"></i>
+                                                    添加
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
                         </div>
                         
                         <div class="flex justify-end">
                             <button 
                                 type="button" 
-                                @click="saveMcdrPluginsUrl"
+                                @click="saveRepositories"
                                 class="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:focus:ring-offset-gray-800 flex items-center"
                             >
                                 <i class="fas fa-save mr-2"></i>
-                                保存插件目录配置
+                                保存仓库配置
                             </button>
                         </div>
                     </div>
@@ -480,429 +581,7 @@
     <script src="/js/main.js"></script>
     <!-- 公告脚本 -->
     <script src="/js/notice.js"></script>
-    <script>
-        function settingsApp() {
-            return {
-                serverStatus: 'loading',
-                userName: '',
-                webConfig: {
-                    host: '',
-                    port: 8000,
-                    super_admin_account: '',
-                    disable_admin_login_web: false,
-                    enable_temp_login_password: false
-                },
-                deepseekApiKey: '',
-                deepseekModel: 'deepseek-chat',
-                isKeyValid: false,
-                keyValidated: false,
-                mcdrPluginsUrl: '',
-                pimStatus: 'checking',
-                
-                // 初始化
-                init() {
-                    this.checkLoginStatus();
-                    this.checkServerStatus();
-                    this.getConfig();
-                    this.checkPimStatus();
-                    
-                    // 每60秒自动刷新服务器状态
-                    setInterval(() => this.checkServerStatus(), 10001);
-                    
-                    // 设置当前年份
-                    document.getElementById('year').textContent = new Date().getFullYear();
-                },
-                
-                // 检查登录状态
-                async checkLoginStatus() {
-                    try {
-                        const response = await fetch('/api/checkLogin');
-                        const data = await response.json();
-                        if (data.status === 'success') {
-                            this.userName = data.username;
-                        }
-                    } catch (error) {
-                        console.error('Error checking login status:', error);
-                    }
-                },
-                
-                // 检查服务器状态
-                async checkServerStatus() {
-                    try {
-                        this.serverStatus = 'loading';
-                        const response = await fetch('/api/get_server_status');
-                        const data = await response.json();
-                        this.serverStatus = data.status || 'offline';
-                    } catch (error) {
-                        console.error('Error checking server status:', error);
-                        this.serverStatus = 'error';
-                    }
-                },
-                
-                // 获取配置
-                async getConfig() {
-                    try {
-                        const response = await fetch('/api/get_web_config');
-                        const config = await response.json();
-                        
-                        this.webConfig.host = config.host || '0.0.0.0';
-                        this.webConfig.port = config.port || 8000;
-                        this.webConfig.super_admin_account = config.super_admin_account || '';
-                        this.webConfig.disable_admin_login_web = config.disable_admin_login_web || false;
-                        this.webConfig.enable_temp_login_password = config.enable_temp_login_password || false;
-                        this.deepseekModel = config.deepseek_model || 'deepseek-chat';
-                        // 不加载已保存的API密钥，留空等待用户设置新的密钥
-                        this.deepseekApiKey = '';
-                        // 如果已配置过密钥，标记为已验证和有效
-                        if (config.deepseek_api_key && config.deepseek_api_key.trim() !== '') {
-                            this.isKeyValid = true;
-                            this.keyValidated = true;
-                        }
-                        this.mcdrPluginsUrl = config.mcdr_plugins_url || '';
-                        this.pimStatus = config.pim_status || 'checking';
-                        
-                        // 更新后台切换开关状态
-                        this.$nextTick(() => {
-                            const toggleSwitches = document.querySelectorAll('.toggle-switch');
-                            toggleSwitches.forEach((switchEl) => {
-                                switchEl.checked = this[switchEl.id];
-                            });
-                        });
-                    } catch (error) {
-                        console.error('Error loading config:', error);
-                        this.showNotification('加载配置失败', 'error');
-                    }
-                },
-                
-                // 保存网络配置
-                async saveNetworkConfig() {
-                    try {
-                        // 验证输入
-                        if (!this.webConfig.host) {
-                            this.showNotification('主机地址不能为空', 'error');
-                            return;
-                        }
-                        
-                        if (!this.webConfig.port || this.webConfig.port < 1 || this.webConfig.port > 65535) {
-                            this.showNotification('端口必须是1-65535之间的有效数字', 'error');
-                            return;
-                        }
-                        
-                        const response = await fetch('/api/save_web_config', {
-                            method: 'POST',
-                            headers: {
-                                'Content-Type': 'application/json'
-                            },
-                            body: JSON.stringify({
-                                action: 'config',
-                                host: this.webConfig.host,
-                                port: this.webConfig.port
-                            })
-                        });
-                        
-                        const result = await response.json();
-                        if (result.status === 'success') {
-                            this.showNotification('网络设置保存成功', 'success');
-                        } else {
-                            this.showNotification('保存失败: ' + result.message, 'error');
-                        }
-                    } catch (error) {
-                        console.error('Error saving network config:', error);
-                        this.showNotification('保存出错: ' + error.message, 'error');
-                    }
-                },
-                
-                // 保存账户配置
-                async saveAccountConfig() {
-                    try {
-                        // 验证输入
-                        if (!this.webConfig.super_admin_account) {
-                            this.showNotification('超级管理员账号不能为空', 'error');
-                            return;
-                        }
-                        
-                        const response = await fetch('/api/save_web_config', {
-                            method: 'POST',
-                            headers: {
-                                'Content-Type': 'application/json'
-                            },
-                            body: JSON.stringify({
-                                action: 'config',
-                                superaccount: this.webConfig.super_admin_account
-                            })
-                        });
-                        
-                        const result = await response.json();
-                        if (result.status === 'success') {
-                            this.showNotification('账户设置保存成功', 'success');
-                        } else {
-                            this.showNotification('保存失败: ' + result.message, 'error');
-                        }
-                    } catch (error) {
-                        console.error('Error saving account config:', error);
-                        this.showNotification('保存出错: ' + error.message, 'error');
-                    }
-                },
-                
-                // 切换布尔设置
-                async toggleSetting(setting) {
-                    try {
-                        const apiSetting = setting === 'disable_admin_login_web' ? 'disable_admin_login_web' : 'enable_temp_login_password';
-                        
-                        const response = await fetch('/api/save_web_config', {
-                            method: 'POST',
-                            headers: {
-                                'Content-Type': 'application/json'
-                            },
-                            body: JSON.stringify({
-                                action: apiSetting
-                            })
-                        });
-                        
-                        const result = await response.json();
-                        if (result.status === 'success') {
-                            // 切换本地状态
-                            this.webConfig[setting] = result.message;
-                            this.showNotification(`设置已${this.webConfig[setting] ? '启用' : '禁用'}`, 'success');
-                        } else {
-                            this.showNotification('设置切换失败: ' + result.message, 'error');
-                        }
-                    } catch (error) {
-                        console.error('Error toggling setting:', error);
-                        this.showNotification('设置出错: ' + error.message, 'error');
-                    }
-                },
-                
-                // 显示通知
-                showNotification(message, type = 'info') {
-                    // 获取或创建通知容器
-                    let notificationContainer = document.getElementById('notification-container');
-                    if (!notificationContainer) {
-                        notificationContainer = document.createElement('div');
-                        notificationContainer.id = 'notification-container';
-                        notificationContainer.className = 'fixed top-16 right-4 z-50 flex flex-col gap-2';
-                        document.body.appendChild(notificationContainer);
-                    }
-                    
-                    // 创建通知元素
-                    const notification = document.createElement('div');
-                    notification.className = `p-3 rounded-lg shadow-lg transition-all duration-300 transform translate-x-full opacity-0`;
-                    
-                    // 根据类型设置样式
-                    switch (type) {
-                        case 'success':
-                            notification.className += ' bg-green-500 text-white';
-                            notification.innerHTML = `<i class="fas fa-check-circle mr-2"></i>${message}`;
-                            break;
-                        case 'error':
-                            notification.className += ' bg-red-500 text-white';
-                            notification.innerHTML = `<i class="fas fa-times-circle mr-2"></i>${message}`;
-                            break;
-                        default:
-                            notification.className += ' bg-blue-500 text-white';
-                            notification.innerHTML = `<i class="fas fa-info-circle mr-2"></i>${message}`;
-                    }
-                    
-                    // 添加到容器
-                    notificationContainer.appendChild(notification);
-                    
-                    // 触发动画
-                    setTimeout(() => {
-                        notification.classList.remove('translate-x-full', 'opacity-0');
-                        notification.classList.add('translate-x-0', 'opacity-100');
-                    }, 10);
-                    
-                    // 自动移除
-                    setTimeout(() => {
-                        notification.classList.remove('translate-x-0', 'opacity-100');
-                        notification.classList.add('translate-x-full', 'opacity-0');
-                        setTimeout(() => {
-                            notificationContainer.removeChild(notification);
-                        }, 300);
-                    }, 3000);
-                },
-                
-                // 保存DeepSeek配置
-                async saveDeepseekConfig() {
-                    try {
-                        // 如果没有验证，提示用户先验证密钥
-                        if (this.deepseekApiKey && !this.keyValidated) {
-                            this.showNotification('请先验证API密钥', 'warning');
-                            return;
-                        }
-                        
-                        // 如果密钥不为空且验证不通过，提示用户
-                        if (this.deepseekApiKey && !this.isKeyValid) {
-                            this.showNotification('API密钥无效，请重新输入', 'error');
-                            return;
-                        }
-                        
-                        // 如果密钥为空且没有之前验证过的有效密钥，显示警告
-                        if (!this.deepseekApiKey && !this.isKeyValid) {
-                            if (!confirm('您没有设置API密钥，确定要保存吗？')) {
-                                return;
-                            }
-                        }
-                        
-                        const response = await fetch('/api/save_web_config', {
-                            method: 'POST',
-                            headers: {
-                                'Content-Type': 'application/json'
-                            },
-                            body: JSON.stringify({
-                                action: 'config',
-                                deepseek_api_key: this.deepseekApiKey || undefined, // 如果为空，传undefined表示不修改
-                                deepseek_model: this.deepseekModel
-                            })
-                        });
-                        
-                        const result = await response.json();
-                        if (result.status === 'success') {
-                            this.showNotification('DeepSeek配置保存成功', 'success');
-                            // 保存成功后重置状态
-                            if (this.deepseekApiKey) {
-                                this.deepseekApiKey = '';
-                                this.keyValidated = false;
-                            }
-                        } else {
-                            this.showNotification('保存失败: ' + result.message, 'error');
-                        }
-                    } catch (error) {
-                        console.error('Error saving DeepSeek config:', error);
-                        this.showNotification('保存出错: ' + error.message, 'error');
-                    }
-                },
-                
-                // 切换密码可见性
-                togglePasswordVisibility(id) {
-                    const input = document.getElementById(id);
-                    const toggle = document.getElementById(`${id}_toggle`);
-                    
-                    if (input.type === 'password') {
-                        input.type = 'text';
-                        toggle.classList.remove('fa-eye');
-                        toggle.classList.add('fa-eye-slash');
-                    } else {
-                        input.type = 'password';
-                        toggle.classList.remove('fa-eye-slash');
-                        toggle.classList.add('fa-eye');
-                    }
-                },
-                
-                // 添加API密钥验证方法
-                async validateApiKey() {
-                    if (!this.deepseekApiKey) {
-                        this.showNotification('请输入API密钥', 'error');
-                        return;
-                    }
-                    
-                    try {
-                        this.showNotification('正在验证API密钥...', 'info');
-                        
-                        // 向DeepSeek API发送简单测试请求
-                        const response = await fetch('/api/deepseek', {
-                            method: 'POST',
-                            headers: {
-                                'Content-Type': 'application/json'
-                            },
-                            body: JSON.stringify({
-                                query: '测试密钥是否有效，请回复"有效"',
-                                system_prompt: '你是一个简单的验证程序，只需回复"有效"',
-                                model: this.deepseekModel
-                            })
-                        });
-                        
-                        const result = await response.json();
-                        
-                        if (result.status === 'success') {
-                            this.isKeyValid = true;
-                            this.keyValidated = true;
-                            this.showNotification('API密钥验证成功', 'success');
-                        } else {
-                            this.isKeyValid = false;
-                            this.keyValidated = true;
-                            this.showNotification(`API密钥验证失败: ${result.message}`, 'error');
-                        }
-                    } catch (error) {
-                        console.error('API密钥验证错误:', error);
-                        this.isKeyValid = false;
-                        this.keyValidated = true;
-                        this.showNotification(`验证出错: ${error.message}`, 'error');
-                    }
-                },
-                
-                // 保存MCDR插件目录配置
-                async saveMcdrPluginsUrl() {
-                    try {
-                        // 验证输入
-                        if (!this.mcdrPluginsUrl) {
-                            this.showNotification('插件目录URL不能为空', 'error');
-                            return;
-                        }
-                        
-                        const response = await fetch('/api/save_web_config', {
-                            method: 'POST',
-                            headers: {
-                                'Content-Type': 'application/json'
-                            },
-                            body: JSON.stringify({
-                                action: 'config',
-                                mcdr_plugins_url: this.mcdrPluginsUrl
-                            })
-                        });
-                        
-                        const result = await response.json();
-                        if (result.status === 'success') {
-                            this.showNotification('MCDR插件目录配置保存成功', 'success');
-                        } else {
-                            this.showNotification('保存失败: ' + result.message, 'error');
-                        }
-                    } catch (error) {
-                        console.error('Error saving MCDR plugins URL:', error);
-                        this.showNotification('保存出错: ' + error.message, 'error');
-                    }
-                },
-                
-                // 检查PIM插件状态
-                async checkPimStatus() {
-                    try {
-                        const response = await fetch('/api/check_pim_status');
-                        const result = await response.json();
-                        
-                        if (result.status === 'success') {
-                            this.pimStatus = result.pim_status;
-                        } else {
-                            this.pimStatus = 'not_installed';
-                            console.error('Error checking PIM status:', result.message);
-                        }
-                    } catch (error) {
-                        this.pimStatus = 'not_installed';
-                        console.error('Error checking PIM status:', error);
-                    }
-                },
-                
-                // 安装PIM插件
-                async installPimPlugin() {
-                    try {
-                        this.pimStatus = 'installing';
-                        const response = await fetch('/api/install_pim_plugin');
-                        const result = await response.json();
-                        
-                        if (result.status === 'success') {
-                            this.showNotification('PIM插件安装成功', 'success');
-                            this.pimStatus = 'installed';
-                        } else {
-                            this.showNotification('安装失败: ' + result.message, 'error');
-                            await this.checkPimStatus(); // 重新检查状态
-                        }
-                    } catch (error) {
-                        console.error('Error installing PIM plugin:', error);
-                        this.showNotification('安装出错: ' + error.message, 'error');
-                        await this.checkPimStatus(); // 重新检查状态
-                    }
-                }
-            };
-        }
-    </script>
+    <!-- 设置脚本 -->
+    <script src="/js/settings.js"></script>
 </body>
 </html> 

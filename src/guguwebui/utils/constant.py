@@ -43,7 +43,8 @@ DEFALUT_CONFIG = {
     "allow_temp_password": True,
     "deepseek_api_key": "",  # DeepSeek API密钥
     "deepseek_model": "deepseek-chat",  # DeepSeek 使用的模型
-    "mcdr_plugins_url": "https://api.mcdreforged.com/catalogue/everything_slim.json.xz"  # MCDR插件目录URL
+    "mcdr_plugins_url": "https://api.mcdreforged.com/catalogue/everything_slim.json.xz",  # MCDR插件目录URL
+    "repositories": []  # 多仓库配置列表
 }
 
 user_db = table(USER_DB_PATH, default_content=DEFALUT_DB)
@@ -62,6 +63,7 @@ class saveconfig(BaseModel):
     deepseek_api_key: Optional[str] = None
     deepseek_model: Optional[str] = None
     mcdr_plugins_url: Optional[str] = None
+    repositories: Optional[list] = None
 
 class toggleconfig(BaseModel):
     plugin_id: str

@@ -8,8 +8,10 @@ import sys
 import requests
 import lzma
 import uuid
+import logging
 from typing import List, Dict, Optional, Union, Tuple, Any, Set
 from dataclasses import dataclass
+import hashlib
 
 from mcdreforged.api.all import *
 from mcdreforged.plugin.meta.version import Version, VersionRequirement
@@ -137,54 +139,126 @@ class EmptyMetaRegistry:
 
 class MetaRegistry:
     """简化的元数据注册表实现"""
-    def __init__(self, data: Dict = None):
+    def __init__(self, data: Dict = None, source_url: str = None):
         self.data = data or {}
         self.plugins: Dict[str, PluginData] = {}
+        self.source_url = source_url  # 保存数据来源URL，便于调试和隔离
         self._parse_data()
+        
+        # 输出调试信息
+        plugins_count = len(self.plugins)
+        plugin_ids = list(self.plugins.keys())
+        self.logger = logging.getLogger("MetaRegistry")
+        source_info = f" from {self.source_url}" if self.source_url else ""
+        self.logger.debug(f"已加载 {plugins_count} 个插件{source_info}: {', '.join(plugin_ids[:5])}{'...' if plugins_count > 5 else ''}")
     
     def _parse_data(self):
         """解析数据为插件数据对象"""
-        if not self.data or 'plugins' not in self.data:
+        if not self.data:
             return
         
-        for plugin_id, plugin_info in self.data['plugins'].items():
-            meta = plugin_info.get('meta', {})
-            release_info = plugin_info.get('release', {})
-            releases = []
-            
-            for rel in release_info.get('releases', []):
-                asset = rel.get('asset', {})
-                release_data = ReleaseData(
-                    name=rel.get('name', ''),
-                    tag_name=rel.get('tag_name', ''),
-                    created_at=rel.get('created_at', ''),
-                    description=rel.get('description', ''),
-                    prerelease=rel.get('prerelease', False),
-                    url=rel.get('url', ''),
-                    browser_download_url=asset.get('browser_download_url', ''),
-                    download_count=asset.get('download_count', 0),
-                    size=asset.get('size', 0),
-                    file_name=asset.get('name', '')
+        # 先清空插件列表，避免数据混合
+        self.plugins = {}
+        
+        # 处理两种不同的数据格式
+        if isinstance(self.data, list):
+            # 数组格式的简化仓库
+            for plugin_info in self.data:
+                if not isinstance(plugin_info, dict) or 'id' not in plugin_info:
+                    continue
+                
+                plugin_id = plugin_info.get('id')
+                
+                # 处理依赖
+                dependencies = {}
+                for dep_id, dep_req in plugin_info.get('dependencies', {}).items():
+                    dependencies[dep_id] = ExtendedVersionRequirement(dep_req)
+                
+                # 从repository_url提取仓库信息
+                repos_owner = ""
+                repos_name = ""
+                if plugin_info.get('repository_url') and 'github.com' in plugin_info.get('repository_url'):
+                    try:
+                        parts = plugin_info['repository_url'].split('github.com/')[1].split('/')
+                        if len(parts) >= 2:
+                            repos_owner = parts[0]
+                            repos_name = parts[1]
+                    except:
+                        pass
+                
+                # 尝试创建一个发布记录
+                release = None
+                if plugin_info.get('latest_version'):
+                    # 在简化格式中，我们没有直接的下载链接，需要后续获取
+                    release = ReleaseData(
+                        name=f"v{plugin_info.get('latest_version')}",
+                        tag_name=f"v{plugin_info.get('latest_version')}",
+                        created_at=plugin_info.get('last_update_time', ''),
+                        description='',
+                        prerelease=False,
+                        url='',
+                        browser_download_url='',  # 暂时留空，稍后通过GitHub API获取
+                        download_count=plugin_info.get('downloads', 0),
+                        size=0,
+                        file_name=f"{plugin_id}.mcdr"
+                    )
+                
+                # 创建插件数据对象
+                plugin_data = PluginData(
+                    id=plugin_id,
+                    name=plugin_info.get('name', plugin_id),
+                    version=plugin_info.get('version', ''),
+                    description=plugin_info.get('description', {}),
+                    author=plugin_info.get('authors', []),
+                    link=plugin_info.get('repository_url', ''),
+                    dependencies=dependencies,
+                    requirements=plugin_info.get('requirements', []),
+                    releases=[release] if release else [],
+                    repos_owner=repos_owner,
+                    repos_name=repos_name
                 )
-                releases.append(release_data)
-            
-            dependencies = {}
-            for dep_id, dep_req in meta.get('dependencies', {}).items():
-                dependencies[dep_id] = ExtendedVersionRequirement(dep_req)
-            
-            plugin_data = PluginData(
-                id=meta.get('id', plugin_id),
-                name=meta.get('name', plugin_id),
-                version=meta.get('version', ''),
-                description=meta.get('description', {}),
-                author=meta.get('authors', []),
-                link=meta.get('link', ''),
-                dependencies=dependencies,
-                requirements=meta.get('requirements', []),
-                releases=releases
-            )
-            
-            self.plugins[plugin_id] = plugin_data
+                
+                self.plugins[plugin_id] = plugin_data
+        elif isinstance(self.data, dict) and 'plugins' in self.data:
+            # 标准格式的仓库
+            for plugin_id, plugin_info in self.data['plugins'].items():
+                meta = plugin_info.get('meta', {})
+                release_info = plugin_info.get('release', {})
+                releases = []
+                
+                for rel in release_info.get('releases', []):
+                    asset = rel.get('asset', {})
+                    release_data = ReleaseData(
+                        name=rel.get('name', ''),
+                        tag_name=rel.get('tag_name', ''),
+                        created_at=rel.get('created_at', ''),
+                        description=rel.get('description', ''),
+                        prerelease=rel.get('prerelease', False),
+                        url=rel.get('url', ''),
+                        browser_download_url=asset.get('browser_download_url', ''),
+                        download_count=asset.get('download_count', 0),
+                        size=asset.get('size', 0),
+                        file_name=asset.get('name', '')
+                    )
+                    releases.append(release_data)
+                
+                dependencies = {}
+                for dep_id, dep_req in meta.get('dependencies', {}).items():
+                    dependencies[dep_id] = ExtendedVersionRequirement(dep_req)
+                
+                plugin_data = PluginData(
+                    id=meta.get('id', plugin_id),
+                    name=meta.get('name', plugin_id),
+                    version=meta.get('version', ''),
+                    description=meta.get('description', {}),
+                    author=meta.get('authors', []),
+                    link=meta.get('link', ''),
+                    dependencies=dependencies,
+                    requirements=meta.get('requirements', []),
+                    releases=releases
+                )
+                
+                self.plugins[plugin_id] = plugin_data
     
     def get_plugin_data(self, plugin_id: str) -> Optional[PluginData]:
         """获取指定ID的插件数据"""
@@ -420,15 +494,48 @@ class PIMHelper:
             self.logger.error(f"初始化PIM辅助工具失败: {e}")
             raise
 
-    def get_cata_meta(self, source, ignore_ttl: bool = False) -> MetaRegistry:
-        """获取插件目录元数据，使用everything_slim.json"""
+    def get_cata_meta(self, source, ignore_ttl: bool = False, repo_url: str = None) -> MetaRegistry:
+        """
+        获取插件目录元数据，使用everything_slim.json
+        
+        Args:
+            source: 命令源
+            ignore_ttl: 是否忽略缓存过期时间
+            repo_url: 指定仓库URL，如果提供则从该仓库获取元数据
+            
+        Returns:
+            MetaRegistry: 元数据注册表
+        """
         # 使用缓存目录存放缓存
         cache_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "static", "cache")
-        cache_file = os.path.join(cache_dir, "everything_slim.json")
-        cache_xz_file = os.path.join(cache_dir, "everything_slim.json.xz")
-        
-        # 创建缓存目录
         os.makedirs(cache_dir, exist_ok=True)
+        
+        # 如果指定了仓库URL，使用该URL作为缓存文件名基础
+        if repo_url:
+            source.reply(f"使用指定仓库: {repo_url}")
+            
+            # 使用MD5哈希创建唯一标识符，确保文件名安全
+            cache_name = hashlib.md5(repo_url.encode()).hexdigest()
+            cache_file = os.path.join(cache_dir, f"repo_{cache_name}.json")
+            cache_xz_file = os.path.join(cache_dir, f"repo_{cache_name}.json.xz")
+            url = repo_url
+            
+            # 如果是指定仓库，总是强制刷新缓存，确保数据是最新的
+            # 这防止了使用错误的缓存数据
+            ignore_ttl = True
+            self.logger.debug(f"使用自定义仓库，强制刷新缓存: {repo_url}")
+            
+            # 记录使用的是自定义仓库
+            self.logger.debug(f"使用自定义仓库: {repo_url}, 缓存文件: {cache_file}")
+        else:
+            # 使用默认缓存文件
+            cache_file = os.path.join(cache_dir, "everything_slim.json")
+            cache_xz_file = os.path.join(cache_dir, "everything_slim.json.xz")
+            
+            # 从配置中获取插件目录URL
+            server_config = self.server.load_config_simple("config.json", {"mcdr_plugins_url": "https://api.mcdreforged.com/catalogue/everything_slim.json.xz"}, echo_in_console=False)
+            url = server_config.get("mcdr_plugins_url", "https://api.mcdreforged.com/catalogue/everything_slim.json.xz")
+            self.logger.debug(f"使用默认仓库: {url}")
         
         # 检查缓存是否过期（2小时）
         cache_expired = True
@@ -436,47 +543,85 @@ class PIMHelper:
             file_time = os.path.getmtime(cache_file)
             if not ignore_ttl and time.time() - file_time < 7200:  # 2小时 = 7200秒
                 cache_expired = False
+                self.logger.debug(f"使用缓存文件: {cache_file}, 未过期")
         
         # 如果缓存已过期或不存在，则下载并解压新文件
         if cache_expired:
             try:
                 source.reply("正在获取插件目录元数据...")
-                # 从配置中获取插件目录URL
-                server_config = self.server.load_config_simple("config.json", {"mcdr_plugins_url": "https://api.mcdreforged.com/catalogue/everything_slim.json.xz"})
-                url = server_config.get("mcdr_plugins_url", "https://api.mcdreforged.com/catalogue/everything_slim.json.xz")
+                self.logger.debug(f"下载仓库数据: {url}")
+                
                 response = requests.get(url, timeout=30)  # 增加超时时间设置
                 
                 if response.status_code == 200:
-                    # 保存压缩文件
-                    with open(cache_xz_file, 'wb') as f:
-                        f.write(response.content)
-                    
-                    # 解压文件
-                    with lzma.open(cache_xz_file, 'rb') as f_in:
+                    # 判断是否是xz压缩文件
+                    if url.endswith('.xz'):
+                        # 保存压缩文件
+                        with open(cache_xz_file, 'wb') as f:
+                            f.write(response.content)
+                        
+                        # 解压文件
+                        with lzma.open(cache_xz_file, 'rb') as f_in:
+                            with open(cache_file, 'wb') as f_out:
+                                f_out.write(f_in.read())
+                        
+                        self.logger.debug(f"下载并解压完成: {cache_file}")
+                    else:
+                        # 直接保存JSON数据
                         with open(cache_file, 'wb') as f_out:
-                            f_out.write(f_in.read())
+                            f_out.write(response.content)
+                        
+                        self.logger.debug(f"下载完成: {cache_file}")
+                    
                     source.reply("获取元数据成功")
                 else:
                     source.reply(f"获取元数据失败: HTTP {response.status_code}")
+                    self.logger.error(f"获取元数据失败: HTTP {response.status_code}, URL: {url}")
+                    
                     # 如果下载失败但缓存文件存在，继续使用旧缓存
                     if not os.path.exists(cache_file):
                         source.reply("缓存不存在，返回空元数据")
                         return EmptyMetaRegistry()
             except Exception as e:
                 source.reply(f"获取元数据失败: {e}")
+                self.logger.error(f"获取元数据失败: {e}, URL: {url}")
+                
                 # 下载或解压出错，如果缓存文件存在则使用旧缓存
                 if not os.path.exists(cache_file):
                     return EmptyMetaRegistry()
         
         # 读取并解析文件
         try:
+            self.logger.debug(f"开始解析元数据文件: {cache_file}")
+            
             with open(cache_file, 'r', encoding='utf-8') as f:
                 everything_data = json.load(f)
             
             # 创建元数据注册表
-            return MetaRegistry(everything_data)
+            registry = MetaRegistry(everything_data, url)
+            plugin_count = len(registry.get_plugins())
+            
+            # 检查是否成功解析到插件
+            if plugin_count == 0:
+                source.reply(f"仓库未包含任何有效插件: {url}")
+                self.logger.warning(f"仓库未包含任何有效插件: {url}")
+                
+                if repo_url:  # 只有指定仓库时才提示
+                    source.reply("请确认仓库URL是否正确，以及是否提供了有效的插件信息")
+            else:
+                source.reply(f"已从仓库加载 {plugin_count} 个插件")
+                self.logger.debug(f"成功从仓库加载 {plugin_count} 个插件, URL: {url}")
+                
+                # 如果是简化仓库，记录具体插件ID
+                if isinstance(everything_data, list) and plugin_count < 10:
+                    plugin_ids = list(registry.get_plugins().keys())
+                    source.reply(f"加载的插件: {', '.join(plugin_ids)}")
+                    self.logger.debug(f"加载的插件: {', '.join(plugin_ids)}")
+            
+            return registry
         except Exception as e:
             source.reply(f"解析元数据失败: {e}")
+            self.logger.error(f"解析元数据失败: {e}, 文件: {cache_file}")
             return EmptyMetaRegistry()
 
     def list_plugins(self, source, keyword: Optional[str] = None) -> int:
@@ -2573,6 +2718,72 @@ class PIMHelper:
             source.reply("将继续尝试加载插件...")
             return True  # 继续尝试加载插件
 
+    def get_github_release_asset_url(self, source, owner: str, repo: str, tag: str) -> Optional[str]:
+        """
+        通过GitHub API获取指定版本的下载链接
+        
+        Args:
+            source: 命令源
+            owner: 仓库所有者
+            repo: 仓库名称
+            tag: 版本号标签
+            
+        Returns:
+            Optional[str]: 下载链接
+        """
+        if not owner or not repo or not tag:
+            source.reply(f"仓库信息不完整: {owner}/{repo}@{tag}")
+            return None
+        
+        # 构建GitHub API URL - 不使用token
+        api_url = f"https://api.github.com/repos/{owner}/{repo}/releases/tags/{tag}?access_token="
+        
+        try:
+            source.reply(f"正在通过GitHub API获取 {owner}/{repo} 的 {tag} 版本信息...")
+            
+            headers = {
+                'Accept': 'application/vnd.github.v3+json',
+                'User-Agent': 'MCDR-WebUI'
+            }
+            
+            response = requests.get(api_url, headers=headers, timeout=30)
+            
+            if response.status_code == 200:
+                release_data = response.json()
+                
+                # 遍历资产列表，查找mcdr文件
+                if 'assets' in release_data and release_data['assets']:
+                    for asset in release_data['assets']:
+                        # 优先选择.mcdr或.pyz文件
+                        if asset['name'].endswith('.mcdr') or asset['name'].endswith('.pyz'):
+                            # source.reply(f"找到插件下载链接: {asset['name']}")
+                            source.reply(f"找到插件下载链接: {asset['name']}, URL: {asset['browser_download_url']}")
+                            self.logger.debug(f"找到插件下载链接: {asset['name']}, URL: {asset['browser_download_url']}")
+                            return asset['browser_download_url']
+                    
+                    # 如果没有找到.mcdr或.pyz文件，使用第一个资产
+                    source.reply(f"未找到.mcdr或.pyz文件，使用第一个资产: {release_data['assets'][0]['name']}")
+                    self.logger.debug(f"未找到.mcdr或.pyz文件，使用第一个资产: {release_data['assets'][0]['name']}")
+                    return release_data['assets'][0]['browser_download_url']
+                else:
+                    source.reply(f"发布 {tag} 没有可下载的资产")
+                    self.logger.warning(f"发布 {tag} 没有可下载的资产")
+            else:
+                source.reply(f"获取GitHub版本信息失败: HTTP {response.status_code}")
+                self.logger.error(f"获取GitHub版本信息失败: HTTP {response.status_code}, API URL: {api_url}")
+                
+                if response.status_code == 404:
+                    source.reply(f"版本标签 '{tag}' 可能不存在，请检查")
+                    self.logger.warning(f"版本标签 '{tag}' 可能不存在，仓库: {owner}/{repo}")
+                elif response.status_code == 403:
+                    source.reply("GitHub API请求次数已达上限，请稍后再试")
+                    self.logger.warning("GitHub API请求次数已达上限")
+        except Exception as e:
+            source.reply(f"获取GitHub版本信息时出错: {e}")
+            self.logger.error(f"获取GitHub版本信息时出错: {e}, 仓库: {owner}/{repo}@{tag}")
+        
+        return None
+
 # 插件实例
 pim_helper: Optional[PIMHelper] = None
 
@@ -2615,13 +2826,14 @@ class PluginInstaller:
             self.logger.error(f"获取插件 {plugin_id} 版本信息失败: {e}")
             return []
         
-    def install_plugin(self, plugin_id: str, version: str = None) -> str:
+    def install_plugin(self, plugin_id: str, version: str = None, repo_url: str = None) -> str:
         """
         异步安装插件
         
         Args:
             plugin_id: 插件ID
             version: 可选的指定版本号
+            repo_url: 可选的指定仓库URL
             
         Returns:
             任务ID
@@ -2633,6 +2845,7 @@ class PluginInstaller:
             self.install_tasks[task_id] = {
                 'plugin_id': plugin_id,
                 'version': version,  # 记录指定的版本号
+                'repo_url': repo_url,  # 记录指定的仓库URL
                 'action': 'install',
                 'status': 'running',
                 'progress': 0.0,
@@ -2644,12 +2857,13 @@ class PluginInstaller:
             
             # 保存到日志，便于调试
             version_info = f" v{version}" if version else ""
-            self.logger.info(f"创建安装任务 {task_id} 用于插件 {plugin_id}{version_info}")
+            repo_info = f" 从仓库 {repo_url}" if repo_url else ""
+            self.logger.info(f"创建安装任务 {task_id} 用于插件 {plugin_id}{version_info}{repo_info}")
             
         # 创建线程运行安装
         thread = threading.Thread(
             target=self._install_plugin_thread,
-            args=(task_id, plugin_id, version),
+            args=(task_id, plugin_id, version, repo_url),
             daemon=True
         )
         thread.start()
@@ -2867,7 +3081,7 @@ class PluginInstaller:
                 
         return CustomCommandSource(self, task_id)
         
-    def _install_plugin_thread(self, task_id: str, plugin_id: str, version: str = None):
+    def _install_plugin_thread(self, task_id: str, plugin_id: str, version: str = None, repo_url: str = None):
         """安装插件的线程函数"""
         try:
             # 创建自定义的 CommandSource 来捕获输出
@@ -2875,15 +3089,16 @@ class PluginInstaller:
             
             # 更新初始消息
             version_info = f" v{version}" if version else ""
+            repo_info = f" 从仓库 {repo_url}" if repo_url else ""
             with self._lock:
                 if task_id in self.install_tasks:
-                    self.install_tasks[task_id]['message'] = f"开始安装插件 {plugin_id}{version_info}"
+                    self.install_tasks[task_id]['message'] = f"开始安装插件 {plugin_id}{version_info}{repo_info}"
                     # 设置详细信息记录
                     self.install_tasks[task_id]['error_messages'] = []
                     self.install_tasks[task_id]['all_messages'] = []
             
             # 记录详细日志
-            self.logger.info(f"开始异步安装插件 {plugin_id}{version_info} (任务ID: {task_id})")
+            self.logger.info(f"开始异步安装插件 {plugin_id}{version_info}{repo_info} (任务ID: {task_id})")
             
             # 创建任务日志记录器
             class TaskLogger:
@@ -2911,10 +3126,10 @@ class PluginInstaller:
             local_pim_helper = PIMHelper(self.server)
             
             # 记录日志，同时更新任务进度
-            source.reply(f"开始安装插件 {plugin_id}{version_info}")
+            source.reply(f"开始安装插件 {plugin_id}{version_info}{repo_info}")
             
-            # 如果指定了版本，使用新的实现
-            if version:
+            # 如果指定了版本或仓库，使用新的实现
+            if version or repo_url:
                 # 创建任务记录器
                 task_logger = TaskLogger(self.install_tasks.get(task_id, {}))
                 
@@ -2922,7 +3137,7 @@ class PluginInstaller:
                 start_time = time.time()
                 
                 # 获取元数据
-                meta = local_pim_helper.get_cata_meta(task_logger)
+                meta = local_pim_helper.get_cata_meta(task_logger, False, repo_url)
                 if not meta:
                     source.reply(f"获取插件元数据失败")
                     with self._lock:
@@ -2950,7 +3165,7 @@ class PluginInstaller:
                 for release in plugin_data.releases:
                     # 标准化版本号（去掉 'v' 前缀）
                     release_version = release.tag_name.lstrip('v') if release.tag_name else ""
-                    version_to_match = version.lstrip('v')
+                    version_to_match = version.lstrip('v') if version is not None else ""
                     
                     # 精确匹配
                     if release_version == version_to_match:
@@ -2961,7 +3176,7 @@ class PluginInstaller:
                 if not target_release:
                     for release in plugin_data.releases:
                         release_version = release.tag_name.lstrip('v') if release.tag_name else ""
-                        version_to_match = version.lstrip('v')
+                        version_to_match = version.lstrip('v') if version is not None else ""
                         
                         if release_version.startswith(version_to_match):
                             target_release = release
@@ -3011,6 +3226,48 @@ class PluginInstaller:
                 # 准备目标路径
                 plugin_dir = local_pim_helper.get_plugin_dir()
                 target_path = os.path.join(plugin_dir, target_release.file_name or f"{plugin_id}.mcdr")
+                
+                # 如果没有下载链接，尝试通过GitHub API获取
+                if not target_release.browser_download_url:
+                    if not plugin_data.repos_owner or not plugin_data.repos_name:
+                        # 尝试从URL解析仓库信息
+                        repo_url = plugin_data.link or ""
+                        if repo_url and 'github.com' in repo_url:
+                            try:
+                                parts = repo_url.split('github.com/')[1].split('/')
+                                if len(parts) >= 2:
+                                    plugin_data.repos_owner = parts[0]
+                                    plugin_data.repos_name = parts[1]
+                            except:
+                                pass
+                    
+                    # 使用GitHub API获取下载链接
+                    browser_download_url = local_pim_helper.get_github_release_asset_url(
+                        source,
+                        plugin_data.repos_owner,
+                        plugin_data.repos_name,
+                        target_release.tag_name
+                    )
+                    
+                    if not browser_download_url:
+                        source.reply(f"无法获取插件 {plugin_id} 的下载链接")
+                        with self._lock:
+                            if task_id in self.install_tasks:
+                                self.install_tasks[task_id]['status'] = 'failed'
+                                self.install_tasks[task_id]['message'] = f"无法获取插件 {plugin_id} 的下载链接"
+                                self.install_tasks[task_id]['end_time'] = time.time()
+                                self.install_tasks[task_id]['all_messages'] = source.messages
+                        return
+                    
+                    # 更新下载链接
+                    target_release.browser_download_url = browser_download_url
+                    
+                    # 更新文件名
+                    if '/' in browser_download_url:
+                        filename = browser_download_url.split('/')[-1]
+                        if filename:
+                            target_release.file_name = filename
+                            target_path = os.path.join(plugin_dir, filename)
                 
                 # 下载插件
                 download_success = downloader.download(target_release.browser_download_url, target_path)

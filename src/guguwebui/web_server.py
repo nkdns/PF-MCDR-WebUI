@@ -16,6 +16,7 @@ import inspect
 import subprocess
 import sys
 from typing import Dict, List, Any, Optional, Union, Tuple
+from packaging.version import parse as parse_version
 
 from pathlib import Path
 
@@ -48,6 +49,8 @@ app = FastAPI()
 # 全局变量，用于存储在线插件数据
 online_plugins_data = []
 online_plugins_last_update = 0
+# 添加仓库缓存字典，格式为 {repo_url: {'data': plugins_data, 'last_update': timestamp}}
+repo_plugins_cache = {}
 
 # template engine -> jinja2
 templates = Jinja2Templates(directory=f"{STATIC_PATH}/templates")
@@ -111,7 +114,7 @@ async def login_page(request: Request):
     # token is valid
     token = request.cookies.get("token")
     server:PluginServerInterface = app.state.server_interface
-    server_config = server.load_config_simple("config.json", DEFALUT_CONFIG)
+    server_config = server.load_config_simple("config.json", DEFALUT_CONFIG, echo_in_console=False)
 
     disable_other_admin = server_config.get("disable_other_admin", False)
     super_admin_account = server_config.get("super_admin_account")
@@ -157,7 +160,7 @@ async def login(
     )
     now = datetime.datetime.now(datetime.timezone.utc)
     server:PluginServerInterface = app.state.server_interface
-    server_config = server.load_config_simple("config.json", DEFALUT_CONFIG)
+    server_config = server.load_config_simple("config.json", DEFALUT_CONFIG, echo_in_console=False)
 
     # check account & password
     if account and password:
@@ -389,9 +392,228 @@ async def get_plugins(request: Request, detail: bool = False):
 
 # 从 everything_slim.json 获取在线插件列表，免登录
 @app.get("/api/online-plugins")
-async def get_online_plugins(request: Request):
-    global online_plugins_data, online_plugins_last_update
+async def get_online_plugins(request: Request, repo_url: str = None):
+    global online_plugins_data, online_plugins_last_update, repo_plugins_cache
     
+    # 获取配置中定义的仓库URL
+    server = app.state.server_interface
+    config = server.load_config_simple("config.json", DEFALUT_CONFIG, echo_in_console=False)
+    official_repo_url = config.get("mcdr_plugins_url", "https://api.mcdreforged.com/catalogue/everything_slim.json.xz")
+    configured_repos = [official_repo_url]  # 始终包含官方仓库
+    
+    # 添加配置中的其他仓库URL
+    if "repositories" in config and isinstance(config["repositories"], list):
+        for repo in config["repositories"]:
+            if isinstance(repo, dict) and "url" in repo:
+                configured_repos.append(repo["url"])
+    
+    # 如果指定了特定仓库URL，则只获取该仓库的数据
+    if repo_url:
+        # 检查是否是配置中的仓库，如果是则可以使用缓存
+        is_configured_repo = repo_url in configured_repos
+        current_time = time.time()
+        
+        # 检查缓存是否存在且未过期（2小时）
+        if is_configured_repo and repo_url in repo_plugins_cache:
+            cache_data = repo_plugins_cache[repo_url]
+            cache_expired = current_time - cache_data['last_update'] > 7200  # 2小时 = 7200秒
+            
+            # 如果缓存未过期，直接返回缓存数据
+            if not cache_expired:
+                return cache_data['data']
+        
+        try:
+            # 下载指定仓库数据
+            response = requests.get(repo_url, timeout=30)
+            
+            if response.status_code == 200:
+                # 解析数据
+                if repo_url.endswith('.xz'):
+                    with lzma.open(io.BytesIO(response.content), 'rb') as f_in:
+                        repo_data = json.loads(f_in.read().decode('utf-8'))
+                else:
+                    repo_data = response.json()
+                
+                # 检查是否为数组格式的插件列表（新仓库类型）
+                if isinstance(repo_data, list):
+                    # 验证是否为预期的插件列表格式（检查必要字段）
+                    if all(isinstance(item, dict) and 'id' in item and 'name' in item for item in repo_data):
+                        # 这是直接返回格式的插件列表，不需要转换，直接使用
+                        # server.logger.info(f"仓库 {repo_url} 为直接插件列表格式，包含 {len(repo_data)} 个插件")
+                        
+                        # 如果是配置中的仓库，更新缓存
+                        if is_configured_repo:
+                            repo_plugins_cache[repo_url] = {
+                                'data': repo_data,
+                                'last_update': current_time
+                            }
+                            # server.logger.info(f"已更新仓库 {repo_url} 的缓存数据")
+                        
+                        return repo_data
+                
+                # 非数组格式或不符合要求，继续使用原有逻辑处理
+                # 转换为与旧API兼容的格式
+                plugins_data = []
+                for plugin_id, plugin_info in repo_data.get('plugins', {}).items():
+                    try:
+                        # 获取元数据
+                        meta = plugin_info.get('meta', {})
+                        plugin_data = plugin_info.get('plugin', {})
+                        repository = plugin_info.get('repository', {})
+                        release = plugin_info.get('release', {})
+                        
+                        # 获取最新版本信息
+                        latest_version = None
+                        try:
+                            latest_version_index = release.get('latest_version_index', 0)
+                            releases = release.get('releases', [])
+                            if releases and len(releases) > latest_version_index:
+                                latest_version = releases[latest_version_index]
+                        except Exception as version_error:
+                            server.logger.error(f"处理插件 {plugin_id} 的版本信息时出错: {version_error}")
+                            latest_version = None
+
+                        # 获取协议链接
+                        license_info = repository.get('license', {}) or {}
+                        license_url = ''
+                        if license_info:
+                            # 优先使用license中的url字段
+                            if 'url' in license_info:
+                                license_url = license_info.get('url', '')
+                            # 如果没有url字段，根据key构建GitHub许可证URL
+                            elif 'key' in license_info:
+                                license_key = license_info.get('key', '')
+                                if license_key:
+                                    license_url = f"https://github.com/licenses/{license_key}"
+                        
+                        # 创建与旧格式兼容的结构
+                        try:
+                            plugin_entry = {
+                                "id": meta.get('id', plugin_id),
+                                "name": meta.get('name', plugin_id),
+                                "version": meta.get('version', ''),
+                                "description": meta.get('description', {}),
+                                "authors": [],
+                                "dependencies": meta.get('dependencies', {}),
+                                "labels": plugin_data.get('labels', []),
+                                "repository_url": repository.get('html_url', '') or plugin_data.get('repository', ''),
+                                "update_time": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                                "latest_version": release.get('latest_version', meta.get('version', '')),
+                                "license": (repository.get('license', {}) or {}).get('spdx_id', '未知'),
+                                "license_url": license_url,
+                                "downloads": 0,  # 初始化下载计数
+                                "readme_url": repository.get('readme_url', '') or plugin_data.get('readme_url', '') or '',
+                            }
+                        except Exception as entry_error:
+                            server.logger.error(f"创建插件 {plugin_id} 条目时出错: {entry_error}")
+                            # 创建一个最小的安全条目
+                            plugin_entry = {
+                                "id": plugin_id,
+                                "name": plugin_id,
+                                "version": "",
+                                "description": {},
+                                "authors": [],
+                                "dependencies": {},
+                                "labels": [],
+                                "repository_url": "",
+                                "update_time": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                                "latest_version": "",
+                                "license": "未知",
+                                "downloads": 0,
+                                "readme_url": "",
+                            }
+                        
+                        # 计算所有版本的下载总数
+                        try:
+                            total_downloads = 0
+                            for rel in releases:
+                                if isinstance(rel, dict) and 'asset' in rel:
+                                    asset = rel['asset']
+                                    if isinstance(asset, dict) and 'download_count' in asset:
+                                        try:
+                                            total_downloads += int(asset['download_count'])
+                                        except (ValueError, TypeError):
+                                            # 忽略无法转换为整数的下载计数
+                                            pass
+                            plugin_entry["downloads"] = total_downloads
+                        except Exception as downloads_error:
+                            server.logger.error(f"计算插件 {plugin_id} 的下载次数时出错: {downloads_error}")
+                        
+                        # 格式化作者信息
+                        author_names = plugin_data.get('authors', []) or meta.get('authors', [])
+                        authors_info = repo_data.get('authors', {}) or {}
+                        authors_dict = authors_info.get('authors', {}) if isinstance(authors_info, dict) else {}
+                        
+                        for author_name in author_names:
+                            try:
+                                author_info = authors_dict.get(author_name, {})
+                                if author_info:
+                                    plugin_entry["authors"].append({
+                                        "name": author_info.get('name', author_name),
+                                        "link": author_info.get('link', '')
+                                    })
+                                else:
+                                    plugin_entry["authors"].append({
+                                        "name": author_name,
+                                        "link": ""
+                                    })
+                            except Exception as author_error:
+                                # 如果处理单个作者信息失败，记录错误但继续处理
+                                server.logger.error(f"处理插件 {plugin_id} 的作者 {author_name} 信息时出错: {author_error}")
+                                # 添加一个安全的作者信息
+                                plugin_entry["authors"].append({
+                                    "name": "未知作者",
+                                    "link": ""
+                                })
+                        
+                        # 添加最后更新时间
+                        if latest_version and 'created_at' in latest_version:
+                            try:
+                                # 将ISO格式时间转换为更友好的格式
+                                dt = datetime.datetime.fromisoformat(latest_version['created_at'].replace('Z', '+00:00'))
+                                plugin_entry["last_update_time"] = dt.strftime("%Y-%m-%d %H:%M:%S")
+                            except Exception as time_error:
+                                server.logger.error(f"处理插件 {plugin_id} 的时间信息时出错: {time_error}")
+                                plugin_entry["last_update_time"] = latest_version.get('created_at', '')
+                        
+                        plugins_data.append(plugin_entry)
+                    except Exception as plugin_error:
+                        # 如果处理单个插件失败，记录错误但继续处理其他插件
+                        server.logger.error(f"处理插件 {plugin_id} 信息时出错: {plugin_error}")
+                
+                # 如果是配置中的仓库，更新缓存
+                if is_configured_repo:
+                    repo_plugins_cache[repo_url] = {
+                        'data': plugins_data,
+                        'last_update': current_time
+                    }
+                    # server.logger.info(f"已更新仓库 {repo_url} 的缓存数据")
+                
+                return plugins_data
+            else:
+                server.logger.error(f"从仓库 {repo_url} 获取数据失败: HTTP {response.status_code}")
+                
+                # 如果是配置中的仓库，尝试使用过期的缓存
+                if is_configured_repo and repo_url in repo_plugins_cache:
+                    server.logger.info(f"使用仓库 {repo_url} 的过期缓存数据")
+                    return repo_plugins_cache[repo_url]['data']
+                return []
+        except Exception as e:
+            # 下载或解析出错，记录详细错误信息
+            import traceback
+            error_msg = f"获取指定仓库的插件列表失败: {str(e)}\n{traceback.format_exc()}"
+            if server:
+                server.logger.error(error_msg)
+            else:
+                print(error_msg)
+            
+            # 如果是配置中的仓库，尝试使用过期的缓存
+            if is_configured_repo and repo_url in repo_plugins_cache:
+                server.logger.info(f"使用仓库 {repo_url} 的过期缓存数据")
+                return repo_plugins_cache[repo_url]['data']
+            return []
+    
+    # 没有指定仓库URL，使用缓存的合并数据
     # 检查内存缓存是否过期（2小时）
     current_time = time.time()
     cache_expired = current_time - online_plugins_last_update > 7200  # 2小时 = 7200秒
@@ -400,8 +622,6 @@ async def get_online_plugins(request: Request):
     if cache_expired or not online_plugins_data:
         try:
             # 从配置中获取插件目录URL
-            server = app.state.server_interface
-            config = server.load_config_simple("config.json", DEFALUT_CONFIG)
             url = config.get("mcdr_plugins_url", "https://api.mcdreforged.com/catalogue/everything_slim.json.xz")
             
             # 下载压缩文件
@@ -409,9 +629,32 @@ async def get_online_plugins(request: Request):
             
             if response.status_code == 200:
                 # 解压数据
-                with lzma.open(io.BytesIO(response.content), 'rb') as f_in:
-                    everything_data = json.loads(f_in.read().decode('utf-8'))
+                if url.endswith('.xz'):
+                    with lzma.open(io.BytesIO(response.content), 'rb') as f_in:
+                        everything_data = json.loads(f_in.read().decode('utf-8'))
+                else:
+                    everything_data = response.json()
                 
+                # 检查是否为数组格式的插件列表（新仓库类型）
+                if isinstance(everything_data, list):
+                    # 验证是否为预期的插件列表格式（检查必要字段）
+                    if all(isinstance(item, dict) and 'id' in item and 'name' in item for item in everything_data):
+                        # 这是直接返回格式的插件列表，不需要转换，直接使用
+                        # server.logger.info(f"官方仓库为直接插件列表格式，包含 {len(everything_data)} 个插件")
+                        
+                        # 更新内存缓存和仓库缓存
+                        online_plugins_data = everything_data
+                        online_plugins_last_update = current_time
+                        
+                        # 同时更新官方仓库URL的缓存
+                        repo_plugins_cache[url] = {
+                            'data': everything_data,
+                            'last_update': current_time
+                        }
+                        
+                        return everything_data
+                
+                # 非数组格式，继续使用原有逻辑处理
                 # 转换为与旧API兼容的格式
                 plugins_data = []
                 for plugin_id, plugin_info in everything_data.get('plugins', {}).items():
@@ -545,6 +788,12 @@ async def get_online_plugins(request: Request):
                 online_plugins_data = plugins_data
                 online_plugins_last_update = current_time
                 
+                # 同时更新官方仓库URL的缓存
+                repo_plugins_cache[url] = {
+                    'data': plugins_data,
+                    'last_update': current_time
+                }
+                
                 return plugins_data
             else:
                 server.logger.error(f"下载插件数据失败: HTTP {response.status_code}")
@@ -641,7 +890,7 @@ async def get_web_config(request: Request):
             {"status": "error", "message": "User not logged in"}, status_code=401
         )
     server = app.state.server_interface
-    config = server.load_config_simple("config.json", DEFALUT_CONFIG)
+    config = server.load_config_simple("config.json", DEFALUT_CONFIG, echo_in_console=False)
     return JSONResponse(
         {   
             "host": config["host"],
@@ -652,6 +901,7 @@ async def get_web_config(request: Request):
             "deepseek_api_key": config.get("deepseek_api_key", ""),
             "deepseek_model": config.get("deepseek_model", "deepseek-chat"),
             "mcdr_plugins_url": config.get("mcdr_plugins_url", "https://api.mcdreforged.com/catalogue/everything_slim.json.xz"),
+            "repositories": config.get("repositories", []),
         }
     )
 
@@ -663,7 +913,8 @@ async def save_web_config(request: Request, config: saveconfig):
             {"status": "error", "message": "User not logged in"}, status_code=401
         )
     web_config = app.state.server_interface.load_config_simple(
-        "config.json", DEFALUT_CONFIG
+        "config.json", DEFALUT_CONFIG,
+        echo_in_console=False
     )
     # change port & account
     if config.action == "config":
@@ -681,6 +932,9 @@ async def save_web_config(request: Request, config: saveconfig):
         # 更新MCDR插件目录URL
         if config.mcdr_plugins_url is not None:
             web_config["mcdr_plugins_url"] = config.mcdr_plugins_url
+        # 更新仓库列表
+        if config.repositories is not None:
+            web_config["repositories"] = config.repositories
         
         response = {"status": "success"}
     # disable_admin_login_web & enable_temp_login_password
@@ -1448,7 +1702,7 @@ async def query_deepseek(request: Request, query_data: DeepseekQuery):
     try:
         # 加载配置
         server = app.state.server_interface
-        config = server.load_config_simple("config.json", DEFALUT_CONFIG)
+        config = server.load_config_simple("config.json", DEFALUT_CONFIG, echo_in_console=False)
         
         # 获取API密钥
         api_key = config.get("deepseek_api_key", "")
@@ -1552,6 +1806,11 @@ async def api_install_plugin(
 ):
     """
     安装指定的插件
+    
+    可接受的参数:
+    - plugin_id: 必需，插件ID
+    - version: 可选，指定版本号
+    - repo_url: 可选，指定仓库URL
     """
     if not token_valid:
         return JSONResponse(
@@ -1561,6 +1820,7 @@ async def api_install_plugin(
     
     plugin_id = plugin_req.get("plugin_id")
     version = plugin_req.get("version")
+    repo_url = plugin_req.get("repo_url")
     
     if not plugin_id:
         return JSONResponse(
@@ -1574,13 +1834,20 @@ async def api_install_plugin(
         installer = create_installer(server)
         
         # 启动异步安装
-        task_id = installer.install_plugin(plugin_id, version)
+        task_id = installer.install_plugin(plugin_id, version, repo_url)
+        
+        # 构建响应消息
+        message = f"开始安装插件 {plugin_id}"
+        if version:
+            message += f" v{version}"
+        if repo_url:
+            message += f" 从仓库 {repo_url}"
         
         return JSONResponse(
             content={
                 "success": True, 
                 "task_id": task_id, 
-                "message": f"开始安装插件 {plugin_id}" + (f" v{version}" if version else "")
+                "message": message
             }
         )
     except Exception as e:
@@ -1599,6 +1866,11 @@ async def api_update_plugin(
 ):
     """
     更新指定的插件到指定版本
+    
+    可接受的参数:
+    - plugin_id: 必需，插件ID
+    - version: 可选，指定版本号
+    - repo_url: 可选，指定仓库URL
     """
     if not token_valid:
         return JSONResponse(
@@ -1608,6 +1880,7 @@ async def api_update_plugin(
     
     plugin_id = plugin_req.get("plugin_id")
     version = plugin_req.get("version")
+    repo_url = plugin_req.get("repo_url")
     
     if not plugin_id:
         return JSONResponse(
@@ -1621,13 +1894,22 @@ async def api_update_plugin(
         installer = create_installer(server)
         
         # 启动异步安装/更新
-        task_id = installer.install_plugin(plugin_id, version)
+        task_id = installer.install_plugin(plugin_id, version, repo_url)
+        
+        # 构建响应消息
+        message = f"开始更新插件 {plugin_id}"
+        if version:
+            message += f" 到 v{version}"
+        else:
+            message += " 到最新版本"
+        if repo_url:
+            message += f" 从仓库 {repo_url}"
         
         return JSONResponse(
             content={
                 "success": True, 
                 "task_id": task_id, 
-                "message": f"开始更新插件 {plugin_id}" + (f" 到 v{version}" if version else " 到最新版本")
+                "message": message
             }
         )
     except Exception as e:
