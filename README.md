@@ -19,7 +19,7 @@
 ### 主要功能
 > 为MCDR提供一个 `在线WebUI管理界面` 和 `MCDR插件管理` 和 `表单配置功能`（可选使用在线编辑器）。
 
-
+- [x] **pip包管理**
 - [x] **本地插件管理:** 
   - 列出全部插件
   - 一键更新
@@ -112,20 +112,20 @@ A:[PIM插件](https://github.com/LoosePrince/PF-MCDR-WebUI/blob/main/src/guguweb
 
 ## 示例图
 
-> 截图来源v1.3.0本地测试
+> 截图来源v1.3.4本地测试(部分未改动截图为v1.3.0)
 
 登录页![image](https://github.com/user-attachments/assets/3439beb0-4325-406f-9443-9a6015edb2c6)
-仪表盘![image](https://github.com/user-attachments/assets/1ac6c44d-fec1-4d94-ade2-31eac56d8500)
+仪表盘![image](https://github.com/user-attachments/assets/2fe582f2-7d51-4666-9e0e-f8314fe27520)
 MCDR配置![image](https://github.com/user-attachments/assets/141c1416-33ca-4a62-83ef-574cd494ba70)
 MC服务器配置![image](https://github.com/user-attachments/assets/08b3bdd5-ba33-48f6-926c-96333df622d8)
-本地插件![image](https://github.com/user-attachments/assets/8f009195-6f05-4ef3-8910-7a6db4ac49b0)
+本地插件![image](https://github.com/user-attachments/assets/252941b6-f1f1-4b4b-9736-eb75324c09f6)
 插件配置![image](https://github.com/user-attachments/assets/bf04660b-03a1-4b6e-ac82-03821c273989)
-插件仓库![image](https://github.com/user-attachments/assets/dd1a3998-799f-47a0-8101-90ddd8b56375)
+插件仓库![image](https://github.com/user-attachments/assets/b7c41f92-1b4c-4a37-82e9-4b865af365bf)
 插件安装![image](https://github.com/user-attachments/assets/eb701e46-9e09-4b2d-b4f3-685b74792bb2)
 终端![image](https://github.com/user-attachments/assets/66b1db2c-ef36-4639-95ef-b685cc64692a)
 AI分析![image](https://github.com/user-attachments/assets/91276765-ec5b-47eb-8a85-d5faf6629fbb)
-设置![image](https://github.com/user-attachments/assets/03f32762-87bc-44ec-afa9-94c412740767)
-浅色模式![image](https://github.com/user-attachments/assets/7bc3388a-c8a2-4263-b1a3-4dea25b624cf)
+设置![image](https://github.com/user-attachments/assets/eb333411-3e59-4939-a957-c2e956f70f2f)
+浅色模式![image](https://github.com/user-attachments/assets/e514d1e4-09f7-41c4-ad27-5b46a8245513)
 
 # TODO
 
