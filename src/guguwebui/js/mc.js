@@ -14,6 +14,7 @@ document.addEventListener('alpine:init', () => {
         notificationMessage: '',
         notificationType: 'success',
         showNotification: false,
+        serverPath: 'server/', // 默认服务器路径，将在初始化时更新
         
         // 配置分类
         categories: {
@@ -141,11 +142,34 @@ document.addEventListener('alpine:init', () => {
             }
         },
         
+        // 加载MCDR配置获取服务器路径
+        loadMcdrConfig: async function() {
+            try {
+                const response = await fetch('/api/load_config?path=config.yml');
+                const mcdrConfig = await response.json();
+                
+                // 获取工作目录
+                if (mcdrConfig && mcdrConfig.working_directory) {
+                    // 确保路径以斜杠结尾
+                    this.serverPath = mcdrConfig.working_directory.endsWith('/') 
+                        ? mcdrConfig.working_directory 
+                        : mcdrConfig.working_directory + '/';
+                    
+                    console.log('从MCDR配置获取到服务器路径:', this.serverPath);
+                } else {
+                    console.warn('未能从MCDR配置获取工作目录，使用默认路径:', this.serverPath);
+                }
+            } catch (error) {
+                console.error('加载MCDR配置失败:', error);
+                console.warn('使用默认服务器路径:', this.serverPath);
+            }
+        },
+        
         // 加载配置数据
         loadConfig: async function() {
             try {
                 this.loading = true;
-                const response = await fetch('/api/load_config?path=server/server.properties');
+                const response = await fetch(`/api/load_config?path=${this.serverPath}server.properties`);
                 this.configData = await response.json();
                 this.loading = false;
             } catch (error) {
@@ -176,7 +200,7 @@ document.addEventListener('alpine:init', () => {
                         'Content-Type': 'application/json'
                     },
                     body: JSON.stringify({
-                        file_path: 'server/server.properties',
+                        file_path: `${this.serverPath}server.properties`,
                         config_data: formattedConfig
                     })
                 });
@@ -290,10 +314,15 @@ document.addEventListener('alpine:init', () => {
         },
         
         init() {
+            // 先加载MCDR配置获取服务器路径
+            this.loadMcdrConfig().then(() => {
+                // 加载完成后再加载配置
+                this.loadConfig();
+            });
+            
             this.checkLoginStatus();
             this.checkServerStatus();
             this.loadTranslations();
-            this.loadConfig();
             
             // 每60秒自动刷新服务器状态
             setInterval(() => this.checkServerStatus(), 10001);
