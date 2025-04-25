@@ -230,6 +230,9 @@ async function checkLoginStatus() {
             // 检查是否是QQ号，如果是则获取QQ信息
             if (/^\d{5,11}$/.test(data.username)) {
                 fetchQQInfo(data.username);
+            } else {
+                // 不是QQ号，直接使用用户名更新UI
+                updateUIWithQQInfo(data.username, data.username);
             }
         }
         
@@ -381,7 +384,12 @@ function updateUIWithQQInfo(qqNumber, nickname) {
     
     // 更新头像
     const avatarElements = document.querySelectorAll('.user-avatar');
-    const avatarUrl = `https://q1.qlogo.cn/g?b=qq&nk=${qqNumber}&s=640`;
+    // 判断是否为QQ号
+    const isQQNumber = /^\d{5,11}$/.test(qqNumber);
+    // 设置头像URL - 如果是QQ号使用QQ头像，否则使用随机模糊图片
+    const avatarUrl = isQQNumber 
+        ? `https://q1.qlogo.cn/g?b=qq&nk=${qqNumber}&s=640`
+        : 'https://picsum.photos/100/?blur=5';
     
     avatarElements.forEach(el => {
         // 如果是img标签
@@ -406,13 +414,17 @@ function updateUIWithQQInfo(qqNumber, nickname) {
         if (el.tagName === 'IMG') {
             el.onerror = function() {
                 this.onerror = null;
-                this.src = '';
-                this.style.display = 'none';
+                // 使用随机模糊图片作为备用
+                this.src = 'https://picsum.photos/100/?blur=5';
                 
-                // 创建并添加图标作为后备
-                const iconElement = document.createElement('i');
-                iconElement.className = 'fas fa-user';
-                el.parentNode.appendChild(iconElement);
+                // 如果第二次加载也失败，则使用图标
+                this.addEventListener('error', function() {
+                    this.style.display = 'none';
+                    // 创建并添加图标作为后备
+                    const iconElement = document.createElement('i');
+                    iconElement.className = 'fas fa-user';
+                    this.parentNode.appendChild(iconElement);
+                }, { once: true });
             };
         }
     });
