@@ -14,9 +14,9 @@ PLUGIN_METADATA = {
 }
 
 # 权限等级
-PERMISSION_LEVEL_INSTALL = 3  # 使用 !!pip install 的最低权限
-PERMISSION_LEVEL_UNINSTALL = 3  # 使用 !!pip uninstall 的最低权限
-PERMISSION_LEVEL_LIST = 1  # 使用 !!pip list 的最低权限
+PERMISSION_LEVEL_INSTALL = 4  # 使用 !!pip install 的最低权限
+PERMISSION_LEVEL_UNINSTALL = 4  # 使用 !!pip uninstall 的最低权限
+PERMISSION_LEVEL_LIST = 4  # 使用 !!pip list 的最低权限
 
 def on_load(server: PluginServerInterface, old):
     server.register_help_message('!!pip', '使用pip安装/卸载/查询Python包')
