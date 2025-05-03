@@ -78,12 +78,31 @@ def find_plugin_config_paths(plugin_id:str)->list:
     single_file_paths = [single_file_path.with_suffix(suffix) for suffix in config_suffix]
 
     # Configs in ./config/plugin_id/
-    response += [file for file in Path(MCDR_plugin_folder).rglob("*") if file.suffix in config_suffix]
+    if Path(MCDR_plugin_folder).exists():
+        # 直接使用存在的目录
+        response += [file for file in Path(MCDR_plugin_folder).rglob("*") if file.suffix.lower() in config_suffix]
+    else:
+        # 查找不区分大小写的目录
+        config_dir = Path("./config")
+        if config_dir.exists():
+            for item in config_dir.iterdir():
+                if item.is_dir() and item.name.lower() == plugin_id.lower():
+                    response += [file for file in item.rglob("*") if file.suffix.lower() in config_suffix]
+    
     # Configs in ./config/
-    response += [file_path for file_path in single_file_paths if file_path.exists()]
+    for file_path in single_file_paths:
+        if file_path.exists():
+            response.append(file_path)
+        else:
+            # 查找不区分大小写的文件
+            parent_dir = file_path.parent
+            if parent_dir.exists():
+                for item in parent_dir.iterdir():
+                    if item.is_file() and item.stem.lower() == plugin_id.lower() and item.suffix.lower() in config_suffix:
+                        response.append(item)
 
     # filter out translation files
-    response = [str(i) for i in response if not Path(i).stem.endswith("_lang")]
+    response = [str(i) for i in response if not Path(i).stem.lower().endswith("_lang")]
 
     return response
 
