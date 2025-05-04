@@ -1,5 +1,7 @@
 import ruamel.yaml
 from pathlib import Path
+import json
+import os
 
 from passlib.context import CryptContext
 from pydantic import BaseModel
@@ -41,8 +43,9 @@ DEFALUT_CONFIG = {
     "super_admin_account": 123456789123456789,
     "disable_other_admin": False,
     "allow_temp_password": True,
-    "deepseek_api_key": "",  # DeepSeek API密钥
-    "deepseek_model": "deepseek-chat",  # DeepSeek 使用的模型
+    "ai_api_key": "",  # AI API密钥
+    "ai_model": "deepseek-chat",  # AI模型名称
+    "ai_api_url": "https://api.deepseek.com/chat/completions",  # 自定义API链接
     "mcdr_plugins_url": "https://api.mcdreforged.com/catalogue/everything_slim.json.xz",  # MCDR插件目录URL
     "repositories": []  # 多仓库配置列表
 }
@@ -60,8 +63,9 @@ class saveconfig(BaseModel):
     host: Optional[str] = None
     port: Optional[str] = None
     superaccount: Optional[str] = None
-    deepseek_api_key: Optional[str] = None
-    deepseek_model: Optional[str] = None
+    ai_api_key: Optional[str] = None
+    ai_model: Optional[str] = None
+    ai_api_url: Optional[str] = None
     mcdr_plugins_url: Optional[str] = None
     repositories: Optional[list] = None
 
@@ -87,3 +91,5 @@ class DeepseekQuery(BaseModel):
     query: str
     system_prompt: Optional[str] = None
     model: Optional[str] = None
+    api_url: Optional[str] = None
+    api_key: Optional[str] = None

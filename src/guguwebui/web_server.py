@@ -61,6 +61,9 @@ log_watcher = LogWatcher()
 # 用于保存pip任务状态的字典
 pip_tasks = {}
 
+# 尝试迁移旧配置
+migrate_old_config()
+
 # 初始化函数，在应用程序启动时调用
 def init_app(server_instance):
     """初始化应用程序，注册事件监听器"""
@@ -898,8 +901,9 @@ async def get_web_config(request: Request):
             "super_admin_account": config["super_admin_account"],
             "disable_admin_login_web": config["disable_other_admin"],
             "enable_temp_login_password": config["allow_temp_password"],
-            "deepseek_api_key": config.get("deepseek_api_key", ""),
-            "deepseek_model": config.get("deepseek_model", "deepseek-chat"),
+            "ai_api_key": config.get("ai_api_key", ""),
+            "ai_model": config.get("ai_model", "deepseek-chat"),
+            "ai_api_url": config.get("ai_api_url", "https://api.deepseek.com/chat/completions"),
             "mcdr_plugins_url": config.get("mcdr_plugins_url", "https://api.mcdreforged.com/catalogue/everything_slim.json.xz"),
             "repositories": config.get("repositories", []),
         }
@@ -912,10 +916,9 @@ async def save_web_config(request: Request, config: saveconfig):
         return JSONResponse(
             {"status": "error", "message": "User not logged in"}, status_code=401
         )
-    web_config = app.state.server_interface.load_config_simple(
-        "config.json", DEFALUT_CONFIG,
-        echo_in_console=False
-    )
+    server = app.state.server_interface
+    web_config = server.load_config_simple("config.json", DEFALUT_CONFIG, echo_in_console=False)
+    
     # change port & account
     if config.action == "config":
         if config.host:
@@ -924,14 +927,21 @@ async def save_web_config(request: Request, config: saveconfig):
             web_config["port"] = int(config.port)
         if config.superaccount:
             web_config["super_admin_account"] = int(config.superaccount)
-        # 更新DeepSeek配置
-        if config.deepseek_api_key is not None:
-            web_config["deepseek_api_key"] = config.deepseek_api_key
-        if config.deepseek_model is not None:
-            web_config["deepseek_model"] = config.deepseek_model
+        # 更新AI配置 - 处理None值，避免将None保存到配置中
+        if config.ai_api_key is not None:
+            # JavaScript端undefined会被转为null，处理这种情况
+            if isinstance(config.ai_api_key, str):
+                web_config["ai_api_key"] = config.ai_api_key
+        if config.ai_model is not None:
+            if isinstance(config.ai_model, str):
+                web_config["ai_model"] = config.ai_model
+        if config.ai_api_url is not None:
+            if isinstance(config.ai_api_url, str):
+                web_config["ai_api_url"] = config.ai_api_url
         # 更新MCDR插件目录URL
         if config.mcdr_plugins_url is not None:
-            web_config["mcdr_plugins_url"] = config.mcdr_plugins_url
+            if isinstance(config.mcdr_plugins_url, str):
+                web_config["mcdr_plugins_url"] = config.mcdr_plugins_url
         # 更新仓库列表
         if config.repositories is not None:
             web_config["repositories"] = config.repositories
@@ -950,12 +960,36 @@ async def save_web_config(request: Request, config: saveconfig):
             "status": "success",
             "message": web_config[config_map[config.action]],
         }
-
+    else:
+        response = {"status": "error", "message": "Invalid action"}
+    
     try:
-        app.state.server_interface.save_config_simple(web_config)
+        # 检查MCDR服务器接口的save_config_simple方法签名
+        # 打印出调试信息
+        server.logger.info(f"保存配置: file_name='config.json'")
+        
+        # 直接使用模块函数而不是server.save_config_simple
+        from pathlib import Path
+        import json
+        
+        # 确保配置目录存在
+        config_dir = server.get_data_folder()
+        Path(config_dir).mkdir(parents=True, exist_ok=True)
+        
+        # 构建配置文件路径
+        config_path = Path(config_dir) / "config.json"
+        
+        # 直接保存JSON文件
+        with open(config_path, 'w', encoding='utf-8') as f:
+            json.dump(web_config, f, ensure_ascii=False, indent=4)
+            
+        server.logger.info(f"配置已保存到 {config_path}")
         return JSONResponse(response)
     except Exception as e:
-        return JSONResponse({"status": "fail", "message": str(e)}, status_code=500)
+        import traceback
+        error_stack = traceback.format_exc()
+        server.logger.error(f"保存配置文件时出错: {str(e)}\n{error_stack}")
+        return JSONResponse({"status": "error", "message": f"保存配置文件失败: {str(e)}"}, status_code=500)
 
 
 # Load config data & Load config translation
@@ -1684,7 +1718,7 @@ async def send_command(request: Request):
 @app.post("/api/deepseek")
 async def query_deepseek(request: Request, query_data: DeepseekQuery):
     """
-    向DeepSeek API发送问题并获取回答
+    向AI API发送问题并获取回答
     
     Args:
         request: FastAPI请求对象
@@ -1704,16 +1738,19 @@ async def query_deepseek(request: Request, query_data: DeepseekQuery):
         server = app.state.server_interface
         config = server.load_config_simple("config.json", DEFALUT_CONFIG, echo_in_console=False)
         
-        # 获取API密钥
-        api_key = config.get("deepseek_api_key", "")
+        # 获取API密钥 - 优先使用请求中提供的临时api_key参数(用于验证)
+        api_key = getattr(query_data, "api_key", None) or config.get("ai_api_key", "")
         if not api_key:
             return JSONResponse(
-                {"status": "error", "message": "未配置DeepSeek API密钥"}, 
+                {"status": "error", "message": "未配置AI API密钥"}, 
                 status_code=400
             )
         
         # 获取模型配置
-        model = query_data.model or config.get("deepseek_model", "deepseek-chat")
+        model = query_data.model or config.get("ai_model", "deepseek-chat")
+        
+        # 获取API URL
+        api_url = query_data.api_url or config.get("ai_api_url", "https://api.deepseek.com/chat/completions")
         
         # 检查查询内容
         query = query_data.query.strip()
@@ -1753,10 +1790,10 @@ async def query_deepseek(request: Request, query_data: DeepseekQuery):
             "max_tokens": 4000
         }
         
-        # 发送请求到DeepSeek API
+        # 发送请求到AI API
         async with aiohttp.ClientSession() as session:
             async with session.post(
-                "https://api.deepseek.com/chat/completions", 
+                api_url, 
                 headers=headers, 
                 json=json_data
             ) as response:
@@ -1781,7 +1818,7 @@ async def query_deepseek(request: Request, query_data: DeepseekQuery):
                 
     except Exception as e:
         server = app.state.server_interface
-        server.logger.error(f"DeepSeek API请求失败: {str(e)}")
+        server.logger.error(f"AI API请求失败: {str(e)}")
         return JSONResponse(
             {"status": "error", "message": f"请求失败: {str(e)}"}, 
             status_code=500

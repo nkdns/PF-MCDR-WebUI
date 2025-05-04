@@ -453,6 +453,50 @@ def amount_static_files(server):
     # 如果文件夹复制失败，退回到单文件复制方式
     server.logger.warning("部分文件夹复制失败")
 
+# 检查是否存在旧配置，并自动继承旧的deepseek_api_key和deepseek_model参数
+def migrate_old_config():
+    try:
+        plugin_config_dir = Path("./config") / "guguwebui"
+        config_path = plugin_config_dir / "config.json"
+        
+        # 如果存在旧配置文件
+        if os.path.exists(config_path):
+            with open(config_path, "r", encoding="utf-8") as f:
+                old_config = json.load(f)
+                
+            # 检查是否存在旧的deepseek参数
+            need_save = False
+            
+            # 如果存在旧的deepseek_api_key参数且ai_api_key为空
+            if "deepseek_api_key" in old_config and old_config["deepseek_api_key"] and not old_config.get("ai_api_key"):
+                old_config["ai_api_key"] = old_config["deepseek_api_key"]
+                need_save = True
+                
+            # 如果存在旧的deepseek_model参数且ai_model为空
+            if "deepseek_model" in old_config and old_config["deepseek_model"] and not old_config.get("ai_model"):
+                old_config["ai_model"] = old_config["deepseek_model"]
+                need_save = True
+                
+            # 删除旧参数
+            if "deepseek_api_key" in old_config:
+                del old_config["deepseek_api_key"]
+                need_save = True
+                
+            if "deepseek_model" in old_config:
+                del old_config["deepseek_model"]
+                need_save = True
+                
+            # 如果有变更，保存配置
+            if need_save:
+                # 确保配置目录存在
+                plugin_config_dir.mkdir(parents=True, exist_ok=True)
+                
+                # 保存更新后的配置
+                with open(config_path, "w", encoding="utf-8") as f:
+                    json.dump(old_config, f, ensure_ascii=False, indent=4)
+    except Exception as e:
+        pass
+
 #============================================================#
 
 def get_minecraft_log_path(server_interface=None):

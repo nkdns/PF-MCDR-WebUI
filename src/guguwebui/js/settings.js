@@ -1,18 +1,29 @@
 function settingsApp() {
     return {
+        // 状态
+        showNotificationBar: false,
+        notificationMessage: '',
+        notificationType: 'success',
+        notificationTimeout: null,
+        
+        // 表单数据
         serverStatus: 'loading',
         userName: '',
         webConfig: {
-            host: '',
+            host: '0.0.0.0',
             port: 8000,
             super_admin_account: '',
             disable_admin_login_web: false,
             enable_temp_login_password: false
         },
-        deepseekApiKey: '',
-        deepseekModel: 'deepseek-chat',
+        
+        // AI配置
+        aiApiKey: '',
+        aiModel: 'deepseek-chat',
+        aiApiUrl: 'https://api.deepseek.com/chat/completions',
         isKeyValid: false,
         keyValidated: false,
+        
         repositories: [],
         officialRepoUrl: 'https://api.mcdreforged.com/catalogue/everything_slim.json.xz',
         newRepo: {
@@ -73,13 +84,24 @@ function settingsApp() {
                 this.webConfig.super_admin_account = config.super_admin_account || '';
                 this.webConfig.disable_admin_login_web = config.disable_admin_login_web || false;
                 this.webConfig.enable_temp_login_password = config.enable_temp_login_password || false;
-                this.deepseekModel = config.deepseek_model || 'deepseek-chat';
+                this.aiModel = config.ai_model || 'deepseek-chat';
+                this.aiApiUrl = config.ai_api_url || 'https://api.deepseek.com/chat/completions';
                 // 不加载已保存的API密钥，留空等待用户设置新的密钥
-                this.deepseekApiKey = '';
+                this.aiApiKey = '';
                 // 如果已配置过密钥，标记为已验证和有效
-                if (config.deepseek_api_key && config.deepseek_api_key.trim() !== '') {
+                if (config.ai_api_key && config.ai_api_key.trim() !== '') {
                     this.isKeyValid = true;
                     this.keyValidated = true;
+                }
+                
+                // 检查插件目录URL
+                if (config.mcdr_plugins_url) {
+                    this.mcdrPluginsUrl = config.mcdr_plugins_url;
+                }
+                
+                // 检查仓库列表
+                if (config.repositories && Array.isArray(config.repositories)) {
+                    this.repositories = config.repositories;
                 }
                 
                 // 处理仓库配置
@@ -102,7 +124,6 @@ function settingsApp() {
                     this.repositories = []; // 初始化为空数组
                 }
                 
-                this.mcdrPluginsUrl = config.mcdr_plugins_url || '';
                 this.pimStatus = config.pim_status || 'checking';
                 
                 // 更新后台切换开关状态
@@ -113,8 +134,8 @@ function settingsApp() {
                     });
                 });
             } catch (error) {
-                console.error('Error loading config:', error);
-                this.showNotification('加载配置失败', 'error');
+                console.error('Error fetching config:', error);
+                this.showNotification('获取配置失败', 'error');
             }
         },
         
@@ -132,16 +153,19 @@ function settingsApp() {
                     return;
                 }
                 
+                // 准备请求数据
+                const requestData = {
+                    action: 'config',
+                    host: this.webConfig.host.toString().trim(),
+                    port: parseInt(this.webConfig.port, 10)
+                };
+                
                 const response = await fetch('/api/save_web_config', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
                     },
-                    body: JSON.stringify({
-                        action: 'config',
-                        host: this.webConfig.host,
-                        port: this.webConfig.port
-                    })
+                    body: JSON.stringify(requestData)
                 });
                 
                 const result = await response.json();
@@ -165,15 +189,18 @@ function settingsApp() {
                     return;
                 }
                 
+                // 准备请求数据
+                const requestData = {
+                    action: 'config',
+                    superaccount: this.webConfig.super_admin_account.toString().trim()
+                };
+
                 const response = await fetch('/api/save_web_config', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
                     },
-                    body: JSON.stringify({
-                        action: 'config',
-                        superaccount: this.webConfig.super_admin_account
-                    })
+                    body: JSON.stringify(requestData)
                 });
                 
                 const result = await response.json();
@@ -266,26 +293,27 @@ function settingsApp() {
             }, 3000);
         },
         
-        // 保存DeepSeek配置
-        async saveDeepseekConfig() {
+        // 保存AI配置
+        async saveAiConfig() {
             try {
-                // 如果没有验证，提示用户先验证密钥
-                if (this.deepseekApiKey && !this.keyValidated) {
-                    this.showNotification('请先验证API密钥', 'warning');
-                    return;
+                // 准备请求数据，只包含非空值
+                const requestData = {
+                    action: 'config'
+                };
+                
+                // 只有当aiApiKey有值且不为空白字符串时才添加到请求
+                if (this.aiApiKey && this.aiApiKey.trim() !== '') {
+                    requestData.ai_api_key = this.aiApiKey.trim();
                 }
                 
-                // 如果密钥不为空且验证不通过，提示用户
-                if (this.deepseekApiKey && !this.isKeyValid) {
-                    this.showNotification('API密钥无效，请重新输入', 'error');
-                    return;
+                // 只有当aiModel有值且不为空白字符串时才添加到请求
+                if (this.aiModel && this.aiModel.trim() !== '') {
+                    requestData.ai_model = this.aiModel.trim();
                 }
                 
-                // 如果密钥为空且没有之前验证过的有效密钥，显示警告
-                if (!this.deepseekApiKey && !this.isKeyValid) {
-                    if (!confirm('您没有设置API密钥，确定要保存吗？')) {
-                        return;
-                    }
+                // 只有当aiApiUrl有值且不为空白字符串时才添加到请求
+                if (this.aiApiUrl && this.aiApiUrl.trim() !== '') {
+                    requestData.ai_api_url = this.aiApiUrl.trim();
                 }
                 
                 const response = await fetch('/api/save_web_config', {
@@ -293,26 +321,21 @@ function settingsApp() {
                     headers: {
                         'Content-Type': 'application/json'
                     },
-                    body: JSON.stringify({
-                        action: 'config',
-                        deepseek_api_key: this.deepseekApiKey || undefined, // 如果为空，传undefined表示不修改
-                        deepseek_model: this.deepseekModel
-                    })
+                    body: JSON.stringify(requestData)
                 });
                 
                 const result = await response.json();
                 if (result.status === 'success') {
-                    this.showNotification('DeepSeek配置保存成功', 'success');
+                    this.showNotification('AI配置保存成功', 'success');
                     // 保存成功后重置状态
-                    if (this.deepseekApiKey) {
-                        this.deepseekApiKey = '';
-                        this.keyValidated = false;
+                    if (this.aiApiKey) {
+                        this.aiApiKey = '';
                     }
                 } else {
                     this.showNotification('保存失败: ' + result.message, 'error');
                 }
             } catch (error) {
-                console.error('Error saving DeepSeek config:', error);
+                console.error('Error saving AI config:', error);
                 this.showNotification('保存出错: ' + error.message, 'error');
             }
         },
@@ -335,7 +358,7 @@ function settingsApp() {
         
         // 添加API密钥验证方法
         async validateApiKey() {
-            if (!this.deepseekApiKey) {
+            if (!this.aiApiKey) {
                 this.showNotification('请输入API密钥', 'error');
                 return;
             }
@@ -343,7 +366,7 @@ function settingsApp() {
             try {
                 this.showNotification('正在验证API密钥...', 'info');
                 
-                // 向DeepSeek API发送简单测试请求
+                // 直接使用输入框中的API密钥发送测试请求
                 const response = await fetch('/api/deepseek', {
                     method: 'POST',
                     headers: {
@@ -352,7 +375,10 @@ function settingsApp() {
                     body: JSON.stringify({
                         query: '测试密钥是否有效，请回复"有效"',
                         system_prompt: '你是一个简单的验证程序，只需回复"有效"',
-                        model: this.deepseekModel
+                        model: this.aiModel,
+                        api_url: this.aiApiUrl,
+                        // 将输入框中的密钥传递到API，而不是使用后端已保存的密钥
+                        api_key: this.aiApiKey
                     })
                 });
                 
@@ -430,15 +456,27 @@ function settingsApp() {
         // 保存仓库配置
         async saveRepositories() {
             try {
+                // 准备请求数据，只包含非空值
+                const requestData = {
+                    action: 'config'
+                };
+                
+                // 只有当mcdrPluginsUrl有值且不为空白字符串时才添加到请求
+                if (this.mcdrPluginsUrl && this.mcdrPluginsUrl.trim() !== '') {
+                    requestData.mcdr_plugins_url = this.mcdrPluginsUrl.trim();
+                }
+                
+                // 添加仓库列表，确保它是数组
+                if (Array.isArray(this.repositories)) {
+                    requestData.repositories = this.repositories;
+                }
+                
                 const response = await fetch('/api/save_web_config', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
                     },
-                    body: JSON.stringify({
-                        action: 'config',
-                        repositories: this.repositories
-                    })
+                    body: JSON.stringify(requestData)
                 });
                 
                 const result = await response.json();
@@ -456,15 +494,24 @@ function settingsApp() {
         // 保存MCDR插件目录配置 - 保留此方法兼容旧版
         async saveMcdrPluginsUrl() {
             try {
+                // 准备请求数据，只包含非空值
+                const requestData = {
+                    action: 'config'
+                };
+                
+                // 优先使用用户输入的URL，如果为空则使用官方仓库URL
+                const url = (this.mcdrPluginsUrl && this.mcdrPluginsUrl.trim() !== '') 
+                    ? this.mcdrPluginsUrl.trim() 
+                    : this.officialRepoUrl;
+                    
+                requestData.mcdr_plugins_url = url;
+                
                 const response = await fetch('/api/save_web_config', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
                     },
-                    body: JSON.stringify({
-                        action: 'config',
-                        mcdr_plugins_url: this.mcdrPluginsUrl || this.officialRepoUrl
-                    })
+                    body: JSON.stringify(requestData)
                 });
                 
                 const result = await response.json();
@@ -515,6 +562,45 @@ function settingsApp() {
                 console.error('Error installing PIM plugin:', error);
                 this.showNotification('安装出错: ' + error.message, 'error');
                 await this.checkPimStatus(); // 重新检查状态
+            }
+        },
+        
+        // 保存插件仓库配置
+        async savePluginRepoConfig() {
+            try {
+                // 准备请求数据，只包含非空值
+                const requestData = {
+                    action: 'config'
+                };
+                
+                // 只有当mcdrPluginsUrl有值且不为空白字符串时才添加到请求
+                if (this.mcdrPluginsUrl && this.mcdrPluginsUrl.trim() !== '') {
+                    requestData.mcdr_plugins_url = this.mcdrPluginsUrl.trim();
+                }
+                
+                // 添加仓库列表，确保它是数组
+                if (Array.isArray(this.repositories)) {
+                    requestData.repositories = this.repositories;
+                }
+                
+                const response = await fetch('/api/save_web_config', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(requestData)
+                });
+                
+                const result = await response.json();
+                
+                if (result.status === 'success') {
+                    this.showNotification('插件目录配置保存成功', 'success');
+                } else {
+                    this.showNotification('保存失败: ' + result.message, 'error');
+                }
+            } catch (error) {
+                console.error('Error saving plugin repository config:', error);
+                this.showNotification('保存出错: ' + error.message, 'error');
             }
         }
     };

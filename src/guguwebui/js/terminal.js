@@ -519,7 +519,7 @@ document.addEventListener('alpine:init', () => {
             try {
                 const response = await fetch('/api/get_web_config');
                 const config = await response.json();
-                return !!(config.deepseek_api_key && config.deepseek_api_key.trim() !== '');
+                return !!(config.ai_api_key && config.ai_api_key.trim() !== '');
             } catch (error) {
                 console.error('检查API Key状态失败:', error);
                 return false;
@@ -568,7 +568,7 @@ document.addEventListener('alpine:init', () => {
                     },
                     body: JSON.stringify({
                         action: 'config',
-                        deepseek_api_key: this.apiKey.trim()
+                        ai_api_key: this.apiKey.trim()
                     })
                 });
                 
