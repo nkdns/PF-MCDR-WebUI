@@ -3291,23 +3291,153 @@ class PluginInstaller:
                             self.install_tasks[task_id]['all_messages'] = []
                         self.install_tasks[task_id]['all_messages'].append(f"正在加载插件 {plugin_id}...")
                 
+                # 在加载前先检查插件依赖
+                source.reply(f"正在检查插件依赖...")
+                missing_deps = []
+                try:
+                    import zipfile
+                    import json
+                    
+                    with zipfile.ZipFile(target_path, 'r') as zip_ref:
+                        # 查找mcdr_plugin.json
+                        mcdr_plugin_json = None
+                        for file_path in zip_ref.namelist():
+                            if file_path.endswith('mcdr_plugin.json') or file_path == 'mcdr_plugin.json' or file_path.endswith('mcdreforged.plugin.json'):
+                                mcdr_plugin_json = file_path
+                                break
+                        
+                        if mcdr_plugin_json:
+                            # 读取元数据
+                            with zip_ref.open(mcdr_plugin_json) as f:
+                                meta = json.loads(f.read().decode('utf-8'))
+                                
+                                # 检查依赖项
+                                if 'dependencies' in meta:
+                                    deps = meta['dependencies']
+                                    source.reply(f"插件声明的依赖: {deps}")
+                                    
+                                    # 获取已安装的插件
+                                    installed_plugins = {}
+                                    for pid in self.server.get_plugin_list():
+                                        instance = self.server.get_plugin_instance(pid)
+                                        if instance:
+                                            installed_metadata = self.server.get_plugin_metadata(pid)
+                                            installed_version = str(installed_metadata.version) if installed_metadata else 'unknown'
+                                            installed_plugins[pid] = installed_version
+                                    
+                                    # 检查依赖是否缺失
+                                    for dep_id, version_req in deps.items():
+                                        # 跳过MCDR本身和Python版本要求
+                                        if dep_id.lower() == 'mcdreforged' or dep_id.lower() == 'python':
+                                            continue
+                                        
+                                        # 检查依赖是否安装
+                                        if dep_id not in installed_plugins:
+                                            missing_deps.append(dep_id)
+                                            source.reply(f"缺少依赖插件: {dep_id} {version_req}")
+                                        else:
+                                            source.reply(f"已安装依赖: {dep_id}@{installed_plugins[dep_id]}")
+                except Exception as e:
+                    source.reply(f"检查插件依赖时出错: {e}")
+                
+                # 如果有缺失依赖，尝试安装
+                if missing_deps:
+                    source.reply(f"插件 {plugin_id} 依赖于以下插件: {', '.join(missing_deps)}")
+                    source.reply("正在安装依赖插件...")
+                    
+                    # 安装依赖
+                    failed_deps = []
+                    for dep_id in missing_deps:
+                        try:
+                            source.reply(f"⏳ 开始安装依赖: {dep_id}")
+                            
+                            # 使用相同的元数据仓库创建新的安装任务
+                            dep_task_id = self.install_plugin(dep_id, repo_url=repo_url)
+                            source.reply(f"已创建依赖安装任务: {dep_task_id}")
+                            
+                            # 等待依赖安装完成
+                            max_wait_time = 120  # 最长等待2分钟
+                            wait_start = time.time()
+                            while True:
+                                dep_task_info = self.get_task_status(dep_task_id)
+                                if dep_task_info['status'] == 'completed':
+                                    source.reply(f"✓ 依赖 {dep_id} 安装成功")
+                                    break
+                                elif dep_task_info['status'] == 'failed':
+                                    source.reply(f"⚠ 依赖 {dep_id} 安装失败")
+                                    failed_deps.append(dep_id)
+                                    break
+                                
+                                # 检查是否超时
+                                if time.time() - wait_start > max_wait_time:
+                                    source.reply(f"⚠ 依赖 {dep_id} 安装超时")
+                                    failed_deps.append(dep_id)
+                                    break
+                                
+                                # 等待一秒再检查
+                                time.sleep(1)
+                        except Exception as e:
+                            failed_deps.append(dep_id)
+                            source.reply(f"⚠ 依赖 {dep_id} 安装出错: {e}")
+                    
+                    # 检查是否所有依赖都安装成功
+                    if failed_deps:
+                        source.reply(f"⚠ 以下依赖安装失败: {', '.join(failed_deps)}")
+                        source.reply("继续尝试加载主插件，但可能会失败")
+                
                 # 加载插件
                 source.reply(f"正在加载插件 {plugin_id}...")
                 try:
                     self.server.load_plugin(target_path)
-                    source.reply(f"✓ 插件 {plugin_id} {target_release.tag_name} 已成功安装并加载")
                     
-                    end_time = time.time()
-                    with self._lock:
-                        if task_id in self.install_tasks:
-                            self.install_tasks[task_id]['status'] = 'completed'
-                            self.install_tasks[task_id]['progress'] = 1.0
-                            self.install_tasks[task_id]['message'] = f"插件 {plugin_id} {target_release.tag_name} 安装成功"
-                            self.install_tasks[task_id]['end_time'] = end_time
-                            # 确保记录所有消息
-                            self.install_tasks[task_id]['all_messages'] = source.messages
+                    # 验证插件真的加载成功了，而不是因为缺少依赖被立即卸载
+                    time.sleep(1)  # 稍等片刻，让MCDR有时间处理插件加载逻辑
+                    
+                    # 再次检查插件是否在已加载列表中
+                    if plugin_id in self.server.get_plugin_list():
+                        source.reply(f"✓ 插件 {plugin_id} {target_release.tag_name} 已成功安装并加载")
+                        
+                        end_time = time.time()
+                        with self._lock:
+                            if task_id in self.install_tasks:
+                                self.install_tasks[task_id]['status'] = 'completed'
+                                self.install_tasks[task_id]['progress'] = 1.0
+                                self.install_tasks[task_id]['message'] = f"插件 {plugin_id} {target_release.tag_name} 安装成功"
+                                self.install_tasks[task_id]['end_time'] = end_time
+                                # 确保记录所有消息
+                                self.install_tasks[task_id]['all_messages'] = source.messages
+                                
+                        self.logger.info(f"插件 {plugin_id} {target_release.tag_name} 安装成功，耗时 {end_time - start_time:.2f} 秒")
+                    else:
+                        # 插件被卸载了，检查日志获取原因
+                        source.reply(f"⚠ 插件加载后被自动卸载，可能是缺少前置插件或依赖冲突")
+                        
+                        # 查找最近的一条关于此插件被卸载的日志
+                        plugin_log = self.server.get_last_output(10)  # 获取最近的日志
+                        unload_reason = "未知原因"
+                        for line in plugin_log.splitlines():
+                            if f"卸载插件 {plugin_id}" in line:
+                                unload_reason = line.split("原因: ")[-1] if "原因: " in line else "未知原因"
+                                break
+                        
+                        source.reply(f"卸载原因: {unload_reason}")
+                        
+                        # 如果卸载原因是缺少依赖，尝试安装该依赖
+                        if "未找到依赖项" in unload_reason:
+                            missing_dep = unload_reason.split("未找到依赖项 ")[-1].strip()
+                            source.reply(f"正在尝试安装缺失的依赖 {missing_dep}...")
                             
-                    self.logger.info(f"插件 {plugin_id} {target_release.tag_name} 安装成功，耗时 {end_time - start_time:.2f} 秒")
+                            # 递归安装依赖
+                            dep_task_id = self.install_plugin(missing_dep, repo_url=repo_url)
+                            source.reply(f"已创建依赖安装任务: {dep_task_id}，安装完成后请重新安装此插件")
+                        
+                        with self._lock:
+                            if task_id in self.install_tasks:
+                                self.install_tasks[task_id]['status'] = 'failed'
+                                self.install_tasks[task_id]['message'] = f"插件 {plugin_id} 加载失败: {unload_reason}"
+                                self.install_tasks[task_id]['end_time'] = time.time()
+                                # 确保记录所有消息
+                                self.install_tasks[task_id]['all_messages'] = source.messages
                 except Exception as e:
                     source.reply(f"加载插件失败: {e}")
                     # 检查是否是由于缺少pip包导致的加载失败
