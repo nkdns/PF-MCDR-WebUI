@@ -1075,17 +1075,37 @@ async def load_config(request: Request, path:str, translation:bool = False, type
 
 # Helper function for save_config
 # ensure consistent data type
-def consistent_type_update(original, updates):
+def consistent_type_update(original, updates, remove_missing=False):
+    """
+    更新配置数据，保持类型一致性
+    
+    Args:
+        original: 原始配置数据
+        updates: 新的配置数据
+        remove_missing: 是否删除原始数据中存在但新数据中不存在的键
+    """
+    # 如果启用删除功能，先找出需要删除的键
+    if remove_missing and isinstance(original, dict) and isinstance(updates, dict):
+        keys_to_remove = [key for key in original if key not in updates]
+        for key in keys_to_remove:
+            del original[key]
+    
+    # 更新现有键或添加新键
     for key, value in updates.items():
         # setting to None
         if key in original and original[key] is None and \
             (not value or (isinstance(value,list) and not any(value))):
             continue
         # dict -> recurssive update
-        elif isinstance(value, dict) and key in original:
-            consistent_type_update(original[key], value)
+        elif isinstance(value, dict) and key in original and isinstance(original[key], dict):
+            consistent_type_update(original[key], value, remove_missing)
         # get previous type 
         elif isinstance(value, list) and key in original:
+            # 如果原值是字典而新值是列表，直接替换
+            if isinstance(original[key], dict):
+                original[key] = value
+                continue
+                
             # save old comment
             original_ca = original[key].ca.items if isinstance(original[key], CommentedSeq) else None
 
@@ -1149,7 +1169,26 @@ async def save_config(request: Request, config_data: config_data):
 
     # ensure type will not change
     try:
-        consistent_type_update(data, plugin_config)
+        # 对于JSON文件，允许删除不存在的键
+        if config_path.suffix == ".json":
+            # 特殊处理help_msg.json配置
+            if config_path.name == "help_msg.json" and isinstance(plugin_config, dict):
+                # 对于help_msg.json，只更新admin_help_msg和group_help_msg字段
+                allowed_fields = ['admin_help_msg', 'group_help_msg']
+                # 仅更新允许的字段
+                for field in allowed_fields:
+                    if field in plugin_config:
+                        data[field] = plugin_config[field]
+            # 如果提交的配置是空对象，则需确认用户是否真的想清空
+            elif isinstance(plugin_config, dict) and len(plugin_config) == 0 and len(data) > 0:
+                # 执行删除所有键的操作
+                data.clear()
+            else:
+                # 正常更新操作，同时删除缺失的键
+                consistent_type_update(data, plugin_config, remove_missing=True)
+        else:
+            # 对于YAML和properties文件，保持原有行为，不删除键
+            consistent_type_update(data, plugin_config, remove_missing=False)
     except Exception as e:
         print(f"Error updating config data: {e}")
         return JSONResponse({"status": "error", "message": str(e)}, status_code=500)
