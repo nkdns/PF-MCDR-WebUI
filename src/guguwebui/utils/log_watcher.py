@@ -214,7 +214,7 @@ class StdoutInterceptor:
         
         # 打印调试信息
         if self.log_watcher.server_interface:
-            self.log_watcher.server_interface.logger.info("标准输出和标准错误拦截器已启动")
+            self.log_watcher.server_interface.logger.debug("标准输出和标准错误拦截器已启动")
         
     def stop_interception(self):
         """停止拦截并恢复原始流"""
@@ -222,7 +222,7 @@ class StdoutInterceptor:
         sys.stdout = self.original_stdout
         sys.stderr = self.original_stderr
         if self.log_watcher.server_interface:
-            self.log_watcher.server_interface.logger.info("标准输出和标准错误拦截器已停止")
+            self.log_watcher.server_interface.logger.debug("标准输出和标准错误拦截器已停止")
         
     def process_output(self, message):
         """处理拦截到的输出"""
@@ -285,7 +285,7 @@ class LogWatcher:
                 
         logging.StreamHandler.emit = intercepted_emit
         if self.server_interface:
-            self.server_interface.logger.info("已拦截 logging.StreamHandler.emit 方法，可以捕获所有日志输出")
+            self.server_interface.logger.debug("已拦截 logging.StreamHandler.emit 方法，可以捕获所有日志输出")
         
         # 创建并启动标准输出拦截器
         self.stdout_interceptor = StdoutInterceptor(self)
@@ -362,7 +362,7 @@ class LogWatcher:
                         # 添加我们的处理器到MCDR内部日志记录器
                         mcdr_logger.addHandler(self.mcdr_log_handler)
                         if self.server_interface:
-                            self.server_interface.logger.info(f"已添加日志处理器到MCDR内部日志记录器: {mcdr_logger}")
+                            self.server_interface.logger.debug(f"已添加日志处理器到MCDR内部日志记录器: {mcdr_logger}")
                         
                         # 直接添加处理器到控制台处理器
                         console_handler = getattr(mcdr_logger, "console_handler", None)
@@ -386,7 +386,7 @@ class LogWatcher:
                                 # 替换方法
                                 console_handler.emit = intercepted_console_emit
                                 if self.server_interface:
-                                    self.server_interface.logger.info(f"已拦截MCDR控制台处理器的emit方法: {console_handler}")
+                                    self.server_interface.logger.debug(f"已拦截MCDR控制台处理器的emit方法: {console_handler}")
                             except Exception as e:
                                 if self.server_interface:
                                     self.server_interface.logger.error(f"拦截控制台处理器emit方法失败: {e}")
@@ -395,7 +395,7 @@ class LogWatcher:
                         file_handler = getattr(mcdr_logger, "file_handler", None)
                         if file_handler is not None and hasattr(file_handler, "baseFilename"):
                             if self.server_interface:
-                                self.server_interface.logger.info(f"MCDR日志文件路径: {file_handler.baseFilename}")
+                                self.server_interface.logger.debug(f"MCDR日志文件路径: {file_handler.baseFilename}")
                 
                 # 尝试获取控制台处理器
                 try:
@@ -414,10 +414,10 @@ class LogWatcher:
                         return result
                     RTextBase.print = intercepted_print
                     if self.server_interface:
-                        self.server_interface.logger.info("已拦截RTextBase.print方法")
+                        self.server_interface.logger.debug("已拦截RTextBase.print方法")
                 except ImportError:
                     if self.server_interface:
-                        self.server_interface.logger.warning("无法导入RTextBase，跳过拦截")
+                        self.server_interface.logger.debug("无法导入RTextBase，跳过拦截")
                 except Exception as e:
                     if self.server_interface:
                         self.server_interface.logger.error(f"拦截RTextBase.print失败: {e}")

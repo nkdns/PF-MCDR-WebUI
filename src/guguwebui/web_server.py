@@ -102,7 +102,7 @@ def init_app(server_instance):
     except Exception as e:
         server_instance.logger.error(f"内置PIM模块初始化失败: {e}")
     
-    server_instance.logger.info("WebUI日志捕获器已初始化，将直接从MCDR捕获日志")
+    server_instance.logger.debug("WebUI日志捕获器已初始化，将直接从MCDR捕获日志")
 
 # 事件处理函数
 def on_server_output(server, info):
