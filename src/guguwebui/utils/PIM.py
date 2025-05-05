@@ -21,7 +21,7 @@ from mcdreforged.minecraft.rtext.text import RText, RTextList
 # 添加元数据信息
 PLUGIN_METADATA = {
     'id': 'pim_helper',
-    'version': '1.1.0',
+    'version': '1.2.0',
     'name': 'PIM Helper',
     'description': '自定义的安装MCDR插件的辅助工具',
     'author': 'LoosePrince',
@@ -404,17 +404,47 @@ class PluginCatalogueAccess:
 
 class ReleaseDownloader:
     """发布下载器"""
-    def __init__(self, server=None):
+    def __init__(self, server=None, pim_helper=None):
         self.server = server
+        self.pim_helper = pim_helper
     
     def download(self, url: str, target_path: str) -> bool:
         """下载文件到指定路径"""
         try:
+            # 创建临时目录
+            temp_dir = None
+            if self.pim_helper:
+                temp_dir = self.pim_helper.get_temp_dir()
+            else:
+                # 如果没有传入PIMHelper实例，尝试创建一个
+                if self.server:
+                    temp_pim_helper = PIMHelper(self.server)
+                    temp_dir = temp_pim_helper.get_temp_dir()
+            
+            # 创建临时文件路径
+            import uuid
+            temp_filename = f"download_{str(uuid.uuid4())}.tmp"
+            temp_path = os.path.join(temp_dir, temp_filename) if temp_dir else None
+            
+            # 下载文件
             response = requests.get(url, timeout=30)
             if response.status_code == 200:
+                # 确保目标目录存在
                 os.makedirs(os.path.dirname(target_path), exist_ok=True)
-                with open(target_path, 'wb') as f:
-                    f.write(response.content)
+                
+                # 如果有临时目录，先下载到临时文件然后移动
+                if temp_path:
+                    with open(temp_path, 'wb') as f:
+                        f.write(response.content)
+                    
+                    # 成功下载后，移动到目标位置
+                    import shutil
+                    shutil.move(temp_path, target_path)
+                else:
+                    # 直接写入目标文件
+                    with open(target_path, 'wb') as f:
+                        f.write(response.content)
+                        
                 return True
             return False
         except Exception as e:
@@ -506,12 +536,16 @@ class PIMHelper:
         Returns:
             MetaRegistry: 元数据注册表
         """
-        # 使用缓存目录存放缓存
-        cache_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "static", "cache")
+        # 使用get_temp_dir方法获取cache目录作为缓存存储位置
+        cache_dir = self.get_temp_dir()
         os.makedirs(cache_dir, exist_ok=True)
         
+        # 获取官方仓库URL，用于判断是否为官方仓库
+        server_config = self.server.load_config_simple("config.json", {"mcdr_plugins_url": "https://api.mcdreforged.com/catalogue/everything_slim.json.xz"}, echo_in_console=False)
+        official_url = server_config.get("mcdr_plugins_url", "https://api.mcdreforged.com/catalogue/everything_slim.json.xz")
+        
         # 如果指定了仓库URL，使用该URL作为缓存文件名基础
-        if repo_url:
+        if repo_url and repo_url != official_url:
             source.reply(f"使用指定仓库: {repo_url}")
             
             # 使用MD5哈希创建唯一标识符，确保文件名安全
@@ -521,7 +555,6 @@ class PIMHelper:
             url = repo_url
             
             # 如果是指定仓库，总是强制刷新缓存，确保数据是最新的
-            # 这防止了使用错误的缓存数据
             ignore_ttl = True
             self.logger.debug(f"使用自定义仓库，强制刷新缓存: {repo_url}")
             
@@ -532,10 +565,9 @@ class PIMHelper:
             cache_file = os.path.join(cache_dir, "everything_slim.json")
             cache_xz_file = os.path.join(cache_dir, "everything_slim.json.xz")
             
-            # 从配置中获取插件目录URL
-            server_config = self.server.load_config_simple("config.json", {"mcdr_plugins_url": "https://api.mcdreforged.com/catalogue/everything_slim.json.xz"}, echo_in_console=False)
-            url = server_config.get("mcdr_plugins_url", "https://api.mcdreforged.com/catalogue/everything_slim.json.xz")
-            self.logger.debug(f"使用默认仓库: {url}")
+            # 如果没有指定仓库URL或者指定的就是官方仓库，使用官方URL
+            url = repo_url if repo_url else official_url
+            self.logger.debug(f"使用官方仓库: {url}")
         
         # 检查缓存是否过期（2小时）
         cache_expired = True
@@ -564,6 +596,13 @@ class PIMHelper:
                         with lzma.open(cache_xz_file, 'rb') as f_in:
                             with open(cache_file, 'wb') as f_out:
                                 f_out.write(f_in.read())
+                        
+                        # 解压完成后删除压缩文件
+                        try:
+                            os.remove(cache_xz_file)
+                            self.logger.debug(f"已删除压缩文件: {cache_xz_file}")
+                        except Exception as e:
+                            self.logger.warning(f"删除压缩文件失败: {e}")
                         
                         self.logger.debug(f"下载并解压完成: {cache_file}")
                     else:
@@ -606,7 +645,7 @@ class PIMHelper:
                 source.reply(f"仓库未包含任何有效插件: {url}")
                 self.logger.warning(f"仓库未包含任何有效插件: {url}")
                 
-                if repo_url:  # 只有指定仓库时才提示
+                if repo_url and repo_url != official_url:  # 只有指定非官方仓库时才提示
                     source.reply("请确认仓库URL是否正确，以及是否提供了有效的插件信息")
             else:
                 source.reply(f"已从仓库加载 {plugin_count} 个插件")
@@ -942,7 +981,7 @@ class PIMHelper:
                     temp_file = os.path.join(tmp_dir, release.file_name or f"{plugin_id}.mcdr")
                     
                     # 下载插件
-                    downloader = ReleaseDownloader(self.server)
+                    downloader = ReleaseDownloader(self.server, self)
                     source.reply(f"正在下载 {plugin_id} 以检查依赖...")
                     
                     if downloader.download(release.browser_download_url, temp_file):
@@ -1457,7 +1496,7 @@ class PIMHelper:
             download_timeout = mcdr_config.get('plugin_download_timeout', 60)
             
             # 创建下载器
-            downloader = ReleaseDownloader(self.server)
+            downloader = ReleaseDownloader(self.server, self)
             
             # 直接同步执行下载，不使用线程，避免线程同步问题
             source.reply(f"开始下载 {plugin_id}@{release.version}，请稍候...")
@@ -2141,26 +2180,15 @@ class PIMHelper:
 
     def get_temp_dir(self) -> str:
         """获取临时目录路径"""
-        # 获取MCDR根目录
-        mcdr_root = os.getcwd()
+        # 使用PluginServerInterface.get_data_folder()获取插件数据目录
+        plugin_data_folder = self.server.get_data_folder()
         
-        # 尝试获取宿主插件的ID，如果是被其他插件内嵌的情况
-        host_plugin_id = None
+        # 创建cache子目录用于下载和缓存
+        cache_dir_path = os.path.join(plugin_data_folder, "cache")
         
-        try:
-            if self.server.get_plugin_instance("guguwebui"): # Use public API
-                host_plugin_id = "guguwebui"
-        except:
-            pass
-        
-        # 确定使用哪个插件ID作为目录名
-        plugin_id = host_plugin_id or "pim_helper"
-        
-        # 创建固定的临时目录
-        temp_dir_path = os.path.join(mcdr_root, "config", plugin_id, "temp")
-        # 确保临时目录存在
-        os.makedirs(temp_dir_path, exist_ok=True)
-        return temp_dir_path
+        # 确保cache目录存在
+        os.makedirs(cache_dir_path, exist_ok=True)
+        return cache_dir_path
 
     def get_plugin_versions(self, plugin_id: str) -> List[Dict[str, Any]]:
         """
@@ -3221,7 +3249,7 @@ class PluginInstaller:
                 
                 # 下载插件
                 source.reply(f"正在下载插件 {plugin_id} {target_release.tag_name}...")
-                downloader = ReleaseDownloader(self.server)
+                downloader = ReleaseDownloader(self.server, local_pim_helper)
                 
                 # 准备目标路径
                 plugin_dir = local_pim_helper.get_plugin_dir()
@@ -3647,32 +3675,53 @@ def on_load(server: PluginServerInterface, prev_module):
         except Exception as e:
             server.logger.warning(f'创建元数据文件失败: {e}')
     
-    # 创建固定的临时目录
-    try:
-        mcdr_root = os.getcwd()
-        
-        # 尝试确定宿主插件ID
-        host_plugin_id = None
-        try:
-            # 如果当前运行的是WebUI插件
-            if server.get_plugin_instance("guguwebui"):
-                host_plugin_id = "guguwebui"
-        except:
-            pass
-        
-        # 使用确定的插件ID或默认值
-        plugin_id = host_plugin_id or "pim_helper"
-        
-        temp_dir_path = os.path.join(mcdr_root, "config", plugin_id, "temp")
-        os.makedirs(temp_dir_path, exist_ok=True)
-        server.logger.info(f'创建临时目录: {temp_dir_path}')
-    except Exception as e:
-        server.logger.warning(f'创建临时目录失败: {e}')
-    
     # 尝试初始化 PIM 助手
     try:
         pim_helper = PIMHelper(server)
         plugin_installer = PluginInstaller(server)
+        
+        # 初始化时创建并记录缓存目录
+        try:
+            cache_dir = pim_helper.get_temp_dir()
+            server.logger.info(f'缓存目录: {cache_dir}')
+            
+            # 清理旧的缓存文件
+            def clean_cache_files():
+                try:
+                    # 清理所有.xz压缩文件，解压后已不需要
+                    xz_files = [f for f in os.listdir(cache_dir) if f.endswith('.xz')]
+                    for xz_file in xz_files:
+                        try:
+                            xz_path = os.path.join(cache_dir, xz_file)
+                            os.remove(xz_path)
+                            server.logger.debug(f'已删除多余的压缩文件: {xz_path}')
+                        except Exception as e:
+                            server.logger.warning(f'删除压缩文件失败: {xz_file}, 错误: {e}')
+                    
+                    # 获取官方仓库URL，用于判断
+                    server_config = server.load_config_simple("config.json", {"mcdr_plugins_url": "https://api.mcdreforged.com/catalogue/everything_slim.json.xz"}, echo_in_console=False)
+                    official_url = server_config.get("mcdr_plugins_url", "https://api.mcdreforged.com/catalogue/everything_slim.json.xz")
+                    official_url_hash = hashlib.md5(official_url.encode()).hexdigest()
+                    
+                    # 检查是否有重复缓存的官方仓库文件 (带有repo_前缀但实际是官方仓库的文件)
+                    official_repo_files = [f for f in os.listdir(cache_dir) if f.startswith(f'repo_{official_url_hash}')]
+                    for repo_file in official_repo_files:
+                        try:
+                            repo_path = os.path.join(cache_dir, repo_file)
+                            os.remove(repo_path)
+                            server.logger.debug(f'已删除重复的官方仓库缓存: {repo_path}')
+                        except Exception as e:
+                            server.logger.warning(f'删除重复缓存失败: {repo_file}, 错误: {e}')
+                    
+                    server.logger.debug('缓存清理完成')
+                except Exception as e:
+                    server.logger.warning(f'清理缓存文件时出错: {e}')
+            
+            # 执行清理
+            clean_cache_files()
+            
+        except Exception as e:
+            server.logger.warning(f'获取缓存目录失败: {e}')
         
         # 注册命令
         server.register_command(
@@ -3752,6 +3801,11 @@ def on_load(server: PluginServerInterface, prev_module):
                     QuotableText('task_id').
                     runs(lambda src, ctx: show_task_log(src, ctx['task_id']))
                 )
+            ).
+            then(
+                # 添加新命令：清理缓存
+                Literal('clean_cache').
+                runs(lambda src: clean_cache(src))
             )
         )
         
@@ -3783,6 +3837,7 @@ def show_help(source):
 !!pim_helper task_status <任务ID> - 查询任务状态
 !!pim_helper task_list - 查询所有任务
 !!pim_helper task_log <任务ID> - 查看任务的完整日志
+!!pim_helper clean_cache - 清理缓存文件
 -------------------------'''
     source.reply(help_msg)
 
@@ -4038,9 +4093,70 @@ def show_task_log(source, task_id: str):
     back_btn.c(RAction.run_command, f'!!pim_helper task_status {task_id}')
     source.reply(back_btn)
 
+def clean_cache(source):
+    """清理缓存文件"""
+    if pim_helper is None:
+        source.reply('PIM辅助工具未初始化')
+        return
+        
+    try:
+        # 获取缓存目录
+        cache_dir = pim_helper.get_temp_dir()
+        source.reply(f'正在清理缓存目录: {cache_dir}')
+        
+        # 清理所有.xz压缩文件
+        xz_files = [f for f in os.listdir(cache_dir) if f.endswith('.xz')]
+        for xz_file in xz_files:
+            try:
+                xz_path = os.path.join(cache_dir, xz_file)
+                os.remove(xz_path)
+                source.reply(f'已删除压缩文件: {xz_file}')
+            except Exception as e:
+                source.reply(f'删除压缩文件失败: {xz_file}, 错误: {e}')
+        
+        # 获取官方仓库URL，用于判断
+        server_config = pim_helper.server.load_config_simple("config.json", {"mcdr_plugins_url": "https://api.mcdreforged.com/catalogue/everything_slim.json.xz"}, echo_in_console=False)
+        official_url = server_config.get("mcdr_plugins_url", "https://api.mcdreforged.com/catalogue/everything_slim.json.xz")
+        official_url_hash = hashlib.md5(official_url.encode()).hexdigest()
+        
+        # 检查是否有重复缓存的官方仓库文件
+        official_repo_files = [f for f in os.listdir(cache_dir) if f.startswith(f'repo_{official_url_hash}')]
+        for repo_file in official_repo_files:
+            try:
+                repo_path = os.path.join(cache_dir, repo_file)
+                os.remove(repo_path)
+                source.reply(f'已删除重复的官方仓库缓存: {repo_file}')
+            except Exception as e:
+                source.reply(f'删除重复缓存失败: {repo_file}, 错误: {e}')
+        
+        # 检测下载任务的临时文件
+        temp_files = [f for f in os.listdir(cache_dir) if f.startswith('download_') or f.endswith('.tmp')]
+        for temp_file in temp_files:
+            try:
+                temp_path = os.path.join(cache_dir, temp_file)
+                os.remove(temp_path)
+                source.reply(f'已删除临时下载文件: {temp_file}')
+            except Exception as e:
+                source.reply(f'删除临时下载文件失败: {temp_file}, 错误: {e}')
+        
+        # 汇报清理结果
+        cache_files = os.listdir(cache_dir)
+        source.reply(f'缓存清理完成，剩余 {len(cache_files)} 个文件')
+        
+        if cache_files:
+            source.reply('剩余文件:')
+            for file in cache_files:
+                file_path = os.path.join(cache_dir, file)
+                file_size = os.path.getsize(file_path) / 1024  # KB
+                source.reply(f'- {file} ({file_size:.1f} KB)')
+        
+    except Exception as e:
+        source.reply(f'清理缓存时出错: {e}')
+        pim_helper.logger.exception('清理缓存时出错')
+
 # 在文件最底部添加
 # 导出的类和函数，供其他模块导入
-__all__ = ['PluginInstaller', 'get_installer', 'create_installer', 'get_global_registry']
+__all__ = ['PluginInstaller', 'get_installer', 'create_installer', 'get_global_registry', 'initialize_pim']
 
 def get_installer() -> Optional[PluginInstaller]:
     """
@@ -4065,5 +4181,82 @@ def create_installer(server: PluginServerInterface) -> PluginInstaller:
     return PluginInstaller(server)
 
 # 更新 __all__ 列表
-__all__ = ['PluginInstaller', 'get_installer', 'create_installer', 'get_global_registry']
+__all__ = ['PluginInstaller', 'get_installer', 'create_installer', 'get_global_registry', 'initialize_pim']
+
+def initialize_pim(server: PluginServerInterface):
+    """
+    初始化PIM功能，供WebUI内部调用
+    当PIM被嵌入到WebUI中使用时，不会自动执行on_load初始化，
+    可以通过此函数手动初始化基本功能，但不注册命令
+    
+    Args:
+        server: MCDR服务器接口
+    
+    Returns:
+        Tuple[PIMHelper, PluginInstaller]: 初始化后的PIM助手和插件安装器
+    """
+    global pim_helper, plugin_installer, PENDING_DELETE_FILES, _global_registry
+    
+    # 重置待删除文件列表
+    PENDING_DELETE_FILES = {}
+    # 重置全局注册表
+    _global_registry = None
+    
+    server.logger.debug('PIM辅助工具正在初始化(WebUI内嵌模式)...')
+    
+    # 尝试初始化 PIM 助手
+    try:
+        # 创建PIM助手和插件安装器实例
+        pim_helper = PIMHelper(server)
+        plugin_installer = PluginInstaller(server)
+        
+        # 初始化时创建并记录缓存目录
+        try:
+            cache_dir = pim_helper.get_temp_dir()
+            server.logger.info(f'缓存目录: {cache_dir}')
+            
+            # 清理旧的缓存文件
+            def clean_cache_files():
+                try:
+                    # 清理所有.xz压缩文件，解压后已不需要
+                    xz_files = [f for f in os.listdir(cache_dir) if f.endswith('.xz')]
+                    for xz_file in xz_files:
+                        try:
+                            xz_path = os.path.join(cache_dir, xz_file)
+                            os.remove(xz_path)
+                            server.logger.debug(f'已删除多余的压缩文件: {xz_path}')
+                        except Exception as e:
+                            server.logger.warning(f'删除压缩文件失败: {xz_file}, 错误: {e}')
+                    
+                    # 获取官方仓库URL，用于判断
+                    server_config = server.load_config_simple("config.json", {"mcdr_plugins_url": "https://api.mcdreforged.com/catalogue/everything_slim.json.xz"}, echo_in_console=False)
+                    official_url = server_config.get("mcdr_plugins_url", "https://api.mcdreforged.com/catalogue/everything_slim.json.xz")
+                    official_url_hash = hashlib.md5(official_url.encode()).hexdigest()
+                    
+                    # 检查是否有重复缓存的官方仓库文件 (带有repo_前缀但实际是官方仓库的文件)
+                    official_repo_files = [f for f in os.listdir(cache_dir) if f.startswith(f'repo_{official_url_hash}')]
+                    for repo_file in official_repo_files:
+                        try:
+                            repo_path = os.path.join(cache_dir, repo_file)
+                            os.remove(repo_path)
+                            server.logger.debug(f'已删除重复的官方仓库缓存: {repo_path}')
+                        except Exception as e:
+                            server.logger.warning(f'删除重复缓存失败: {repo_file}, 错误: {e}')
+                    
+                    server.logger.debug('缓存清理完成')
+                except Exception as e:
+                    server.logger.warning(f'清理缓存文件时出错: {e}')
+            
+            # 执行清理
+            clean_cache_files()
+            
+        except Exception as e:
+            server.logger.warning(f'获取缓存目录失败: {e}')
+        
+        server.logger.debug('PIM辅助工具初始化成功(WebUI内嵌模式)')
+        return pim_helper, plugin_installer
+    except Exception as e:
+        server.logger.error(f'PIM辅助工具初始化失败: {e}')
+        server.logger.exception('详细错误信息:')
+        return None, None
 

@@ -33,7 +33,7 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 from starlette.middleware.sessions import SessionMiddleware
 
 from .utils.log_watcher import LogWatcher
-from .utils.PIM import PluginInstaller, create_installer  # 修改导入，添加 create_installer
+from .utils.PIM import PluginInstaller, create_installer, initialize_pim  # 修改导入，添加 initialize_pim
 
 from .utils.constant import *
 from .utils.server_util import *
@@ -87,6 +87,20 @@ def init_app(server_instance):
     # USER_INFO应该映射到on_server_output，处理用户输入的命令
     server_instance.register_event_listener(MCDR.MCDRPluginEvents.GENERAL_INFO, on_mcdr_info)
     server_instance.register_event_listener(MCDR.MCDRPluginEvents.USER_INFO, on_server_output)
+    
+    # 初始化PIM模块
+    try:
+        # server_instance.logger.info("正在初始化内置PIM模块...")
+        pim_helper, plugin_installer = initialize_pim(server_instance)
+        # 将初始化后的PIM实例存储到app.state中，供API调用
+        app.state.pim_helper = pim_helper
+        app.state.plugin_installer = plugin_installer
+        if pim_helper and plugin_installer:
+            server_instance.logger.info("内置PIM模块初始化成功")
+        else:
+            server_instance.logger.warning("内置PIM模块初始化部分失败，某些功能可能不可用")
+    except Exception as e:
+        server_instance.logger.error(f"内置PIM模块初始化失败: {e}")
     
     server_instance.logger.info("WebUI日志捕获器已初始化，将直接从MCDR捕获日志")
 
@@ -1906,8 +1920,13 @@ async def api_install_plugin(
     
     try:
         server = app.state.server_interface
-        # 创建安装器实例
-        installer = create_installer(server)
+        
+        # 首先尝试使用已初始化的实例
+        installer = getattr(app.state, "plugin_installer", None)
+        if not installer:
+            # 如果没有预初始化的实例，创建新的安装器实例
+            server.logger.info("使用临时创建的安装器实例")
+            installer = create_installer(server)
         
         # 启动异步安装
         task_id = installer.install_plugin(plugin_id, version, repo_url)
@@ -1966,8 +1985,13 @@ async def api_update_plugin(
     
     try:
         server = app.state.server_interface
-        # 创建安装器实例
-        installer = create_installer(server)
+        
+        # 首先尝试使用已初始化的实例
+        installer = getattr(app.state, "plugin_installer", None)
+        if not installer:
+            # 如果没有预初始化的实例，创建新的安装器实例
+            server.logger.info("使用临时创建的安装器实例")
+            installer = create_installer(server)
         
         # 启动异步安装/更新
         task_id = installer.install_plugin(plugin_id, version, repo_url)
@@ -2021,8 +2045,13 @@ async def api_uninstall_plugin(
     
     try:
         server = app.state.server_interface
-        # 创建安装器实例
-        installer = create_installer(server)
+        
+        # 首先尝试使用已初始化的实例
+        installer = getattr(app.state, "plugin_installer", None)
+        if not installer:
+            # 如果没有预初始化的实例，创建新的安装器实例
+            server.logger.info("使用临时创建的安装器实例")
+            installer = create_installer(server)
         
         # 启动异步卸载，同时处理已加载和未加载的插件
         task_id = installer.uninstall_plugin(plugin_id)
@@ -2062,84 +2091,47 @@ async def api_task_status(
     
     try:
         server = app.state.server_interface
-        # 创建安装器实例
-        installer = create_installer(server)
         
-        # 如果有任务ID，优先使用任务ID查询
+        # 首先尝试使用已初始化的实例
+        installer = getattr(app.state, "plugin_installer", None)
+        if not installer:
+            # 如果没有预初始化的实例，创建新的安装器实例
+            server.logger.info("使用临时创建的安装器实例")
+            installer = create_installer(server)
+        
+        # 如果指定了任务ID，返回单个任务状态
         if task_id:
-            task_info = installer.get_task_status(task_id)
-            
-            # 如果找不到指定任务，尝试查找最近的任务
-            if task_info.get("status") == "not_found":
-                server.logger.info(f"未找到任务 {task_id}，尝试查找最近的任务")
-                # 获取所有任务
-                all_tasks = installer.get_all_tasks()
-                # 按照开始时间倒序排序
-                recent_tasks = sorted(
-                    all_tasks.items(), 
-                    key=lambda x: x[1].get('start_time', 0), 
-                    reverse=True
-                )
-                
-                # 先检查是否有其他任务也处理相同的插件ID
-                if plugin_id:
-                    for tid, tinfo in recent_tasks:
-                        if tinfo.get('plugin_id') == plugin_id:
-                            task_info = tinfo
-                            server.logger.info(f"找到处理相同插件的任务 {tid}")
-                            break
-                
-                # 如果仍未找到，返回最近的一个任务
-                if task_info.get("status") == "not_found" and recent_tasks:
-                    recent_task_id, recent_task_info = recent_tasks[0]
-                    task_info = recent_task_info
-                    server.logger.info(f"使用最近的任务 {recent_task_id} 替代")
-                    
-                if task_info.get("status") == "not_found":
-                    return JSONResponse(
-                        status_code=status.HTTP_404_NOT_FOUND,
-                        content={"success": False, "error": f"任务 {task_id} 不存在"}
-                    )
-            
-            return JSONResponse(
-                content={
-                    "success": True,
-                    "task_info": task_info
-                }
-            )
-        
-        # 如果只有插件ID，则查找处理该插件的最新任务
-        elif plugin_id:
-            all_tasks = installer.get_all_tasks()
-            # 找到处理此插件的最新任务
-            plugin_tasks = [
-                (tid, tinfo) for tid, tinfo in all_tasks.items()
-                if tinfo.get('plugin_id') == plugin_id
-            ]
-            
-            # 按照开始时间倒序排序
-            plugin_tasks.sort(key=lambda x: x[1].get('start_time', 0), reverse=True)
-            
-            if plugin_tasks:
-                task_id, task_info = plugin_tasks[0]
-                server.logger.info(f"找到插件 {plugin_id} 的最新任务: {task_id}")
-                return JSONResponse(
-                    content={
-                        "success": True,
-                        "task_info": task_info
-                    }
-                )
-            else:
+            task_status = installer.get_task_status(task_id)
+            # 如果找不到任务
+            if not task_status:
                 return JSONResponse(
                     status_code=status.HTTP_404_NOT_FOUND,
-                    content={"success": False, "error": f"没有找到处理插件 {plugin_id} 的任务"}
+                    content={"success": False, "error": f"找不到任务 {task_id}"}
                 )
+            return JSONResponse(content={"success": True, "task": task_status})
+        
+        # 如果指定了插件ID，返回涉及该插件的所有任务
+        elif plugin_id:
+            all_tasks = installer.get_all_tasks()
+            plugin_tasks = {}
+            
+            for tid, task in all_tasks.items():
+                if task.get('plugin_id') == plugin_id:
+                    plugin_tasks[tid] = task
+            
+            return JSONResponse(content={"success": True, "tasks": plugin_tasks})
+        
+        # 如果两者都未指定，返回所有任务
+        else:
+            all_tasks = installer.get_all_tasks()
+            return JSONResponse(content={"success": True, "tasks": all_tasks})
+            
     except Exception as e:
-        import traceback
-        traceback.print_exc()
+        server = app.state.server_interface
+        server.logger.error(f"获取任务状态失败: {e}")
         return JSONResponse(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            content={"success": False, "error": f"获取任务状态时出错: {str(e)}"}
+            content={"success": False, "error": f"获取任务状态失败: {str(e)}"}
         )
 
 @app.get("/api/check_pim_status")
@@ -2243,8 +2235,10 @@ async def api_get_plugin_versions_v2(
     plugin_id: str,
     token_valid: bool = Depends(verify_token)
 ):
-    """使用PluginInstaller获取插件的所有可用版本"""
-    if not request.session.get("logged_in"):
+    """
+    获取插件的所有可用版本（新版API）
+    """
+    if not token_valid:
         return JSONResponse(
             status_code=status.HTTP_401_UNAUTHORIZED,
             content={"success": False, "error": "未登录或会话已过期"}
@@ -2257,38 +2251,29 @@ async def api_get_plugin_versions_v2(
         )
     
     try:
-        # 获取服务器接口
         server = app.state.server_interface
         
-        # 创建PluginInstaller实例，使用 create_installer 函数
-        plugin_installer = create_installer(server)
+        # 首先尝试使用已初始化的实例
+        pim_helper_instance = getattr(app.state, "pim_helper", None)
+        if pim_helper_instance:
+            # 使用pim_helper实例
+            versions = pim_helper_instance.get_plugin_versions(plugin_id)
+        else:
+            # 如果没有预初始化的实例，创建临时安装器
+            server.logger.info("使用临时创建的安装器获取插件版本")
+            installer = create_installer(server)
+            versions = installer.get_plugin_versions(plugin_id)
         
-        # 获取插件版本
-        versions = plugin_installer.get_plugin_versions(plugin_id)
-        
-        # 获取当前已安装版本
-        installed_version = None
-        plugin_manager = getattr(server, "_PluginServerInterface__plugin", None)
-        if plugin_manager:
-            plugin_manager = getattr(plugin_manager, "plugin_manager", None)
-            if plugin_manager:
-                installed_plugin = plugin_manager.get_plugin_from_id(plugin_id)
-                if installed_plugin:
-                    installed_version = str(installed_plugin.get_version())
-        
+        # 返回版本列表
         return JSONResponse(
             content={
-                "success": True,
-                "versions": versions,
-                "plugin_id": plugin_id,
-                "installed_version": installed_version
+                "success": True, 
+                "versions": versions
             }
         )
-        
     except Exception as e:
-        import traceback
-        error_trace = traceback.format_exc()
-        server.logger.error(f"获取插件版本失败: {e}\n{error_trace}")
+        server = app.state.server_interface
+        server.logger.error(f"获取插件版本失败: {e}")
         return JSONResponse(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             content={"success": False, "error": f"获取插件版本失败: {str(e)}"}
