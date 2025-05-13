@@ -138,19 +138,28 @@ class EmptyMetaRegistry:
         return {}
 
 class MetaRegistry:
-    """简化的元数据注册表实现"""
+    """元数据注册表类"""
     def __init__(self, data: Dict = None, source_url: str = None):
         self.data = data or {}
-        self.plugins: Dict[str, PluginData] = {}
-        self.source_url = source_url  # 保存数据来源URL，便于调试和隔离
-        self._parse_data()
+        self.source_url = source_url
+        self.plugins = {}
+        self.logger = logging.getLogger('PIM')
         
-        # 输出调试信息
-        plugins_count = len(self.plugins)
+        try:
+            self._parse_data()
+            plugins_count = len(self.plugins)
+        except Exception as e:
+            self.logger.error(f"解析元数据失败: {e}")
+            plugins_count = 0
+        
         plugin_ids = list(self.plugins.keys())
         self.logger = logging.getLogger("MetaRegistry")
         source_info = f" from {self.source_url}" if self.source_url else ""
         self.logger.debug(f"已加载 {plugins_count} 个插件{source_info}: {', '.join(plugin_ids[:5])}{'...' if plugins_count > 5 else ''}")
+    
+    def get_registry_data(self) -> Dict:
+        """获取元数据注册表的原始数据"""
+        return self.data
     
     def _parse_data(self):
         """解析数据为插件数据对象"""
@@ -305,25 +314,44 @@ def get_global_registry() -> MetaRegistry:
     global _global_registry
     
     if _global_registry is None:
-        # 使用缓存目录存放缓存
-        cache_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "static", "cache")
-        cache_file = os.path.join(cache_dir, "everything_slim.json")
-        
-        # 创建缓存目录
-        os.makedirs(cache_dir, exist_ok=True)
-        
-        # 如果缓存文件存在，读取并解析
-        if os.path.exists(cache_file):
-            try:
-                with open(cache_file, 'r', encoding='utf-8') as f:
-                    everything_data = json.load(f)
-                # 创建元数据注册表
-                _global_registry = MetaRegistry(everything_data)
-            except Exception:
-                # 解析失败，返回空注册表
+        # 尝试获取PIMHelper实例中的缓存目录
+        try:
+            # 检查pim_helper是否已初始化
+            if 'pim_helper' in globals() and pim_helper is not None:
+                # 使用pim_helper的缓存目录
+                cache_dir = pim_helper.get_temp_dir()
+            else:
+                # 使用默认的缓存目录
+                cache_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "static", "cache")
+            
+            cache_file = os.path.join(cache_dir, "everything_slim.json")
+            
+            # 创建缓存目录
+            os.makedirs(cache_dir, exist_ok=True)
+            
+            # 如果缓存文件存在，读取并解析
+            if os.path.exists(cache_file):
+                try:
+                    with open(cache_file, 'r', encoding='utf-8') as f:
+                        everything_data = json.load(f)
+                    # 创建元数据注册表
+                    _global_registry = MetaRegistry(everything_data)
+                except Exception as e:
+                    # 记录错误日志
+                    if 'pim_helper' in globals() and pim_helper is not None:
+                        pim_helper.logger.error(f"解析缓存文件失败: {e}")
+                    # 解析失败，返回空注册表
+                    _global_registry = EmptyMetaRegistry()
+            else:
+                # 缓存文件不存在，返回空注册表
+                if 'pim_helper' in globals() and pim_helper is not None:
+                    pim_helper.logger.debug(f"缓存文件不存在: {cache_file}")
                 _global_registry = EmptyMetaRegistry()
-        else:
-            # 缓存文件不存在，返回空注册表
+        except Exception as e:
+            # 记录错误日志
+            if 'pim_helper' in globals() and pim_helper is not None:
+                pim_helper.logger.error(f"获取全局注册表失败: {e}")
+            # 任何异常，返回空注册表
             _global_registry = EmptyMetaRegistry()
     
     return _global_registry
@@ -501,28 +529,22 @@ def as_requirement(plugin_id: str, version: str, op: Optional[str] = None) -> Pl
     )
 
 class PIMHelper:
+    # 为了让下载失败缓存在所有实例间共享，将其移到类级别
+    _download_failure_cache = {}
+    _failure_cooldown = 15 * 60  # 15分钟，单位为秒
+    
     def __init__(self, server: PluginServerInterface):
+        """
+        初始化
+        """
         self.server = server
         self.logger = server.logger
-        # 获取内部的MetaRegistryHolder
-        try:
-            # 尝试直接获取 plugin_manager
-            # plugin_manager = server._PluginServerInterface__plugin.plugin_manager
-            # self.logger.info("成功获取plugin_manager")
-            
-            # 不再尝试获取 pim_ext 对象，直接使用其他可用API
-            # self.logger.info("直接使用替代API，不获取pim_ext对象")
-            
-            # 设置为 None，在后续方法中使用替代API
-            self.pim_ext = None
-            self.meta_holder = None
-            self.tr = None
-            self.install_handler = None
-            
-            # self.logger.info("成功初始化PIM辅助工具")
-        except Exception as e:
-            self.logger.error(f"初始化PIM辅助工具失败: {e}")
-            raise
+        
+        # 使用类变量替代实例变量，确保缓存在所有实例间共享
+        # self.download_failure_cache = {}  # 移除实例变量
+        # self.failure_cooldown = 15 * 60  # 移除实例变量
+        
+        server.logger.debug("PIM助手初始化完成")
 
     def get_cata_meta(self, source, ignore_ttl: bool = False, repo_url: str = None) -> MetaRegistry:
         """
@@ -554,11 +576,8 @@ class PIMHelper:
             cache_xz_file = os.path.join(cache_dir, f"repo_{cache_name}.json.xz")
             url = repo_url
             
-            # 如果是指定仓库，总是强制刷新缓存，确保数据是最新的
-            ignore_ttl = True
-            self.logger.debug(f"使用自定义仓库，强制刷新缓存: {repo_url}")
-            
-            # 记录使用的是自定义仓库
+            # 不再强制刷新自定义仓库的缓存，而是尊重ignore_ttl参数
+            # ignore_ttl = True  # 删除此行
             self.logger.debug(f"使用自定义仓库: {repo_url}, 缓存文件: {cache_file}")
         else:
             # 使用默认缓存文件
@@ -568,6 +587,31 @@ class PIMHelper:
             # 如果没有指定仓库URL或者指定的就是官方仓库，使用官方URL
             url = repo_url if repo_url else official_url
             self.logger.debug(f"使用官方仓库: {url}")
+            
+        # 检查是否在失败冷却期内
+        current_time = time.time()
+        if url in PIMHelper._download_failure_cache:  # 使用类变量
+            failure_info = PIMHelper._download_failure_cache[url]  # 使用类变量
+            if current_time - failure_info['failed_at'] < PIMHelper._failure_cooldown and failure_info['attempt_count'] >= 2:  # 使用类变量
+                # 在15分钟的冷却期内且尝试次数已达到2次，直接返回空数据
+                time_elapsed = current_time - failure_info['failed_at']
+                time_remaining = PIMHelper._failure_cooldown - time_elapsed  # 使用类变量
+                source.reply(f"仓库 {url} 之前下载失败，将在 {int(time_remaining/60)} 分钟后再次尝试")
+                self.logger.debug(f"仓库 {url} 在冷却期内，跳过下载，将在 {int(time_remaining/60)} 分钟后再次尝试")
+                
+                # 如果缓存文件存在，尝试使用它
+                if os.path.exists(cache_file):
+                    self.logger.debug(f"使用现有缓存文件: {cache_file}")
+                    try:
+                        with open(cache_file, 'r', encoding='utf-8') as f:
+                            everything_data = json.load(f)
+                        registry = MetaRegistry(everything_data, url)
+                        return registry
+                    except Exception as e:
+                        self.logger.error(f"读取缓存文件失败: {e}")
+                
+                # 否则返回空数据
+                return EmptyMetaRegistry()
         
         # 检查缓存是否过期（2小时）
         cache_expired = True
@@ -579,55 +623,96 @@ class PIMHelper:
         
         # 如果缓存已过期或不存在，则下载并解压新文件
         if cache_expired:
-            try:
-                source.reply("正在获取插件目录元数据...")
-                self.logger.debug(f"下载仓库数据: {url}")
-                
-                response = requests.get(url, timeout=30)  # 增加超时时间设置
-                
-                if response.status_code == 200:
-                    # 判断是否是xz压缩文件
-                    if url.endswith('.xz'):
-                        # 保存压缩文件
-                        with open(cache_xz_file, 'wb') as f:
-                            f.write(response.content)
-                        
-                        # 解压文件
-                        with lzma.open(cache_xz_file, 'rb') as f_in:
+            # 初始化尝试次数，如果失败记录中没有该URL，初始化为0
+            attempt_count = PIMHelper._download_failure_cache.get(url, {}).get('attempt_count', 0)  # 使用类变量
+            max_attempts = 2  # 最多尝试2次（1次初始 + 1次重试）
+            
+            for attempt in range(max_attempts - attempt_count):
+                try:
+                    source.reply(f"正在获取插件目录元数据...{'' if attempt == 0 else '(重试)'}")
+                    self.logger.debug(f"下载仓库数据: {url}{'' if attempt == 0 else ' (重试)'}")
+                    
+                    response = requests.get(url, timeout=30)  # 增加超时时间设置
+                    
+                    if response.status_code == 200:
+                        # 判断是否是xz压缩文件
+                        if url.endswith('.xz'):
+                            # 保存压缩文件
+                            with open(cache_xz_file, 'wb') as f:
+                                f.write(response.content)
+                            
+                            # 解压文件
+                            with lzma.open(cache_xz_file, 'rb') as f_in:
+                                with open(cache_file, 'wb') as f_out:
+                                    f_out.write(f_in.read())
+                            
+                            # 解压完成后删除压缩文件
+                            try:
+                                os.remove(cache_xz_file)
+                                self.logger.debug(f"已删除压缩文件: {cache_xz_file}")
+                            except Exception as e:
+                                self.logger.warning(f"删除压缩文件失败: {e}")
+                            
+                            self.logger.debug(f"下载并解压完成: {cache_file}")
+                        else:
+                            # 直接保存JSON数据
                             with open(cache_file, 'wb') as f_out:
-                                f_out.write(f_in.read())
+                                f_out.write(response.content)
+                            
+                            self.logger.debug(f"下载完成: {cache_file}")
                         
-                        # 解压完成后删除压缩文件
-                        try:
-                            os.remove(cache_xz_file)
-                            self.logger.debug(f"已删除压缩文件: {cache_xz_file}")
-                        except Exception as e:
-                            self.logger.warning(f"删除压缩文件失败: {e}")
+                        source.reply("获取元数据成功")
                         
-                        self.logger.debug(f"下载并解压完成: {cache_file}")
+                        # 下载成功，清除失败记录
+                        if url in PIMHelper._download_failure_cache:  # 使用类变量
+                            del PIMHelper._download_failure_cache[url]  # 使用类变量
+                        
+                        # 下载成功，跳出重试循环
+                        break
                     else:
-                        # 直接保存JSON数据
-                        with open(cache_file, 'wb') as f_out:
-                            f_out.write(response.content)
+                        source.reply(f"获取元数据失败: HTTP {response.status_code}")
+                        self.logger.error(f"获取元数据失败: HTTP {response.status_code}, URL: {url}")
                         
-                        self.logger.debug(f"下载完成: {cache_file}")
+                        # 更新失败记录
+                        current_attempt = attempt_count + attempt + 1
+                        PIMHelper._download_failure_cache[url] = {  # 使用类变量
+                            'failed_at': current_time,
+                            'attempt_count': current_attempt
+                        }
+                        
+                        # 如果这是最后一次尝试且失败
+                        if current_attempt >= max_attempts - 1:
+                            source.reply(f"仓库 {url} 下载失败，15分钟内将不再尝试下载")
+                            self.logger.warning(f"仓库 {url} 已达到最大尝试次数，15分钟内将不再尝试下载")
+                            
+                            # 如果下载失败但缓存文件存在，继续使用旧缓存
+                            if not os.path.exists(cache_file):
+                                source.reply("缓存不存在，返回空元数据")
+                                return EmptyMetaRegistry()
+                        else:
+                            # 不是最后一次尝试，等待1秒后重试
+                            source.reply("1秒后重试...")
+                            time.sleep(1)
+                except Exception as e:
+                    source.reply(f"获取元数据失败: {e}")
+                    self.logger.error(f"获取元数据失败: {e}, URL: {url}")
                     
-                    source.reply("获取元数据成功")
-                else:
-                    source.reply(f"获取元数据失败: HTTP {response.status_code}")
-                    self.logger.error(f"获取元数据失败: HTTP {response.status_code}, URL: {url}")
+                    # 更新失败记录
+                    current_attempt = attempt_count + attempt + 1
+                    PIMHelper._download_failure_cache[url] = {  # 使用类变量
+                        'failed_at': current_time,
+                        'attempt_count': current_attempt
+                    }
                     
-                    # 如果下载失败但缓存文件存在，继续使用旧缓存
-                    if not os.path.exists(cache_file):
-                        source.reply("缓存不存在，返回空元数据")
-                        return EmptyMetaRegistry()
-            except Exception as e:
-                source.reply(f"获取元数据失败: {e}")
-                self.logger.error(f"获取元数据失败: {e}, URL: {url}")
-                
-                # 下载或解压出错，如果缓存文件存在则使用旧缓存
-                if not os.path.exists(cache_file):
-                    return EmptyMetaRegistry()
+                    # 如果这是最后一次尝试且失败
+                    if current_attempt >= max_attempts - 1:
+                        # 下载或解压出错，如果缓存文件存在则使用旧缓存
+                        if not os.path.exists(cache_file):
+                            return EmptyMetaRegistry()
+                    else:
+                        # 不是最后一次尝试，等待1秒后重试
+                        source.reply("1秒后重试...")
+                        time.sleep(1)
         
         # 读取并解析文件
         try:
@@ -2201,12 +2286,35 @@ class PIMHelper:
             包含版本信息的列表，每个版本包含版本号、发布日期、下载次数等信息
         """
         try:
-            # 使用全局元数据注册表
-            global_registry = get_global_registry()
+            # 获取 PIMHelper 实例
+            global pim_helper
+            if pim_helper is None:
+                pim_helper = PIMHelper(self.server)
+            
+            # 创建临时的命令源，用于记录消息
+            class TempCommandSource:
+                def __init__(self, logger):
+                    self.logger = logger
+                def reply(self, message):
+                    if isinstance(message, str):
+                        self.logger.debug(message)
+                def get_server(self):
+                    return None
+            
+            # 创建临时命令源
+            source = TempCommandSource(self.logger)
+            
+            # 使用 PIMHelper 的 get_cata_meta 方法获取元数据
+            # 忽略缓存TTL以强制刷新
+            cata_meta = pim_helper.get_cata_meta(source, ignore_ttl=True)
+            if not cata_meta:
+                self.logger.warning(f"无法获取仓库元数据")
+                return []
             
             # 查找插件数据
-            plugin_data = global_registry.get_plugin_data(plugin_id)
+            plugin_data = cata_meta.get_plugin_data(plugin_id)
             if not plugin_data or not plugin_data.releases:
+                self.logger.debug(f"插件 {plugin_id} 无可用版本或不存在")
                 return []
             
             # 获取当前已安装版本（如果有）
@@ -2238,10 +2346,13 @@ class PIMHelper:
             # 按发布日期排序（最新的在前）
             versions.sort(key=lambda x: x.get('release_date', ''), reverse=True)
             
+            self.logger.debug(f"获取到插件 {plugin_id} 的 {len(versions)} 个版本")
             return versions
             
         except Exception as e:
             self.logger.error(f"获取插件 {plugin_id} 版本信息失败: {e}")
+            import traceback
+            self.logger.debug(traceback.format_exc())
             return []
 
     def get_plugin_dir(self) -> str:

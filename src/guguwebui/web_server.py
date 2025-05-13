@@ -46,12 +46,6 @@ from .utils.utils import __copyFile
 
 app = FastAPI()
 
-# 全局变量，用于存储在线插件数据
-online_plugins_data = []
-online_plugins_last_update = 0
-# 添加仓库缓存字典，格式为 {repo_url: {'data': plugins_data, 'last_update': timestamp}}
-repo_plugins_cache = {}
-
 # template engine -> jinja2
 templates = Jinja2Templates(directory=f"{STATIC_PATH}/templates")
 
@@ -90,7 +84,7 @@ def init_app(server_instance):
     
     # 初始化PIM模块
     try:
-        # server_instance.logger.info("正在初始化内置PIM模块...")
+        server_instance.logger.debug("正在初始化内置PIM模块...")
         pim_helper, plugin_installer = initialize_pim(server_instance)
         # 将初始化后的PIM实例存储到app.state中，供API调用
         app.state.pim_helper = pim_helper
@@ -99,10 +93,58 @@ def init_app(server_instance):
             server_instance.logger.info("内置PIM模块初始化成功")
         else:
             server_instance.logger.warning("内置PIM模块初始化部分失败，某些功能可能不可用")
+            
+        # 在启动时检查插件仓库缓存
+        check_repository_cache(server_instance)
     except Exception as e:
         server_instance.logger.error(f"内置PIM模块初始化失败: {e}")
     
     server_instance.logger.debug("WebUI日志捕获器已初始化，将直接从MCDR捕获日志")
+
+# 检查仓库缓存
+def check_repository_cache(server):
+    """检查插件仓库缓存，如果不存在则尝试下载"""
+    try:
+        # 获取PIM缓存目录
+        pim_helper = app.state.pim_helper
+        if not pim_helper:
+            server.logger.warning("无法获取PIM模块实例，跳过缓存检查")
+            return
+            
+        cache_dir = pim_helper.get_temp_dir()
+        cache_file = os.path.join(cache_dir, "everything_slim.json")
+        
+        # 创建一个命令源模拟对象
+        class CacheCheckSource:
+            def __init__(self, server):
+                self.server = server
+            
+            def reply(self, message):
+                self.server.logger.info(f"[仓库缓存] {message}")
+            
+            def get_server(self):
+                return self.server
+        
+        source = CacheCheckSource(server)
+        
+        # 检查缓存是否存在
+        if not os.path.exists(cache_file):
+            server.logger.info("插件仓库缓存不存在，尝试下载")
+            
+            # 使用PIM获取仓库数据，会自动缓存，使用ignore_ttl=False以利用PIM的失败缓存机制
+            # 无需额外的try-except，因为PIM内部已经实现了失败处理和重试
+            pim_helper.get_cata_meta(source, ignore_ttl=False)
+            
+            # 检查下载后缓存是否存在
+            if os.path.exists(cache_file):
+                server.logger.info("插件仓库缓存已成功下载")
+            else:
+                server.logger.warning("插件仓库缓存下载可能失败，但这是正常的，请参考日志了解详情")
+                server.logger.info("WebUI将使用PIM模块的下载失败缓存机制，在15分钟内不会重复尝试下载失败的仓库")
+        else:
+            server.logger.debug("插件仓库缓存已存在")
+    except Exception as e:
+        server.logger.error(f"检查仓库缓存时出错: {e}")
 
 # 事件处理函数
 def on_server_output(server, info):
@@ -410,10 +452,16 @@ async def get_plugins(request: Request, detail: bool = False):
 # 从 everything_slim.json 获取在线插件列表，免登录
 @app.get("/api/online-plugins")
 async def get_online_plugins(request: Request, repo_url: str = None):
-    global online_plugins_data, online_plugins_last_update, repo_plugins_cache
+    # 获取服务器接口和PIM助手
+    server = app.state.server_interface
+    pim_helper = getattr(app.state, "pim_helper", None)
+    
+    # 如果没有PIM助手，无法处理请求
+    if not pim_helper:
+        server.logger.warning("未找到PIM助手实例，无法获取插件信息")
+        return []
     
     # 获取配置中定义的仓库URL
-    server = app.state.server_interface
     config = server.load_config_simple("config.json", DEFALUT_CONFIG, echo_in_console=False)
     official_repo_url = config.get("mcdr_plugins_url", "https://api.mcdreforged.com/catalogue/everything_slim.json.xz")
     configured_repos = [official_repo_url]  # 始终包含官方仓库
@@ -424,416 +472,349 @@ async def get_online_plugins(request: Request, repo_url: str = None):
             if isinstance(repo, dict) and "url" in repo:
                 configured_repos.append(repo["url"])
     
-    # 如果指定了特定仓库URL，则只获取该仓库的数据
-    if repo_url:
-        # 检查是否是配置中的仓库，如果是则可以使用缓存
-        is_configured_repo = repo_url in configured_repos
-        current_time = time.time()
-        
-        # 检查缓存是否存在且未过期（2小时）
-        if is_configured_repo and repo_url in repo_plugins_cache:
-            cache_data = repo_plugins_cache[repo_url]
-            cache_expired = current_time - cache_data['last_update'] > 7200  # 2小时 = 7200秒
+    try:
+        # 创建一个命令源模拟对象，用于PIM助手的API调用
+        class FakeSource:
+            def __init__(self, server):
+                self.server = server
             
-            # 如果缓存未过期，直接返回缓存数据
-            if not cache_expired:
-                return cache_data['data']
-        
-        try:
-            # 下载指定仓库数据
-            response = requests.get(repo_url, timeout=30)
+            def reply(self, message):
+                if isinstance(message, str):
+                    self.server.logger.debug(f"[仓库API] {message}")
             
-            if response.status_code == 200:
-                # 解析数据
-                if repo_url.endswith('.xz'):
-                    with lzma.open(io.BytesIO(response.content), 'rb') as f_in:
-                        repo_data = json.loads(f_in.read().decode('utf-8'))
-                else:
-                    repo_data = response.json()
-                
-                # 检查是否为数组格式的插件列表（新仓库类型）
-                if isinstance(repo_data, list):
-                    # 验证是否为预期的插件列表格式（检查必要字段）
-                    if all(isinstance(item, dict) and 'id' in item and 'name' in item for item in repo_data):
-                        # 这是直接返回格式的插件列表，不需要转换，直接使用
-                        # server.logger.info(f"仓库 {repo_url} 为直接插件列表格式，包含 {len(repo_data)} 个插件")
-                        
-                        # 如果是配置中的仓库，更新缓存
-                        if is_configured_repo:
-                            repo_plugins_cache[repo_url] = {
-                                'data': repo_data,
-                                'last_update': current_time
-                            }
-                            # server.logger.info(f"已更新仓库 {repo_url} 的缓存数据")
-                        
-                        return repo_data
-                
-                # 非数组格式或不符合要求，继续使用原有逻辑处理
-                # 转换为与旧API兼容的格式
-                plugins_data = []
-                for plugin_id, plugin_info in repo_data.get('plugins', {}).items():
-                    try:
-                        # 获取元数据
-                        meta = plugin_info.get('meta', {})
-                        plugin_data = plugin_info.get('plugin', {})
-                        repository = plugin_info.get('repository', {})
-                        release = plugin_info.get('release', {})
-                        
-                        # 获取最新版本信息
-                        latest_version = None
-                        try:
-                            latest_version_index = release.get('latest_version_index', 0)
-                            releases = release.get('releases', [])
-                            if releases and len(releases) > latest_version_index:
-                                latest_version = releases[latest_version_index]
-                        except Exception as version_error:
-                            server.logger.error(f"处理插件 {plugin_id} 的版本信息时出错: {version_error}")
-                            latest_version = None
-
-                        # 获取协议链接
-                        license_info = repository.get('license', {}) or {}
-                        license_url = ''
-                        if license_info:
-                            # 优先使用license中的url字段
-                            if 'url' in license_info:
-                                license_url = license_info.get('url', '')
-                            # 如果没有url字段，根据key构建GitHub许可证URL
-                            elif 'key' in license_info:
-                                license_key = license_info.get('key', '')
-                                if license_key:
-                                    license_url = f"https://github.com/licenses/{license_key}"
-                        
-                        # 创建与旧格式兼容的结构
-                        try:
-                            plugin_entry = {
-                                "id": meta.get('id', plugin_id),
-                                "name": meta.get('name', plugin_id),
-                                "version": meta.get('version', ''),
-                                "description": meta.get('description', {}),
-                                "authors": [],
-                                "dependencies": meta.get('dependencies', {}),
-                                "labels": plugin_data.get('labels', []),
-                                "repository_url": repository.get('html_url', '') or plugin_data.get('repository', ''),
-                                "update_time": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-                                "latest_version": release.get('latest_version', meta.get('version', '')),
-                                "license": (repository.get('license', {}) or {}).get('spdx_id', '未知'),
-                                "license_url": license_url,
-                                "downloads": 0,  # 初始化下载计数
-                                "readme_url": repository.get('readme_url', '') or plugin_data.get('readme_url', '') or '',
-                            }
-                        except Exception as entry_error:
-                            server.logger.error(f"创建插件 {plugin_id} 条目时出错: {entry_error}")
-                            # 创建一个最小的安全条目
-                            plugin_entry = {
-                                "id": plugin_id,
-                                "name": plugin_id,
-                                "version": "",
-                                "description": {},
-                                "authors": [],
-                                "dependencies": {},
-                                "labels": [],
-                                "repository_url": "",
-                                "update_time": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-                                "latest_version": "",
-                                "license": "未知",
-                                "downloads": 0,
-                                "readme_url": "",
-                            }
-                        
-                        # 计算所有版本的下载总数
-                        try:
-                            total_downloads = 0
-                            for rel in releases:
-                                if isinstance(rel, dict) and 'asset' in rel:
-                                    asset = rel['asset']
-                                    if isinstance(asset, dict) and 'download_count' in asset:
-                                        try:
-                                            total_downloads += int(asset['download_count'])
-                                        except (ValueError, TypeError):
-                                            # 忽略无法转换为整数的下载计数
-                                            pass
-                            plugin_entry["downloads"] = total_downloads
-                        except Exception as downloads_error:
-                            server.logger.error(f"计算插件 {plugin_id} 的下载次数时出错: {downloads_error}")
-                        
-                        # 格式化作者信息
-                        author_names = plugin_data.get('authors', []) or meta.get('authors', [])
-                        authors_info = repo_data.get('authors', {}) or {}
-                        authors_dict = authors_info.get('authors', {}) if isinstance(authors_info, dict) else {}
-                        
-                        for author_name in author_names:
-                            try:
-                                author_info = authors_dict.get(author_name, {})
-                                if author_info:
-                                    plugin_entry["authors"].append({
-                                        "name": author_info.get('name', author_name),
-                                        "link": author_info.get('link', '')
-                                    })
-                                else:
-                                    plugin_entry["authors"].append({
-                                        "name": author_name,
-                                        "link": ""
-                                    })
-                            except Exception as author_error:
-                                # 如果处理单个作者信息失败，记录错误但继续处理
-                                server.logger.error(f"处理插件 {plugin_id} 的作者 {author_name} 信息时出错: {author_error}")
-                                # 添加一个安全的作者信息
-                                plugin_entry["authors"].append({
-                                    "name": "未知作者",
-                                    "link": ""
-                                })
-                        
-                        # 添加最后更新时间
-                        if latest_version and 'created_at' in latest_version:
-                            try:
-                                # 将ISO格式时间转换为更友好的格式
-                                dt = datetime.datetime.fromisoformat(latest_version['created_at'].replace('Z', '+00:00'))
-                                plugin_entry["last_update_time"] = dt.strftime("%Y-%m-%d %H:%M:%S")
-                            except Exception as time_error:
-                                server.logger.error(f"处理插件 {plugin_id} 的时间信息时出错: {time_error}")
-                                plugin_entry["last_update_time"] = latest_version.get('created_at', '')
-                        
-                        plugins_data.append(plugin_entry)
-                    except Exception as plugin_error:
-                        # 如果处理单个插件失败，记录错误但继续处理其他插件
-                        server.logger.error(f"处理插件 {plugin_id} 信息时出错: {plugin_error}")
-                
-                # 如果是配置中的仓库，更新缓存
-                if is_configured_repo:
-                    repo_plugins_cache[repo_url] = {
-                        'data': plugins_data,
-                        'last_update': current_time
-                    }
-                    # server.logger.info(f"已更新仓库 {repo_url} 的缓存数据")
-                
-                return plugins_data
-            else:
-                server.logger.error(f"从仓库 {repo_url} 获取数据失败: HTTP {response.status_code}")
-                
-                # 如果是配置中的仓库，尝试使用过期的缓存
-                if is_configured_repo and repo_url in repo_plugins_cache:
-                    server.logger.info(f"使用仓库 {repo_url} 的过期缓存数据")
-                    return repo_plugins_cache[repo_url]['data']
+            def get_server(self):
+                return self.server
+        
+        source = FakeSource(server)
+        
+        # 如果指定了特定仓库URL，则只获取该仓库的数据
+        if repo_url:
+            # 检查是否是配置中的仓库，否则视为不受信任的源
+            is_configured_repo = repo_url in configured_repos
+            
+            # 使用PIM获取元数据，使用ignore_ttl=False以利用PIM的下载失败缓存逻辑
+            meta_registry = pim_helper.get_cata_meta(source, ignore_ttl=False, repo_url=repo_url)
+            
+            # 如果没有获取到有效的仓库数据，直接返回空列表
+            if not meta_registry or not hasattr(meta_registry, 'get_plugins') or not meta_registry.get_plugins():
+                server.logger.warning(f"未获取到有效的仓库数据: {repo_url}")
                 return []
-        except Exception as e:
-            # 下载或解析出错，记录详细错误信息
-            import traceback
-            error_msg = f"获取指定仓库的插件列表失败: {str(e)}\n{traceback.format_exc()}"
-            if server:
-                server.logger.error(error_msg)
-            else:
-                print(error_msg)
             
-            # 如果是配置中的仓库，尝试使用过期的缓存
-            if is_configured_repo and repo_url in repo_plugins_cache:
-                server.logger.info(f"使用仓库 {repo_url} 的过期缓存数据")
-                return repo_plugins_cache[repo_url]['data']
-            return []
-    
-    # 没有指定仓库URL，使用缓存的合并数据
-    # 检查内存缓存是否过期（2小时）
-    current_time = time.time()
-    cache_expired = current_time - online_plugins_last_update > 7200  # 2小时 = 7200秒
-    
-    # 如果缓存已过期或为空，则下载并解析新数据
-    if cache_expired or not online_plugins_data:
-        try:
-            # 从配置中获取插件目录URL
-            url = config.get("mcdr_plugins_url", "https://api.mcdreforged.com/catalogue/everything_slim.json.xz")
+            # 获取原始仓库数据
+            registry_data = {}
+            try:
+                # 尝试获取原始仓库数据
+                if hasattr(meta_registry, 'get_registry_data'):
+                    registry_data = meta_registry.get_registry_data()
+            except Exception as e:
+                server.logger.warning(f"获取原始仓库数据失败: {e}")
             
-            # 下载压缩文件
-            response = requests.get(url, timeout=30)
+            # 检查数据类型 - 处理简化格式(list类型)和标准格式(dict类型)
+            if isinstance(registry_data, list):
+                # 简化格式 - 直接返回原始数据
+                server.logger.debug(f"检测到简化格式仓库数据，直接处理: {repo_url}")
+                return registry_data
             
-            if response.status_code == 200:
-                # 解压数据
-                if url.endswith('.xz'):
-                    with lzma.open(io.BytesIO(response.content), 'rb') as f_in:
-                        everything_data = json.loads(f_in.read().decode('utf-8'))
-                else:
-                    everything_data = response.json()
-                
-                # 检查是否为数组格式的插件列表（新仓库类型）
-                if isinstance(everything_data, list):
-                    # 验证是否为预期的插件列表格式（检查必要字段）
-                    if all(isinstance(item, dict) and 'id' in item and 'name' in item for item in everything_data):
-                        # 这是直接返回格式的插件列表，不需要转换，直接使用
-                        # server.logger.info(f"官方仓库为直接插件列表格式，包含 {len(everything_data)} 个插件")
-                        
-                        # 更新内存缓存和仓库缓存
-                        online_plugins_data = everything_data
-                        online_plugins_last_update = current_time
-                        
-                        # 同时更新官方仓库URL的缓存
-                        repo_plugins_cache[url] = {
-                            'data': everything_data,
-                            'last_update': current_time
-                        }
-                        
-                        return everything_data
-                
-                # 非数组格式，继续使用原有逻辑处理
-                # 转换为与旧API兼容的格式
-                plugins_data = []
-                for plugin_id, plugin_info in everything_data.get('plugins', {}).items():
-                    try:
-                        # 获取元数据
-                        meta = plugin_info.get('meta', {})
-                        plugin_data = plugin_info.get('plugin', {})
-                        repository = plugin_info.get('repository', {})
-                        release = plugin_info.get('release', {})
-                        
-                        # 获取最新版本信息
-                        latest_version = None
-                        try:
-                            latest_version_index = release.get('latest_version_index', 0)
-                            releases = release.get('releases', [])
-                            if releases and len(releases) > latest_version_index:
-                                latest_version = releases[latest_version_index]
-                        except Exception as version_error:
-                            server.logger.error(f"处理插件 {plugin_id} 的版本信息时出错: {version_error}")
-                            latest_version = None
-
-                        # 获取协议链接
-                        license_info = repository.get('license', {}) or {}
-                        license_url = ''
-                        if license_info:
-                            # 优先使用license中的url字段
-                            if 'url' in license_info:
-                                license_url = license_info.get('url', '')
-                            # 如果没有url字段，根据key构建GitHub许可证URL
-                            elif 'key' in license_info:
-                                license_key = license_info.get('key', '')
-                                if license_key:
-                                    license_url = f"https://github.com/licenses/{license_key}"
-                        
-                        # 创建与旧格式兼容的结构
-                        try:
-                            plugin_entry = {
-                                "id": meta.get('id', plugin_id),
-                                "name": meta.get('name', plugin_id),
-                                "version": meta.get('version', ''),
-                                "description": meta.get('description', {}),
-                                "authors": [],
-                                "dependencies": meta.get('dependencies', {}),
-                                "labels": plugin_data.get('labels', []),
-                                "repository_url": repository.get('html_url', '') or plugin_data.get('repository', ''),
-                                "update_time": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-                                "latest_version": release.get('latest_version', meta.get('version', '')),
-                                "license": (repository.get('license', {}) or {}).get('spdx_id', '未知'),
-                                "license_url": license_url,
-                                "downloads": 0,  # 初始化下载计数
-                                "readme_url": repository.get('readme_url', '') or plugin_data.get('readme_url', '') or '',
-                            }
-                        except Exception as entry_error:
-                            server.logger.error(f"创建插件 {plugin_id} 条目时出错: {entry_error}")
-                            # 创建一个最小的安全条目
-                            plugin_entry = {
-                                "id": plugin_id,
-                                "name": plugin_id,
-                                "version": "",
-                                "description": {},
-                                "authors": [],
-                                "dependencies": {},
-                                "labels": [],
-                                "repository_url": "",
-                                "update_time": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-                                "latest_version": "",
-                                "license": "未知",
-                                "downloads": 0,
-                                "readme_url": "",
-                            }
-                        
-                        # 计算所有版本的下载总数
-                        try:
-                            total_downloads = 0
-                            for rel in releases:
-                                if isinstance(rel, dict) and 'asset' in rel:
-                                    asset = rel['asset']
-                                    if isinstance(asset, dict) and 'download_count' in asset:
-                                        try:
-                                            total_downloads += int(asset['download_count'])
-                                        except (ValueError, TypeError):
-                                            # 忽略无法转换为整数的下载计数
-                                            pass
-                            plugin_entry["downloads"] = total_downloads
-                        except Exception as downloads_error:
-                            server.logger.error(f"计算插件 {plugin_id} 的下载次数时出错: {downloads_error}")
-                        
-                        # 格式化作者信息
-                        author_names = plugin_data.get('authors', []) or meta.get('authors', [])
-                        authors_info = everything_data.get('authors', {}) or {}
-                        authors_dict = authors_info.get('authors', {}) if isinstance(authors_info, dict) else {}
+            # 提取作者信息
+            authors_data = {}
+            try:
+                if registry_data and 'authors' in registry_data and 'authors' in registry_data['authors']:
+                    authors_data = registry_data['authors']['authors']
+            except Exception as e:
+                server.logger.warning(f"提取作者信息失败: {e}")
+            
+            # 转换为列表格式返回
+            plugins_data = []
+            for plugin_id, plugin_data in meta_registry.get_plugins().items():
+                try:
+                    # 处理作者信息为期望的格式
+                    authors = []
+                    # 从plugin部分获取作者信息，而不是meta部分
+                    if registry_data and 'plugins' in registry_data and plugin_id in registry_data['plugins']:
+                        plugin_info = registry_data['plugins'][plugin_id].get('plugin', {})
+                        author_names = plugin_info.get('authors', [])
                         
                         for author_name in author_names:
-                            try:
-                                author_info = authors_dict.get(author_name, {})
-                                if author_info:
-                                    plugin_entry["authors"].append({
-                                        "name": author_info.get('name', author_name),
-                                        "link": author_info.get('link', '')
+                            if isinstance(author_name, str) and author_name in authors_data:
+                                # 从原始数据中获取作者详细信息
+                                author_info = authors_data.get(author_name, {})
+                                authors.append({
+                                    'name': author_info.get('name', author_name),
+                                    'link': author_info.get('link', '')
+                                })
+                            else:
+                                # 直接使用作者名称
+                                authors.append({
+                                    'name': author_name,
+                                    'link': ''
+                                })
+                    # 如果plugin部分没有作者信息，则尝试从plugin_data.author获取
+                    elif hasattr(plugin_data, 'author'):
+                        for author_item in plugin_data.author:
+                            if isinstance(author_item, str):
+                                # 原始格式：作者名称是字符串
+                                if author_item in authors_data:
+                                    # 从原始数据中获取作者详细信息
+                                    author_info = authors_data.get(author_item, {})
+                                    authors.append({
+                                        'name': author_info.get('name', author_item),
+                                        'link': author_info.get('link', '')
                                     })
                                 else:
-                                    plugin_entry["authors"].append({
-                                        "name": author_name,
-                                        "link": ""
+                                    # 直接使用作者名称
+                                    authors.append({
+                                        'name': author_item,
+                                        'link': ''
                                     })
-                            except Exception as author_error:
-                                # 如果处理单个作者信息失败，记录错误但继续处理
-                                server.logger.error(f"处理插件 {plugin_id} 的作者 {author_name} 信息时出错: {author_error}")
-                                # 添加一个安全的作者信息
-                                plugin_entry["authors"].append({
-                                    "name": "未知作者",
-                                    "link": ""
+                            elif isinstance(author_item, dict):
+                                # 简化格式：作者信息已经是字典
+                                authors.append(author_item)
+                    
+                    # 获取最新版本信息
+                    latest_release = plugin_data.get_latest_release()
+                    
+                    # 处理标签信息 (labels)
+                    labels = []
+                    
+                    # 从原始数据中获取plugin信息
+                    plugin_info = {}
+                    if registry_data and 'plugins' in registry_data and plugin_id in registry_data['plugins']:
+                        plugin_info = registry_data['plugins'][plugin_id].get('plugin', {})
+                        if 'labels' in plugin_info:
+                            labels = plugin_info.get('labels', [])
+                    
+                    # 处理License信息
+                    license_key = "未知"
+                    license_url = ""
+                    
+                    # 从原始数据中获取repository信息
+                    repo_info = {}
+                    if registry_data and 'plugins' in registry_data and plugin_id in registry_data['plugins']:
+                        repo_info = registry_data['plugins'][plugin_id].get('repository', {})
+                        if 'license' in repo_info and repo_info['license']:
+                            license_info = repo_info['license']
+                            license_key = license_info.get('key', '未知')
+                            license_url = license_info.get('url', '')
+                    
+                    # 处理Readme URL
+                    readme_url = ""
+                    if 'readme_url' in repo_info:
+                        readme_url = repo_info.get('readme_url', '')
+                    
+                    # 计算所有版本的下载总数
+                    total_downloads = 0
+                    if registry_data and 'plugins' in registry_data and plugin_id in registry_data['plugins']:
+                        release_info = registry_data['plugins'][plugin_id].get('release', {})
+                        releases = release_info.get('releases', [])
+                        for rel in releases:
+                            if 'asset' in rel and 'download_count' in rel['asset']:
+                                total_downloads += rel['asset']['download_count']
+                    
+                    # 如果没有找到任何下载数据，但最新版本有下载数，则使用它
+                    if total_downloads == 0 and latest_release and hasattr(latest_release, 'download_count'):
+                        total_downloads = latest_release.download_count
+                    
+                    # 创建插件条目
+                    plugin_entry = {
+                        "id": plugin_data.id,
+                        "name": plugin_data.name,
+                        "version": plugin_data.version,
+                        "description": plugin_data.description,
+                        "authors": authors,
+                        "dependencies": {k: str(v) for k, v in plugin_data.dependencies.items()},
+                        "labels": labels,
+                        "repository_url": plugin_data.link,
+                        "update_time": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                        "latest_version": plugin_data.latest_version,
+                        "license": license_key,
+                        "license_url": license_url,
+                        "downloads": total_downloads,
+                        "readme_url": readme_url,
+                    }
+                    
+                    # 添加最后更新时间
+                    if latest_release and hasattr(latest_release, 'created_at'):
+                        try:
+                            # 将ISO格式时间转换为更友好的格式
+                            dt = datetime.datetime.fromisoformat(latest_release.created_at.replace('Z', '+00:00'))
+                            plugin_entry["last_update_time"] = dt.strftime("%Y-%m-%d %H:%M:%S")
+                        except Exception as time_error:
+                            server.logger.error(f"处理插件 {plugin_id} 的时间信息时出错: {time_error}")
+                            plugin_entry["last_update_time"] = latest_release.created_at if hasattr(latest_release, 'created_at') else ''
+                    
+                    plugins_data.append(plugin_entry)
+                except Exception as plugin_error:
+                    server.logger.error(f"处理插件 {plugin_id} 时出错: {plugin_error}")
+                    # 继续处理下一个插件
+            
+            return plugins_data
+        
+        # 没有指定仓库URL，使用官方仓库数据
+        meta_registry = pim_helper.get_cata_meta(source, ignore_ttl=False)
+        
+        # 如果没有获取到有效的仓库数据，直接返回空列表
+        if not meta_registry or not hasattr(meta_registry, 'get_plugins') or not meta_registry.get_plugins():
+            server.logger.warning("未获取到有效的官方仓库数据")
+            return []
+        
+        # 获取原始仓库数据
+        registry_data = {}
+        try:
+            # 尝试获取原始仓库数据
+            if hasattr(meta_registry, 'get_registry_data'):
+                registry_data = meta_registry.get_registry_data()
+        except Exception as e:
+            server.logger.warning(f"获取原始仓库数据失败: {e}")
+        
+        # 检查数据类型 - 处理简化格式(list类型)和标准格式(dict类型)
+        if isinstance(registry_data, list):
+            # 简化格式 - 直接返回原始数据
+            server.logger.info("检测到简化格式仓库数据，直接处理")
+            return registry_data
+        
+        # 提取作者信息
+        authors_data = {}
+        try:
+            if registry_data and 'authors' in registry_data and 'authors' in registry_data['authors']:
+                authors_data = registry_data['authors']['authors']
+        except Exception as e:
+            server.logger.warning(f"提取作者信息失败: {e}")
+        
+        # 转换为列表格式返回
+        plugins_data = []
+        for plugin_id, plugin_data in meta_registry.get_plugins().items():
+            try:
+                # 处理作者信息为期望的格式
+                authors = []
+                # 从plugin部分获取作者信息，而不是meta部分
+                if registry_data and 'plugins' in registry_data and plugin_id in registry_data['plugins']:
+                    plugin_info = registry_data['plugins'][plugin_id].get('plugin', {})
+                    author_names = plugin_info.get('authors', [])
+                    
+                    for author_name in author_names:
+                        if isinstance(author_name, str) and author_name in authors_data:
+                            # 从原始数据中获取作者详细信息
+                            author_info = authors_data.get(author_name, {})
+                            authors.append({
+                                'name': author_info.get('name', author_name),
+                                'link': author_info.get('link', '')
+                            })
+                        else:
+                            # 直接使用作者名称
+                            authors.append({
+                                'name': author_name,
+                                'link': ''
+                            })
+                # 如果plugin部分没有作者信息，则尝试从plugin_data.author获取
+                elif hasattr(plugin_data, 'author'):
+                    for author_item in plugin_data.author:
+                        if isinstance(author_item, str):
+                            # 原始格式：作者名称是字符串
+                            if author_item in authors_data:
+                                # 从原始数据中获取作者详细信息
+                                author_info = authors_data.get(author_item, {})
+                                authors.append({
+                                    'name': author_info.get('name', author_item),
+                                    'link': author_info.get('link', '')
                                 })
-                        
-                        # 添加最后更新时间
-                        if latest_version and 'created_at' in latest_version:
-                            try:
-                                # 将ISO格式时间转换为更友好的格式
-                                dt = datetime.datetime.fromisoformat(latest_version['created_at'].replace('Z', '+00:00'))
-                                plugin_entry["last_update_time"] = dt.strftime("%Y-%m-%d %H:%M:%S")
-                            except Exception as time_error:
-                                server.logger.error(f"处理插件 {plugin_id} 的时间信息时出错: {time_error}")
-                                plugin_entry["last_update_time"] = latest_version.get('created_at', '')
-                        
-                        plugins_data.append(plugin_entry)
-                    except Exception as plugin_error:
-                        # 如果处理单个插件失败，记录错误但继续处理其他插件
-                        server.logger.error(f"处理插件 {plugin_id} 信息时出错: {plugin_error}")
+                            else:
+                                # 直接使用作者名称
+                                authors.append({
+                                    'name': author_item,
+                                    'link': ''
+                                })
+                        elif isinstance(author_item, dict):
+                            # 简化格式：作者信息已经是字典
+                            authors.append(author_item)
                 
-                # 更新内存缓存
-                online_plugins_data = plugins_data
-                online_plugins_last_update = current_time
+                # 获取最新版本信息
+                latest_release = plugin_data.get_latest_release()
                 
-                # 同时更新官方仓库URL的缓存
-                repo_plugins_cache[url] = {
-                    'data': plugins_data,
-                    'last_update': current_time
+                # 处理标签信息 (labels)
+                labels = []
+                
+                # 从原始数据中获取plugin信息
+                plugin_info = {}
+                if registry_data and 'plugins' in registry_data and plugin_id in registry_data['plugins']:
+                    plugin_info = registry_data['plugins'][plugin_id].get('plugin', {})
+                    if 'labels' in plugin_info:
+                        labels = plugin_info.get('labels', [])
+                
+                # 处理License信息
+                license_key = "未知"
+                license_url = ""
+                
+                # 从原始数据中获取repository信息
+                repo_info = {}
+                if registry_data and 'plugins' in registry_data and plugin_id in registry_data['plugins']:
+                    repo_info = registry_data['plugins'][plugin_id].get('repository', {})
+                    if 'license' in repo_info and repo_info['license']:
+                        license_info = repo_info['license']
+                        license_key = license_info.get('key', '未知')
+                        license_url = license_info.get('url', '')
+                
+                # 处理Readme URL
+                readme_url = ""
+                if 'readme_url' in repo_info:
+                    readme_url = repo_info.get('readme_url', '')
+                
+                # 计算所有版本的下载总数
+                total_downloads = 0
+                if registry_data and 'plugins' in registry_data and plugin_id in registry_data['plugins']:
+                    release_info = registry_data['plugins'][plugin_id].get('release', {})
+                    releases = release_info.get('releases', [])
+                    for rel in releases:
+                        if 'asset' in rel and 'download_count' in rel['asset']:
+                            total_downloads += rel['asset']['download_count']
+                
+                # 如果没有找到任何下载数据，但最新版本有下载数，则使用它
+                if total_downloads == 0 and latest_release and hasattr(latest_release, 'download_count'):
+                    total_downloads = latest_release.download_count
+                
+                # 创建插件条目
+                plugin_entry = {
+                    "id": plugin_data.id,
+                    "name": plugin_data.name,
+                    "version": plugin_data.version,
+                    "description": plugin_data.description,
+                    "authors": authors,
+                    "dependencies": {k: str(v) for k, v in plugin_data.dependencies.items()},
+                    "labels": labels,
+                    "repository_url": plugin_data.link,
+                    "update_time": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                    "latest_version": plugin_data.latest_version,
+                    "license": license_key,
+                    "license_url": license_url,
+                    "downloads": total_downloads,
+                    "readme_url": readme_url,
                 }
                 
-                return plugins_data
-            else:
-                server.logger.error(f"下载插件数据失败: HTTP {response.status_code}")
-                # 如果下载失败但内存缓存存在，继续使用旧缓存
-                if online_plugins_data:
-                    return online_plugins_data
-                return []
-        except Exception as e:
-            # 下载或解析出错，记录详细错误信息
-            import traceback
-            error_msg = f"获取在线插件列表失败: {str(e)}\n{traceback.format_exc()}"
-            if server:
-                server.logger.error(error_msg)
-            else:
-                print(error_msg)
-            
-            # 如果内存缓存存在则使用旧缓存
-            if online_plugins_data:
-                return online_plugins_data
-            return []
-    
-    # 使用内存缓存
-    return online_plugins_data
+                # 添加最后更新时间
+                if latest_release and hasattr(latest_release, 'created_at'):
+                    try:
+                        # 将ISO格式时间转换为更友好的格式
+                        dt = datetime.datetime.fromisoformat(latest_release.created_at.replace('Z', '+00:00'))
+                        plugin_entry["last_update_time"] = dt.strftime("%Y-%m-%d %H:%M:%S")
+                    except Exception as time_error:
+                        server.logger.error(f"处理插件 {plugin_id} 的时间信息时出错: {time_error}")
+                        plugin_entry["last_update_time"] = latest_release.created_at if hasattr(latest_release, 'created_at') else ''
+                
+                plugins_data.append(plugin_entry)
+            except Exception as plugin_error:
+                server.logger.error(f"处理插件 {plugin_id} 时出错: {plugin_error}")
+                # 继续处理下一个插件
+        
+        return plugins_data
+        
+    except Exception as e:
+        # 下载或解析出错，记录详细错误信息
+        import traceback
+        error_msg = f"获取在线插件列表失败: {str(e)}\n{traceback.format_exc()}"
+        if server:
+            server.logger.error(error_msg)
+        else:
+            print(error_msg)
+        return []
 
 # Loading/Unloading pluging
 @app.post("/api/toggle_plugin")
@@ -980,7 +961,7 @@ async def save_web_config(request: Request, config: saveconfig):
     try:
         # 检查MCDR服务器接口的save_config_simple方法签名
         # 打印出调试信息
-        server.logger.info(f"保存配置: file_name='config.json'")
+        server.logger.debug(f"保存配置: file_name='config.json'")
         
         # 直接使用模块函数而不是server.save_config_simple
         from pathlib import Path
@@ -997,7 +978,7 @@ async def save_web_config(request: Request, config: saveconfig):
         with open(config_path, 'w', encoding='utf-8') as f:
             json.dump(web_config, f, ensure_ascii=False, indent=4)
             
-        server.logger.info(f"配置已保存到 {config_path}")
+        server.logger.debug(f"配置已保存到 {config_path}")
         return JSONResponse(response)
     except Exception as e:
         import traceback
@@ -1641,7 +1622,7 @@ async def get_command_suggestions(request: Request, input: str = ""):
                         # 如果最后一个参数有可能的匹配值（例如命令+参数情况下）
                         # 并且前一个节点是参数节点，尝试提供参数后的可能子命令
                         if input_ends_with_space and path_nodes and path_nodes[-1]["type"] == "argument":
-                            # 假设用户已经输入了参数值，展示参数后的可能子命令
+                            # 假设用户已经输入了参数值，展示参数后可能的子命令
                             param_node = path_nodes[-1]["node"]
                             # 构建用于显示的完整命令前缀
                             param_prefix = prefix.strip()  # 移除末尾空格
@@ -2108,7 +2089,7 @@ async def api_task_status(
                     status_code=status.HTTP_404_NOT_FOUND,
                     content={"success": False, "error": f"找不到任务 {task_id}"}
                 )
-            return JSONResponse(content={"success": True, "task": task_status})
+            return JSONResponse(content={"success": True, "task_info": task_status})
         
         # 如果指定了插件ID，返回涉及该插件的所有任务
         elif plugin_id:
@@ -2253,17 +2234,26 @@ async def api_get_plugin_versions_v2(
     try:
         server = app.state.server_interface
         
-        # 首先尝试使用已初始化的实例
-        pim_helper_instance = getattr(app.state, "pim_helper", None)
-        if pim_helper_instance:
-            # 使用pim_helper实例
-            versions = pim_helper_instance.get_plugin_versions(plugin_id)
+        # 记录请求日志
+        server.logger.debug(f"请求获取插件版本: {plugin_id}")
+        
+        # 首先尝试使用已初始化的 PluginInstaller 实例
+        plugin_installer = getattr(app.state, "plugin_installer", None)
+        if plugin_installer:
+            server.logger.debug(f"使用已初始化的插件安装器获取版本信息")
+            versions = plugin_installer.get_plugin_versions(plugin_id)
         else:
             # 如果没有预初始化的实例，创建临时安装器
-            server.logger.info("使用临时创建的安装器获取插件版本")
+            server.logger.info(f"使用临时创建的安装器获取版本信息")
             installer = create_installer(server)
             versions = installer.get_plugin_versions(plugin_id)
         
+        # 记录结果
+        if versions:
+            server.logger.debug(f"成功获取插件 {plugin_id} 的 {len(versions)} 个版本")
+        else:
+            server.logger.debug(f"获取插件 {plugin_id} 版本列表为空")
+            
         # 返回版本列表
         return JSONResponse(
             content={
@@ -2274,6 +2264,8 @@ async def api_get_plugin_versions_v2(
     except Exception as e:
         server = app.state.server_interface
         server.logger.error(f"获取插件版本失败: {e}")
+        import traceback
+        server.logger.debug(traceback.format_exc())
         return JSONResponse(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             content={"success": False, "error": f"获取插件版本失败: {str(e)}"}
