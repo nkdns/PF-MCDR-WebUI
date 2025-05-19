@@ -14,7 +14,11 @@ function settingsApp() {
             port: 8000,
             super_admin_account: '',
             disable_admin_login_web: false,
-            enable_temp_login_password: false
+            enable_temp_login_password: false,
+            ssl_enabled: false,
+            ssl_certfile: '',
+            ssl_keyfile: '',
+            ssl_keyfile_password: ''
         },
         
         // AI配置
@@ -93,6 +97,12 @@ function settingsApp() {
                     this.isKeyValid = true;
                     this.keyValidated = true;
                 }
+                
+                // HTTPS 配置
+                this.webConfig.ssl_enabled = config.ssl_enabled || false;
+                this.webConfig.ssl_certfile = config.ssl_certfile || '';
+                this.webConfig.ssl_keyfile = config.ssl_keyfile || '';
+                this.webConfig.ssl_keyfile_password = config.ssl_keyfile_password || '';
                 
                 // 检查插件目录URL
                 if (config.mcdr_plugins_url) {
@@ -600,6 +610,52 @@ function settingsApp() {
                 }
             } catch (error) {
                 console.error('Error saving plugin repository config:', error);
+                this.showNotification('保存出错: ' + error.message, 'error');
+            }
+        },
+        
+        // 保存HTTPS配置
+        async saveHttpsConfig() {
+            try {
+                // 如果启用了HTTPS但未提供证书或密钥文件
+                if (this.webConfig.ssl_enabled && (!this.webConfig.ssl_certfile || !this.webConfig.ssl_keyfile)) {
+                    this.showNotification('启用HTTPS需要同时提供证书文件和密钥文件路径', 'error');
+                    return;
+                }
+                
+                // 检查文件路径格式
+                if (this.webConfig.ssl_enabled) {
+                    // 提示用户确认文件存在
+                    if (!confirm('请确认您已经准备好了SSL证书和密钥文件，并且指定的路径是正确的。\n\n如果文件不存在，WebUI将回退到HTTP模式。\n\n是否继续?')) {
+                        return;
+                    }
+                }
+                
+                // 准备请求数据
+                const requestData = {
+                    action: 'config',
+                    ssl_enabled: this.webConfig.ssl_enabled,
+                    ssl_certfile: this.webConfig.ssl_certfile,
+                    ssl_keyfile: this.webConfig.ssl_keyfile,
+                    ssl_keyfile_password: this.webConfig.ssl_keyfile_password
+                };
+                
+                const response = await fetch('/api/save_web_config', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(requestData)
+                });
+                
+                const result = await response.json();
+                if (result.status === 'success') {
+                    this.showNotification('HTTPS设置保存成功，重启插件后生效。如果SSL文件不存在，系统将自动回退到HTTP模式。', 'success');
+                } else {
+                    this.showNotification('保存失败: ' + result.message, 'error');
+                }
+            } catch (error) {
+                console.error('Error saving HTTPS config:', error);
                 this.showNotification('保存出错: ' + error.message, 'error');
             }
         }

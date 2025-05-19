@@ -47,7 +47,11 @@ DEFALUT_CONFIG = {
     "ai_model": "deepseek-chat",  # AI模型名称
     "ai_api_url": "https://api.deepseek.com/chat/completions",  # 自定义API链接
     "mcdr_plugins_url": "https://api.mcdreforged.com/catalogue/everything_slim.json.xz",  # MCDR插件目录URL
-    "repositories": []  # 多仓库配置列表
+    "repositories": [],  # 多仓库配置列表
+    "ssl_enabled": False,  # 是否启用HTTPS
+    "ssl_certfile": "",  # SSL证书文件路径
+    "ssl_keyfile": "",  # SSL密钥文件路径
+    "ssl_keyfile_password": ""  # SSL密钥文件密码（如果有）
 }
 
 user_db = table(USER_DB_PATH, default_content=DEFALUT_DB)
@@ -68,6 +72,10 @@ class saveconfig(BaseModel):
     ai_api_url: Optional[str] = None
     mcdr_plugins_url: Optional[str] = None
     repositories: Optional[list] = None
+    ssl_enabled: Optional[bool] = None
+    ssl_certfile: Optional[str] = None
+    ssl_keyfile: Optional[str] = None
+    ssl_keyfile_password: Optional[str] = None
 
 class toggleconfig(BaseModel):
     plugin_id: str

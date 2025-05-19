@@ -407,6 +407,36 @@ async def about(request: Request, token_valid: bool = Depends(verify_token)):
 @app.exception_handler(404)
 async def custom_404_handler(request: Request, exc: StarletteHTTPException):
     return templates.TemplateResponse("404.html", {"request": request}, status_code=404)
+
+@app.exception_handler(ConnectionResetError)
+async def connection_reset_handler(request: Request, exc: ConnectionResetError):
+    # 在日志中记录错误，但向客户端返回友好消息
+    app.state.server_interface.logger.warning(f"[GUGUWebUI] 连接重置错误: {str(exc)}")
+    return JSONResponse(
+        status_code=500,
+        content={"status": "error", "message": "连接被重置，请刷新页面重试"}
+    )
+
+@app.exception_handler(Exception)
+async def global_exception_handler(request: Request, exc: Exception):
+    # 记录所有未处理的异常
+    error_message = f"未处理的异常: {str(exc)}"
+    
+    # 尝试获取服务器接口记录日志
+    try:
+        if hasattr(app.state, "server_interface"):
+            app.state.server_interface.logger.error(f"[GUGUWebUI] {error_message}")
+        else:
+            print(f"[GUGUWebUI] {error_message}")
+    except:
+        print(f"[GUGUWebUI] {error_message}")
+    
+    # 返回友好的错误消息
+    return JSONResponse(
+        status_code=500,
+        content={"status": "error", "message": "服务器内部错误，请稍后再试"}
+    )
+
 # ============================================================#
 
 @app.get("/api/checkLogin")
@@ -896,11 +926,15 @@ async def get_web_config(request: Request):
             "super_admin_account": config["super_admin_account"],
             "disable_admin_login_web": config["disable_other_admin"],
             "enable_temp_login_password": config["allow_temp_password"],
-            "ai_api_key": config.get("ai_api_key", ""),
+            "ai_api_key": "",
             "ai_model": config.get("ai_model", "deepseek-chat"),
             "ai_api_url": config.get("ai_api_url", "https://api.deepseek.com/chat/completions"),
             "mcdr_plugins_url": config.get("mcdr_plugins_url", "https://api.mcdreforged.com/catalogue/everything_slim.json.xz"),
             "repositories": config.get("repositories", []),
+            "ssl_enabled": config.get("ssl_enabled", False),
+            "ssl_certfile": config.get("ssl_certfile", ""),
+            "ssl_keyfile": config.get("ssl_keyfile", ""),
+            "ssl_keyfile_password": config.get("ssl_keyfile_password", ""),
         }
     )
 
@@ -940,8 +974,20 @@ async def save_web_config(request: Request, config: saveconfig):
         # 更新仓库列表
         if config.repositories is not None:
             web_config["repositories"] = config.repositories
+        # 更新SSL配置
+        if config.ssl_enabled is not None:
+            web_config["ssl_enabled"] = config.ssl_enabled
+        if config.ssl_certfile is not None:
+            if isinstance(config.ssl_certfile, str):
+                web_config["ssl_certfile"] = config.ssl_certfile
+        if config.ssl_keyfile is not None:
+            if isinstance(config.ssl_keyfile, str):
+                web_config["ssl_keyfile"] = config.ssl_keyfile
+        if config.ssl_keyfile_password is not None:
+            if isinstance(config.ssl_keyfile_password, str):
+                web_config["ssl_keyfile_password"] = config.ssl_keyfile_password
         
-        response = {"status": "success"}
+        response = {"status": "success", "message": "配置已保存，重启插件后生效"}
     # disable_admin_login_web & enable_temp_login_password
     elif config.action in ["disable_admin_login_web", "enable_temp_login_password"]:
         config_map = {
@@ -954,6 +1000,12 @@ async def save_web_config(request: Request, config: saveconfig):
         response = {
             "status": "success",
             "message": web_config[config_map[config.action]],
+        }
+    elif config.action == "toggle_ssl":
+        web_config["ssl_enabled"] = not web_config.get("ssl_enabled", False)
+        response = {
+            "status": "success",
+            "message": web_config["ssl_enabled"],
         }
     else:
         response = {"status": "error", "message": "Invalid action"}
