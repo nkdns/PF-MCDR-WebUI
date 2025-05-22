@@ -39,7 +39,7 @@ window.mcdrConfigApp = function() {
         // 检查登录状态
         async checkLoginStatus() {
             try {
-                const response = await fetch('/api/checkLogin');
+                const response = await fetch('api/checkLogin');
                 const data = await response.json();
                 if (data.status === 'success') {
                     this.userName = data.username;
@@ -53,7 +53,7 @@ window.mcdrConfigApp = function() {
         async checkServerStatus() {
             try {
                 this.serverStatus = 'loading';
-                const response = await fetch('/api/get_server_status');
+                const response = await fetch('api/get_server_status');
                 const data = await response.json();
                 this.serverStatus = data.status || 'offline';
                 this.serverVersion = data.version || '';
@@ -68,7 +68,7 @@ window.mcdrConfigApp = function() {
         async loadConfig(file) {
             try {
                 console.log(`正在加载配置文件: ${file}`);
-                const response = await fetch(`/api/load_config?path=${file}`);
+                const response = await fetch(`api/load_config?path=${file}`);
                 // 先清空configData
                 this.configData = {};
                 this.activeConfigFile = file;
@@ -115,7 +115,7 @@ window.mcdrConfigApp = function() {
         async saveConfig(file) {
             try {
                 const data = this.gatherConfigValues();
-                const response = await fetch('/api/save_config', {
+                const response = await fetch('api/save_config', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'

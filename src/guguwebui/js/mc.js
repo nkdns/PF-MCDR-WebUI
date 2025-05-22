@@ -106,7 +106,7 @@ document.addEventListener('alpine:init', () => {
         
         checkLoginStatus: async function() {
             try {
-                const response = await fetch('/api/checkLogin');
+                const response = await fetch('api/checkLogin');
                 const data = await response.json();
                 if (data.status === 'success') {
                     this.userName = data.username;
@@ -119,7 +119,7 @@ document.addEventListener('alpine:init', () => {
         checkServerStatus: async function() {
             try {
                 this.serverStatus = 'loading';
-                const response = await fetch('/api/get_server_status');
+                const response = await fetch('api/get_server_status');
                 const data = await response.json();
                 this.serverStatus = data.status || 'offline';
                 this.serverVersion = data.version || '';
@@ -133,7 +133,7 @@ document.addEventListener('alpine:init', () => {
         // 加载翻译数据
         loadTranslations: async function() {
             try {
-                const response = await fetch('/custom/server_lang.json');
+                const response = await fetch('custom/server_lang.json');
                 const data = await response.json();
                 this.translations = data.zh_cn || {};
             } catch (error) {
@@ -145,7 +145,7 @@ document.addEventListener('alpine:init', () => {
         // 加载MCDR配置获取服务器路径
         loadMcdrConfig: async function() {
             try {
-                const response = await fetch('/api/load_config?path=config.yml');
+                const response = await fetch('api/load_config?path=config.yml');
                 const mcdrConfig = await response.json();
                 
                 // 获取工作目录
@@ -169,7 +169,7 @@ document.addEventListener('alpine:init', () => {
         loadConfig: async function() {
             try {
                 this.loading = true;
-                const response = await fetch(`/api/load_config?path=${this.serverPath}server.properties`);
+                const response = await fetch(`api/load_config?path=${this.serverPath}server.properties`);
                 this.configData = await response.json();
                 this.loading = false;
             } catch (error) {
@@ -194,7 +194,7 @@ document.addEventListener('alpine:init', () => {
                     }
                 }
                 
-                const response = await fetch('/api/save_config', {
+                const response = await fetch('api/save_config', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'

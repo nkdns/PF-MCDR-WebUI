@@ -5,15 +5,15 @@
     
     <title>MCDR WebUI - 关于</title>
     <!-- 主题预加载脚本 - 防止闪烁 -->
-    <script src="/js/theme-preload.js"></script>
+    <script src="js/theme-preload.js"></script>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Alpine.js -->
-    <script defer src="/js/alpine.min.js"></script>
+    <script defer src="js/alpine.min.js"></script>
     <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <!-- 自定义CSS -->
-    <link rel="stylesheet" href="/css/main.css">
+    <link rel="stylesheet" href="css/main.css">
     <!-- Tailwind配置 -->
     <script>
         tailwind.config = {
@@ -52,83 +52,7 @@
 <body class="h-full bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100 transition-colors duration-300">
     <div x-data="appData()" x-init="init()">
         <!-- 侧边栏 -->
-        <div id="sidebar" :class="{'translate-x-0': sidebarOpen, '-translate-x-full': !sidebarOpen}" class="sidebar-width fixed top-0 left-0 bottom-0 z-30 transform transition-transform duration-300 ease-in-out bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 shadow-lg overflow-y-auto">
-            <div class="p-4 flex flex-col h-full">
-                <!-- Logo -->
-                <div class="flex items-center justify-center mb-8 mt-2">
-                    <div class="w-12 h-12 rounded-full bg-gradient-to-r from-blue-400 to-purple-500 flex items-center justify-center mr-3 shadow-lg">
-                        <i class="fas fa-server text-white text-xl"></i>
-                    </div>
-                    <div>
-                        <h1 class="text-xl font-bold text-gray-800 dark:text-white">MCDR WebUI</h1>
-                        <p class="text-xs text-gray-500 dark:text-gray-400">服务器管理平台</p>
-                    </div>
-                </div>
-                
-                <!-- 导航菜单 -->
-                <div class="flex-1 overflow-y-auto">
-                    <nav class="space-y-1">
-                        <a href="/index" class="flex items-center px-4 py-3 text-sm font-medium rounded-lg text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
-                            <i class="fas fa-home w-6 text-center"></i>
-                            <span class="ml-3">仪表盘</span>
-                        </a>
-                        
-                        <a href="/mcdr" class="flex items-center px-4 py-3 text-sm font-medium rounded-lg text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
-                            <i class="fas fa-cogs w-6 text-center"></i>
-                            <span class="ml-3">MCDR 配置</span>
-                        </a>
-                        
-                        <a href="/mc" class="flex items-center px-4 py-3 text-sm font-medium rounded-lg text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
-                            <i class="fas fa-gamepad w-6 text-center"></i>
-                            <span class="ml-3">MC 服务器配置</span>
-                        </a>
-                        
-                        <a href="/plugins" class="flex items-center px-4 py-3 text-sm font-medium rounded-lg text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
-                            <i class="fas fa-puzzle-piece w-6 text-center"></i>
-                            <span class="ml-3">本地插件</span>
-                        </a>
-                        
-                        <a href="/online-plugins" class="flex items-center px-4 py-3 text-sm font-medium rounded-lg text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
-                            <i class="fas fa-cloud-download-alt w-6 text-center"></i>
-                            <span class="ml-3">在线插件</span>
-                        </a>
-
-                        <a href="/terminal" class="flex items-center px-4 py-3 text-sm font-medium rounded-lg text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
-                            <i class="fas fa-terminal w-6 text-center"></i>
-                            <span class="ml-3">终端日志</span>
-                        </a>
-                        
-                        <a href="/gugubot" class="flex items-center px-4 py-3 text-sm font-medium rounded-lg text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
-                            <i class="fas fa-robot w-6 text-center"></i>
-                            <span class="ml-3">GUGUBot 管理</span>
-                        </a>
-                        
-                        <a href="/cq" class="flex items-center px-4 py-3 text-sm font-medium rounded-lg text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
-                            <i class="fas fa-comments w-6 text-center"></i>
-                            <span class="ml-3">CQ-QQ-API</span>
-                        </a>
-                    </nav>
-                </div>
-                
-                <!-- 底部功能区 -->
-                <div class="pt-4 mt-6 border-t border-gray-200 dark:border-gray-700">
-                    <a href="/settings" class="flex items-center px-4 py-3 text-sm font-medium rounded-lg text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
-                        <i class="fas fa-cog w-6 text-center"></i>
-                        <span class="ml-3">Web设置</span>
-                    </a>
-                    
-                    <a href="/about" class="flex items-center px-4 py-3 text-sm font-medium rounded-lg bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-200">
-                        <i class="fas fa-info-circle w-6 text-center"></i>
-                        <span class="ml-3">关于</span>
-                    </a>
-                    
-                    <a href="/logout" class="flex items-center px-4 py-3 text-sm font-medium rounded-lg text-red-700 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors mt-2">
-                        <i class="fas fa-sign-out-alt w-6 text-center"></i>
-                        <span class="ml-3">退出登录</span>
-                    </a>
-                </div>
-            </div>
-        </div>
+        {% include "sideNavigator.html" %}
         
         <!-- 主内容区 -->
         <div id="main-content" :class="{'sidebar-open': sidebarOpen}" class="main-content min-h-screen transition-all duration-300">
@@ -327,108 +251,10 @@
     </div>
 
     <!-- JavaScript -->
-    <script src="/js/main.js"></script>
-    <script>
-        function appData() {
-            return {
-                serverStatus: 'loading',
-                userName: '',
-                serverVersion: '',
-                serverPlayers: '0/0',
-                
-                // 初始化
-                init() {
-                    this.checkLoginStatus();
-                    this.checkServerStatus();
-                    this.getVersions();
-                    
-                    // 每60秒自动刷新服务器状态
-                    setInterval(() => this.checkServerStatus(), 10001);
-                    
-                    // 设置当前年份
-                    document.getElementById('year').textContent = new Date().getFullYear();
-                },
-                
-                // 检查登录状态
-                async checkLoginStatus() {
-                    try {
-                        const response = await fetch('/api/checkLogin');
-                        const data = await response.json();
-                        if (data.status === 'success') {
-                            this.userName = data.username;
-                        }
-                    } catch (error) {
-                        console.error('Error checking login status:', error);
-                    }
-                },
-                
-                // 检查服务器状态
-                async checkServerStatus() {
-                    try {
-                        this.serverStatus = 'loading';
-                        const response = await fetch('/api/get_server_status');
-                        const data = await response.json();
-                        this.serverStatus = data.status || 'offline';
-                        this.serverVersion = data.version || '';
-                        this.serverPlayers = data.players || '0/0';
-                    } catch (error) {
-                        console.error('Error checking server status:', error);
-                        this.serverStatus = 'error';
-                    }
-                },
-                
-                // 获取插件版本
-                async getVersions() {
-                    try {
-                        const response = await fetch('/api/gugubot_plugins');
-                        const data = await response.json();
-                        
-                        const gugubotVersion = document.getElementById('gugubot-version');
-                        const cqQqApiVersion = document.getElementById('cq-qq-api-version');
-                        const webVersion = document.getElementById('web-version');
-                        
-                        if (data.gugubot_plugins) {
-                            const gugubot = data.gugubot_plugins.find(p => p.id === 'gugubot');
-                            const cq_qq_api = data.gugubot_plugins.find(p => p.id === 'cq_qq_api');
-                            const guguwebui = data.gugubot_plugins.find(p => p.id === 'guguwebui');
-                            
-                            // 设置GUGUbot版本，如果未安装则显示"未安装"
-                            if (gugubot) {
-                                gugubotVersion.textContent = `版本：${gugubot.version || '未知'}`;
-                            } else {
-                                gugubotVersion.textContent = `版本：未安装`;
-                            }
-                            
-                            // 设置cq_qq_api版本，如果未安装则显示"未安装"
-                            if (cq_qq_api) {
-                                cqQqApiVersion.textContent = `版本：${cq_qq_api.version || '未知'}`;
-                            } else {
-                                cqQqApiVersion.textContent = `版本：未安装`;
-                            }
-                            
-                            if (guguwebui) {
-                                webVersion.textContent = `版本：${guguwebui.version || '未知'}`;
-                            }
-                        } else {
-                            // 如果无法获取插件列表，将插件状态设置为"未安装"
-                            gugubotVersion.textContent = `版本：未安装`;
-                            cqQqApiVersion.textContent = `版本：未安装`;
-                            webVersion.textContent = `版本：未知`;
-                        }
-                    } catch (error) {
-                        console.error('Error fetching plugin versions:', error);
-                        // 出错时也显示"未安装"
-                        const gugubotVersion = document.getElementById('gugubot-version');
-                        const cqQqApiVersion = document.getElementById('cq-qq-api-version');
-                        if (gugubotVersion) gugubotVersion.textContent = `版本：未安装`;
-                        if (cqQqApiVersion) cqQqApiVersion.textContent = `版本：未安装`;
-                    }
-                }
-            };
-        }
-    </script>
+    <script src="js/main.js"></script>
+    <script src="js/about.js"></script>
 
     <!-- 公告脚本 -->
-    <script src="/js/notice.js"></script>
+    <script src="js/notice.js"></script>
 </body>
 </html> 

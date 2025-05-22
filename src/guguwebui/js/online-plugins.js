@@ -62,7 +62,7 @@ document.addEventListener('alpine:init', () => {
         
         async checkLoginStatus() {
             try {
-                const response = await fetch('/api/checkLogin');
+                const response = await fetch('api/checkLogin');
                 const data = await response.json();
                 if (data.status === 'success') {
                     this.userName = data.username;
@@ -75,7 +75,7 @@ document.addEventListener('alpine:init', () => {
         async checkServerStatus() {
             try {
                 this.serverStatus = 'loading';
-                const response = await fetch('/api/get_server_status');
+                const response = await fetch('api/get_server_status');
                 const data = await response.json();
                 this.serverStatus = data.status || 'offline';
                 this.serverVersion = data.version || '';
@@ -89,7 +89,7 @@ document.addEventListener('alpine:init', () => {
         // 加载本地插件信息
         async loadLocalPlugins() {
             try {
-                const response = await fetch('/api/plugins?detail=true');
+                const response = await fetch('api/plugins?detail=true');
                 const data = await response.json();
                 if (data && data.plugins) {
                     this.localPlugins = data.plugins;
@@ -134,7 +134,7 @@ document.addEventListener('alpine:init', () => {
                 }
                 
                 // 构建API URL，如果有选择仓库则添加repo_url参数
-                let apiUrl = '/api/online-plugins';
+                let apiUrl = 'api/online-plugins';
                 if (this.selectedRepository) {
                     apiUrl += `?repo_url=${encodeURIComponent(this.selectedRepository.url)}`;
                 }
@@ -163,7 +163,7 @@ document.addEventListener('alpine:init', () => {
         // 加载仓库列表
         async loadRepositories(currentRepoUrl = null) {
             try {
-                const response = await fetch('/api/get_web_config');
+                const response = await fetch('api/get_web_config');
                 const data = await response.json();
                 
                 // 添加官方仓库，编号为0
@@ -813,7 +813,7 @@ document.addEventListener('alpine:init', () => {
                 }
                 
                 // 尝试使用新版PIM安装器API
-                let response = await fetch('/api/pim/install_plugin', {
+                let response = await fetch('api/pim/install_plugin', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
@@ -870,7 +870,7 @@ document.addEventListener('alpine:init', () => {
             try {
                 console.log(`检查任务 ${this.installTaskId} 进度，插件ID: ${this.installPluginId}`);
                 // 添加插件ID作为备用参数
-                const response = await fetch(`/api/pim/task_status?task_id=${this.installTaskId}&plugin_id=${this.installPluginId}`);
+                const response = await fetch(`api/pim/task_status?task_id=${this.installTaskId}&plugin_id=${this.installPluginId}`);
                 const data = await response.json();
                 
                 if (data.success && data.task_info) {
@@ -925,7 +925,7 @@ document.addEventListener('alpine:init', () => {
                     
                     // 重新尝试直接使用插件ID查询
                     try {
-                        const retryResponse = await fetch(`/api/pim/task_status?plugin_id=${this.installPluginId}`);
+                        const retryResponse = await fetch(`api/pim/task_status?plugin_id=${this.installPluginId}`);
                         const retryData = await retryResponse.json();
                         
                         if (retryData.success && retryData.task_info) {

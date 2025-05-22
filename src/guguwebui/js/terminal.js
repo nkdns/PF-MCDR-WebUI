@@ -50,7 +50,7 @@ document.addEventListener('alpine:init', () => {
         
         async checkLoginStatus() {
             try {
-                const response = await fetch('/api/checkLogin');
+                const response = await fetch('api/checkLogin');
                 const data = await response.json();
                 if (data.status === 'success') {
                     this.userName = data.username;
@@ -63,7 +63,7 @@ document.addEventListener('alpine:init', () => {
         async checkServerStatus() {
             try {
                 this.serverStatus = 'loading';
-                const response = await fetch('/api/get_server_status');
+                const response = await fetch('api/get_server_status');
                 const data = await response.json();
                 this.serverStatus = data.status || 'offline';
                 this.serverVersion = data.version || '';
@@ -82,7 +82,7 @@ document.addEventListener('alpine:init', () => {
                     max_lines: 500
                 });
                 
-                const response = await fetch(`/api/server_logs?${params.toString()}`);
+                const response = await fetch(`api/server_logs?${params.toString()}`);
                 const data = await response.json();
                 
                 if (data.status === 'success') {
@@ -130,7 +130,7 @@ document.addEventListener('alpine:init', () => {
                     max_lines: 100  // 每次获取的最大新日志数量
                 });
                 
-                const response = await fetch(`/api/new_logs?${params.toString()}`);
+                const response = await fetch(`api/new_logs?${params.toString()}`);
                 const data = await response.json();
                 
                 if (data.status === 'success') {
@@ -192,7 +192,7 @@ document.addEventListener('alpine:init', () => {
                         input: input
                     });
                     
-                    const response = await fetch(`/api/command_suggestions?${params.toString()}`);
+                    const response = await fetch(`api/command_suggestions?${params.toString()}`);
                     const data = await response.json();
                     
                     if (data.status === 'success') {
@@ -411,7 +411,7 @@ document.addEventListener('alpine:init', () => {
             }
             
             try {
-                const response = await fetch('/api/send_command', {
+                const response = await fetch('api/send_command', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
@@ -517,7 +517,7 @@ document.addEventListener('alpine:init', () => {
         // 检查API Key状态
         async checkApiKeyStatus() {
             try {
-                const response = await fetch('/api/get_web_config');
+                const response = await fetch('api/get_web_config');
                 const config = await response.json();
                 return !!(config.ai_api_key && config.ai_api_key.trim() !== '');
             } catch (error) {
@@ -561,7 +561,7 @@ document.addEventListener('alpine:init', () => {
             
             try {
                 // 保存API Key
-                const response = await fetch('/api/save_web_config', {
+                const response = await fetch('api/save_web_config', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
@@ -634,7 +634,7 @@ document.addEventListener('alpine:init', () => {
             }
             
             // 发送请求到API
-            fetch('/api/deepseek', {
+            fetch('api/deepseek', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'

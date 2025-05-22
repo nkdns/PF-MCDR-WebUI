@@ -162,9 +162,9 @@ def on_mcdr_info(server, info):
 # ============================================================#
 
 # redirect to login
-@app.get("/", response_class=RedirectResponse)
-def read_root():
-    return RedirectResponse(url="/login")
+@app.get("/", name="root")
+def read_root(request: Request):
+    return RedirectResponse(url='./login')
 
 
 # login page
@@ -193,7 +193,7 @@ async def login_page(request: Request):
         request.session["logged_in"] = True
         request.session["token"] = token
         request.session["username"] = user_db["token"][token]["user_name"]
-        return RedirectResponse(url="/index", status_code=status.HTTP_302_FOUND)
+        return RedirectResponse(url="./index", status_code=status.HTTP_302_FOUND)
 
     # no token / expired token
     response = templates.TemplateResponse("login.html", {"request": request})
@@ -244,7 +244,7 @@ async def login(
             max_age = datetime.timedelta(days=365) if remember else datetime.timedelta(days=1)
             max_age = max_age.total_seconds()
 
-            response = RedirectResponse(url="/index", status_code=status.HTTP_302_FOUND)
+            response = RedirectResponse(url="./index", status_code=status.HTTP_302_FOUND)
             response.set_cookie("token", token, expires=expiry, path="/", httponly=True, max_age=max_age)
 
             # save token & username session
@@ -276,7 +276,7 @@ async def login(
             max_age = datetime.timedelta(hours=2)
             max_age = max_age.total_seconds()
 
-            response = RedirectResponse(url="/index", status_code=status.HTTP_302_FOUND)
+            response = RedirectResponse(url="./index", status_code=status.HTTP_302_FOUND)
             response.set_cookie("token", token, expires=expiry, path="/", httponly=True, max_age=max_age)
 
             # save token & username in session
@@ -310,7 +310,7 @@ async def login(
 def logout(request: Request):
     request.session["logged_in"] = False
     request.session.clear()  # clear session data
-    response = RedirectResponse(url="/login", status_code=status.HTTP_302_FOUND)
+    response = RedirectResponse(url="./login", status_code=status.HTTP_302_FOUND)
     response.delete_cookie("token", path="/")  # delete token cookie
     return response
 
@@ -320,25 +320,25 @@ app.add_middleware(SessionMiddleware, secret_key=SECRET_KEY)
 @app.get("/index", response_class=HTMLResponse)
 async def read_index(request: Request, token_valid: bool = Depends(verify_token)):
     if not request.session.get("logged_in"):
-        return RedirectResponse(url="/login")
+        return RedirectResponse(url="./login")
     return templates.TemplateResponse(
-        "index.html", {"request": request, "index_path": "/index"}
+        "index.html", {"request": request, "index_path": "./index"}
     )
 
 
 @app.get("/home", response_class=HTMLResponse)
 async def read_home(request: Request, token_valid: bool = Depends(verify_token)):
     if not request.session.get("logged_in"):
-        return RedirectResponse(url="/login")
+        return RedirectResponse(url="./login")
     return templates.TemplateResponse(
-        "home.html", {"request": request, "message": "欢迎进入后台主页！", "index_path": "/index"}
+        "home.html", {"request": request, "message": "欢迎进入后台主页！", "index_path": "./index"}
     )
 
 
 async def render_template_if_logged_in(request: Request, template_name: str):
     if not request.session.get("logged_in"):
-        return RedirectResponse(url="/login")
-    return templates.TemplateResponse(template_name, {"request": request, "index_path": "/index"})
+        return RedirectResponse(url="./login")
+    return templates.TemplateResponse(template_name, {"request": request, "index_path": "./index"})
 
 @app.get("/gugubot", response_class=HTMLResponse)
 async def gugubot(request: Request, token_valid: bool = Depends(verify_token)):
@@ -1480,7 +1480,7 @@ async def terminal_page(request: Request):
     # 检查是否已登录
     username = request.session.get("username")
     if not username:
-        return RedirectResponse(url="/login?redirect=/terminal")
+        return RedirectResponse(url="login?redirect=/terminal")
     
     return templates.TemplateResponse("terminal.html", {"request": request})
 

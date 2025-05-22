@@ -15,7 +15,7 @@ document.addEventListener('alpine:init', () => {
         
         checkLoginStatus: async function() {
             try {
-                const response = await fetch('/api/checkLogin');
+                const response = await fetch('api/checkLogin');
                 const data = await response.json();
                 if (data.status === 'success') {
                     this.userName = data.username;
@@ -28,7 +28,7 @@ document.addEventListener('alpine:init', () => {
         checkServerStatus: async function() {
             try {
                 this.serverStatus = 'loading';
-                const response = await fetch('/api/get_server_status');
+                const response = await fetch('api/get_server_status');
                 const data = await response.json();
                 this.serverStatus = data.status || 'offline';
                 this.serverVersion = data.version || '';
@@ -42,7 +42,7 @@ document.addEventListener('alpine:init', () => {
         // 加载翻译数据
         loadTranslations: async function() {
             try {
-                const response = await fetch('/api/load_config?path=config/cq_qq_api/config.json&translation=true');
+                const response = await fetch('api/load_config?path=config/cq_qq_api/config.json&translation=true');
                 this.translations = await response.json();
             } catch (error) {
                 console.error('Error loading translations:', error);
@@ -63,7 +63,7 @@ document.addEventListener('alpine:init', () => {
         loadConfig: async function() {
             try {
                 this.loading = true;
-                const response = await fetch('/api/load_config?path=config/cq_qq_api/config.json');
+                const response = await fetch('api/load_config?path=config/cq_qq_api/config.json');
                 this.configData = await response.json();
                 this.loading = false;
             } catch (error) {
@@ -78,7 +78,7 @@ document.addEventListener('alpine:init', () => {
             try {
                 this.saving = true;
                 
-                const response = await fetch('/api/save_config', {
+                const response = await fetch('api/save_config', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'

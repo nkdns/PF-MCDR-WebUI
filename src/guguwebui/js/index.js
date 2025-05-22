@@ -21,7 +21,7 @@ document.addEventListener('alpine:init', () => {
 
         checkLoginStatus: async function() {
             try {
-                const response = await fetch('/api/checkLogin');
+                const response = await fetch('api/checkLogin');
                 const data = await response.json();
                 if (data.status === 'success') {
                     this.userName = data.username;
@@ -34,7 +34,7 @@ document.addEventListener('alpine:init', () => {
         checkServerStatus: async function() {
             try {
                 this.serverStatus = 'loading';
-                const response = await fetch('/api/get_server_status');
+                const response = await fetch('api/get_server_status');
                 const data = await response.json();
                 this.serverStatus = data.status || 'offline';
                 this.serverVersion = data.version || '';
@@ -51,7 +51,7 @@ document.addEventListener('alpine:init', () => {
             this.processingServer = true;
             
             try {
-                const response = await fetch('/api/control_server', {
+                const response = await fetch('api/control_server', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
@@ -91,7 +91,7 @@ document.addEventListener('alpine:init', () => {
         refreshPipPackages: async function() {
             this.loadingPipPackages = true;
             try {
-                const response = await fetch('/api/pip/list');
+                const response = await fetch('api/pip/list');
                 const data = await response.json();
                 
                 if (data.status === 'success') {
@@ -117,7 +117,7 @@ document.addEventListener('alpine:init', () => {
             this.showInstallPipModal = false;
             
             try {
-                const response = await fetch('/api/pip/install', {
+                const response = await fetch('api/pip/install', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
@@ -141,7 +141,7 @@ document.addEventListener('alpine:init', () => {
             this.pipOutput = [];
             
             try {
-                const response = await fetch('/api/pip/uninstall', {
+                const response = await fetch('api/pip/uninstall', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
@@ -180,7 +180,7 @@ document.addEventListener('alpine:init', () => {
             const taskId = data.task_id;
             const checkProgress = async () => {
                 try {
-                    const statusResponse = await fetch(`/api/pip/task_status?task_id=${taskId}`);
+                    const statusResponse = await fetch(`api/pip/task_status?task_id=${taskId}`);
                     const statusData = await statusResponse.json();
                     
                     if (statusData.status === 'success') {
@@ -278,7 +278,7 @@ document.addEventListener('DOMContentLoaded', function() {
             const versionElement = document.getElementById('web-version');
             if (!versionElement) return;
             
-            const response = await fetch('/api/gugubot_plugins');
+            const response = await fetch('api/gugubot_plugins');
             const data = await response.json();
             
             if (data.gugubot_plugins) {

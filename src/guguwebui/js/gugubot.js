@@ -72,7 +72,7 @@ document.addEventListener('alpine:init', () => {
         // 加载用户信息
         async loadUserInfo() {
             try {
-                const response = await fetch('/api/checkLogin');
+                const response = await fetch('api/checkLogin');
                 const data = await response.json();
                 if (data.status === 'success') {
                     this.userName = data.username;
@@ -86,7 +86,7 @@ document.addEventListener('alpine:init', () => {
         // 加载服务器状态
         async loadServerStatus() {
             try {
-                const response = await fetch('/api/get_server_status');
+                const response = await fetch('api/get_server_status');
                 const data = await response.json();
                 this.serverStatus = data.status || 'error';
             } catch (error) {
@@ -99,7 +99,7 @@ document.addEventListener('alpine:init', () => {
         async loadConfigFilesAndTranslations() {
             try {
                 // 首先加载main配置(config.yml)以获取dict_address
-                const mainResponse = await fetch('/api/list_config_files?plugin_id=gugubot');
+                const mainResponse = await fetch('api/list_config_files?plugin_id=gugubot');
                 
                 if (!mainResponse.ok) {
                     throw new Error(`HTTP error! status: ${mainResponse.status}`);
@@ -125,7 +125,7 @@ document.addEventListener('alpine:init', () => {
                 }
                 
                 // 加载config.yml内容
-                const configResponse = await fetch(`/api/load_config?path=${encodeURIComponent(mainConfigPath)}`);
+                const configResponse = await fetch(`api/load_config?path=${encodeURIComponent(mainConfigPath)}`);
                 
                 if (!configResponse.ok) {
                     throw new Error(`加载config.yml失败: ${configResponse.status}`);
@@ -216,7 +216,7 @@ document.addEventListener('alpine:init', () => {
 
                 // 加载主配置的翻译
                 try {
-                    const transResponse = await fetch(`/api/load_config?path=${encodeURIComponent(mainConfigPath)}&translation=true`);
+                    const transResponse = await fetch(`api/load_config?path=${encodeURIComponent(mainConfigPath)}&translation=true`);
                     if (transResponse.ok) {
                         this.translations = await transResponse.json();
                     } else {
@@ -256,7 +256,7 @@ document.addEventListener('alpine:init', () => {
             this.loading = true; // 开始加载特定tab的数据
             try {
                 const path = this.configPaths[tabId];
-                const response = await fetch(`/api/load_config?path=${encodeURIComponent(path)}`);
+                const response = await fetch(`api/load_config?path=${encodeURIComponent(path)}`);
                  if (!response.ok) {
                      const errorText = await response.text();
                      throw new Error(`加载 ${path} 失败: ${response.status} ${errorText}`);
@@ -758,7 +758,7 @@ document.addEventListener('alpine:init', () => {
 
 
             try {
-                const response = await fetch('/api/save_config', {
+                const response = await fetch('api/save_config', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({

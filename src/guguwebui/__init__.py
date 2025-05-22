@@ -34,10 +34,10 @@ def on_load(server: PluginServerInterface, old):
     register_command(server, host, port) # register MCDR command
 
     amount_static_files(server) # move static resource
-    app.mount("/src", StaticFiles(directory=f"{STATIC_PATH}/src"), name="static")
-    app.mount("/js", StaticFiles(directory=f"{STATIC_PATH}/js"), name="static")
-    app.mount("/css", StaticFiles(directory=f"{STATIC_PATH}/css"), name="static")
-    app.mount("/custom", StaticFiles(directory=f"{STATIC_PATH}/custom"), name="static")
+    app.mount("/src", StaticFiles(directory=f"{STATIC_PATH}/src"), name="src")
+    app.mount("/js", StaticFiles(directory=f"{STATIC_PATH}/js"), name="js")
+    app.mount("/css", StaticFiles(directory=f"{STATIC_PATH}/css"), name="css")
+    app.mount("/custom", StaticFiles(directory=f"{STATIC_PATH}/custom"), name="custom")
     
     # 初始化应用程序和日志捕获器
     init_app(server)

@@ -211,7 +211,7 @@ function showResourceErrorModal(failedResources) {
 // 检查登录状态
 async function checkLoginStatus() {
     try {
-        const response = await fetch('/api/checkLogin');
+        const response = await fetch('api/checkLogin');
         const data = await response.json();
         
         if (data.status !== 'success') {
@@ -445,7 +445,7 @@ async function checkServerStatus() {
         statusIndicator.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i>';
         statusText.textContent = '正在检查...';
         
-        const response = await fetch('/api/get_server_status');
+        const response = await fetch('api/get_server_status');
         const data = await response.json();
         
         // 更新状态显示

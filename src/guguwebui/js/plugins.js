@@ -77,7 +77,7 @@ document.addEventListener('alpine:init', () => {
 
         async checkLoginStatus() {
             try {
-                const response = await fetch('/api/checkLogin');
+                const response = await fetch('api/checkLogin');
                 const data = await response.json();
                 if (data.status === 'success') {
                     this.userName = data.username;
@@ -90,7 +90,7 @@ document.addEventListener('alpine:init', () => {
         async checkServerStatus() {
             try {
                 this.serverStatus = 'loading';
-                const response = await fetch('/api/get_server_status');
+                const response = await fetch('api/get_server_status');
                 const data = await response.json();
                 this.serverStatus = data.status || 'offline';
                 this.serverVersion = data.version || '';
@@ -104,7 +104,7 @@ document.addEventListener('alpine:init', () => {
         async loadPlugins() {
             try {
                 this.loading = true;
-                const response = await fetch('/api/plugins?detail=true');
+                const response = await fetch('api/plugins?detail=true');
                 const data = await response.json();
                 this.plugins = data.plugins || [];
                 this.loading = false;
@@ -133,7 +133,7 @@ document.addEventListener('alpine:init', () => {
             this.processingPlugins[pluginId] = true;
             
             try {
-                const response = await fetch('/api/toggle_plugin', {
+                const response = await fetch('api/toggle_plugin', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
@@ -177,7 +177,7 @@ document.addEventListener('alpine:init', () => {
                     this.processingPlugins[id] = true;
                     
                     try {
-                        const response = await fetch('/api/reload_plugin', {
+                        const response = await fetch('api/reload_plugin', {
                             method: 'POST',
                             headers: {
                                 'Content-Type': 'application/json'
@@ -230,7 +230,7 @@ document.addEventListener('alpine:init', () => {
                         this.showInstallModal = true;
                         
                         // 尝试使用新版PIM安装器API更新插件
-                        let response = await fetch('/api/pim/update_plugin', {
+                        let response = await fetch('api/pim/update_plugin', {
                             method: 'POST',
                             headers: {
                                 'Content-Type': 'application/json'
@@ -302,7 +302,7 @@ document.addEventListener('alpine:init', () => {
                         this.showInstallModal = true;
                         
                         // 尝试使用新版PIM安装器API
-                        let response = await fetch('/api/pim/install_plugin', {
+                        let response = await fetch('api/pim/install_plugin', {
                             method: 'POST',
                             headers: {
                                 'Content-Type': 'application/json'
@@ -351,7 +351,7 @@ document.addEventListener('alpine:init', () => {
             
             try {
                 console.log(`检查任务 ${this.installTaskId} 进度，插件ID: ${this.installPluginId}`);
-                const response = await fetch(`/api/pim/task_status?task_id=${this.installTaskId}&plugin_id=${this.installPluginId}`);
+                const response = await fetch(`api/pim/task_status?task_id=${this.installTaskId}&plugin_id=${this.installPluginId}`);
                 const data = await response.json();
                 
                 if (data.success && data.task_info) {
@@ -408,7 +408,7 @@ document.addEventListener('alpine:init', () => {
                     
                     // 重新尝试直接使用插件ID查询
                     try {
-                        const retryResponse = await fetch(`/api/pim/task_status?plugin_id=${this.installPluginId}`);
+                        const retryResponse = await fetch(`api/pim/task_status?plugin_id=${this.installPluginId}`);
                         const retryData = await retryResponse.json();
                         
                         if (retryData.success && retryData.task_info) {
@@ -550,7 +550,7 @@ document.addEventListener('alpine:init', () => {
             this.showConfigModal = true;
             
             try {
-                const response = await fetch(`/api/list_config_files?plugin_id=${plugin.id}`);
+                const response = await fetch(`api/list_config_files?plugin_id=${plugin.id}`);
                 const data = await response.json();
                 this.configFiles = data.files || [];
             } catch (error) {
@@ -574,7 +574,7 @@ document.addEventListener('alpine:init', () => {
             try {
                 if (mode === 'code') {
                     // 以代码编辑器模式打开
-                    const response = await fetch(`/api/load_config_file?path=${file}`);
+                    const response = await fetch(`api/load_config_file?path=${file}`);
                     this.configContent = await response.text();
                     
                     // 使用setTimeout确保DOM已更新
@@ -602,7 +602,7 @@ document.addEventListener('alpine:init', () => {
                     }, 100);
                 } else {
                     // 以表单模式打开
-                    const response = await fetch(`/api/load_config?path=${file}`);
+                    const response = await fetch(`api/load_config?path=${file}`);
                     const data = await response.json();
                     
                     // 重置状态，完全替换数据以触发Alpine.js响应式更新
@@ -674,7 +674,7 @@ document.addEventListener('alpine:init', () => {
                                 setTimeout(async () => {
                                     try {
                                         // console.log(`正在请求翻译数据: /api/load_config?path=${file}&translation=true`);
-                                        const translationResponse = await fetch(`/api/load_config?path=${file}&translation=true`);
+                                        const translationResponse = await fetch(`api/load_config?path=${file}&translation=true`);
                                         const translationData = await translationResponse.json();
                                         if (translationData && typeof translationData === 'object') {
                                             // console.log('收到翻译数据:', translationData);
@@ -732,7 +732,7 @@ document.addEventListener('alpine:init', () => {
                     // 获取CodeMirror的内容
                     const content = this.codeMirrorEditor.getValue();
                     
-                    const response = await fetch('/api/save_config_file', {
+                    const response = await fetch('api/save_config_file', {
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json'
@@ -761,7 +761,7 @@ document.addEventListener('alpine:init', () => {
                     }
                     
                     // 表单模式保存
-                    const response = await fetch('/api/save_config', {
+                    const response = await fetch('api/save_config', {
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json'
@@ -841,7 +841,7 @@ document.addEventListener('alpine:init', () => {
                         this.showInstallModal = true;
                         
                         // 使用PIM API卸载插件
-                        let response = await fetch('/api/pim/uninstall_plugin', {
+                        let response = await fetch('api/pim/uninstall_plugin', {
                             method: 'POST',
                             headers: {
                                 'Content-Type': 'application/json'
@@ -879,7 +879,7 @@ document.addEventListener('alpine:init', () => {
                             this.installLogMessages.push('PIM卸载器不可用，使用简单卸载方式');
                             
                             // 使用toggle_plugin接口将插件卸载
-                            response = await fetch('/api/toggle_plugin', {
+                            response = await fetch('api/toggle_plugin', {
                                 method: 'POST',
                                 headers: {
                                     'Content-Type': 'application/json'
@@ -959,7 +959,7 @@ document.addEventListener('alpine:init', () => {
             this.showVersionModal = true;
             
             try {
-                const response = await fetch(`/api/pim/plugin_versions_v2?plugin_id=${plugin.id}`);
+                const response = await fetch(`api/pim/plugin_versions_v2?plugin_id=${plugin.id}`);
                 const result = await response.json();
                 
                 if (result.success) {
@@ -1002,7 +1002,7 @@ document.addEventListener('alpine:init', () => {
             try {
                 // 先卸载，再安装指定版本
                 if (this.installedVersion) {
-                    const response = await fetch('/api/pim/uninstall_plugin', {
+                    const response = await fetch('api/pim/uninstall_plugin', {
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json'
@@ -1047,7 +1047,7 @@ document.addEventListener('alpine:init', () => {
                 }
                 
                 // 安装指定版本
-                const response = await fetch('/api/pim/install_plugin', {
+                const response = await fetch('api/pim/install_plugin', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'

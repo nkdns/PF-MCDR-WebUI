@@ -206,48 +206,81 @@ def get_plugins_info(server_interface, detail=False):
         if plugin_name in ignore_plugin:
             continue  # 忽略 mcdr 和 python
 
-        if not isinstance(plugin_metadata, Metadata):  # 将 dict 转换为 Metadata 对象
-            plugin_metadata = Metadata(plugin_metadata)
+        try:
+            if not isinstance(plugin_metadata, Metadata):  # 将 dict 转换为 Metadata 对象
+                plugin_metadata = Metadata(plugin_metadata)
 
-        # 从API获取的最新版本号
-        latest_version = plugin_versions.get(plugin_name, None)
-        
-        # 格式化版本号，去除插件ID前缀和v前缀
-        if latest_version and ("-v" in latest_version or "-" in latest_version):
-            version_parts = latest_version.split("-v")
-            if len(version_parts) > 1:
-                latest_version = version_parts[1]  # 使用-v分隔的后半部分
-            else:
-                # 尝试使用'-'分隔并保留最后一部分
-                version_parts = latest_version.split("-")
+            # 从API获取的最新版本号
+            latest_version = plugin_versions.get(plugin_name, None)
+            
+            # 格式化版本号，去除插件ID前缀和v前缀
+            if latest_version and ("-v" in latest_version or "-" in latest_version):
+                version_parts = latest_version.split("-v")
                 if len(version_parts) > 1:
-                    latest_version = version_parts[-1]
-                    # 如果最后一部分以'v'开头，去掉'v'
-                    if latest_version.startswith("v"):
-                        latest_version = latest_version[1:]
+                    latest_version = version_parts[1]  # 使用-v分隔的后半部分
+                else:
+                    # 尝试使用'-'分隔并保留最后一部分
+                    version_parts = latest_version.split("-")
+                    if len(version_parts) > 1:
+                        latest_version = version_parts[-1]
+                        # 如果最后一部分以'v'开头，去掉'v'
+                        if latest_version.startswith("v"):
+                            latest_version = latest_version[1:]
 
-        if not detail and plugin_name not in main_page_ignore:  # 主页面插件信息
+            if not detail and plugin_name not in main_page_ignore:  # 主页面插件信息
+                respond.append({
+                    "id": plugin_name, 
+                    "name": str(plugin_metadata.name) if plugin_metadata else plugin_name,
+                    "status": "loaded" if plugin_name in loaded_metadata else "disabled" if plugin_name in disabled_plugins else "unloaded",
+                    "path": plugin_name if plugin_name in unloaded_plugins + disabled_plugins else ""
+                })
+            elif detail:  # 插件列表详细信息
+                try:
+                    description = plugin_metadata.description
+                    description = (description.get(server_interface.get_mcdr_language()) or description.get("en_us")) \
+                        if isinstance(description, dict) else description
+                except:
+                    description = "该插件数据异常"
+
+                # 处理作者信息
+                try:
+                    author_info = plugin_metadata.author
+                    if isinstance(author_info, list):
+                        # 处理新的作者信息格式
+                        if author_info and isinstance(author_info[0], dict):
+                            author = ", ".join(author.get('name', '') for author in author_info)
+                        else:
+                            author = ", ".join(str(a) for a in author_info)
+                    else:
+                        author = str(author_info)
+                except:
+                    author = "未知"
+
+                respond.append({
+                    "id": str(plugin_metadata.id),
+                    "name": str(plugin_metadata.name) if hasattr(plugin_metadata, 'name') else plugin_name,
+                    "description": str(description),
+                    "author": author,
+                    "github": str(plugin_metadata.link) if hasattr(plugin_metadata, 'link') else "",
+                    "version": str(plugin_metadata.version) if hasattr(plugin_metadata, 'version') else "未知",
+                    "version_latest": str(latest_version) if latest_version else str(plugin_metadata.version) if hasattr(plugin_metadata, 'version') else "未知",
+                    "status": "loaded" if str(plugin_metadata.id) in loaded_metadata else "disabled" if str(plugin_metadata.id) in disabled_plugins else "unloaded",
+                    "path": plugin_name if plugin_name in unloaded_plugins + disabled_plugins else "",
+                    "config_file": bool(find_plugin_config_paths(str(plugin_metadata.id))) if hasattr(plugin_metadata, 'id') else False
+                })
+        except Exception as e:
+            # 如果插件信息解析失败，添加基本信息
             respond.append({
-                "id": plugin_name, 
-                "name": str(plugin_metadata.name) if plugin_metadata else plugin_name,
+                "id": plugin_name,
+                "name": plugin_name,
+                "description": "该插件数据异常",
+                "author": "未知",
+                "github": "",
+                "version": "未知",
+                "version_latest": "未知",
                 "status": "loaded" if plugin_name in loaded_metadata else "disabled" if plugin_name in disabled_plugins else "unloaded",
-                "path": plugin_name if plugin_name in unloaded_plugins + disabled_plugins else ""
-            })
-        elif detail:  # 插件列表详细信息
-            description = plugin_metadata.description
-            description = (description.get(server_interface.get_mcdr_language()) or description.get("en_us")) \
-                if isinstance(description, dict) else description
-            respond.append({
-                "id": str(plugin_metadata.id),
-                "name": str(plugin_metadata.name),
-                "description": str(description),
-                "author": ", ".join(plugin_metadata.author),
-                "github": str(plugin_metadata.link),
-                "version": str(plugin_metadata.version),
-                "version_latest": str(latest_version) if latest_version else str(plugin_metadata.version),
-                "status": "loaded" if str(plugin_metadata.id) in loaded_metadata else "disabled" if str(plugin_metadata.id) in disabled_plugins else "unloaded",
                 "path": plugin_name if plugin_name in unloaded_plugins + disabled_plugins else "",
-                "config_file": bool(find_plugin_config_paths(str(plugin_metadata.id)))
+                "config_file": False
             })
 
     return respond

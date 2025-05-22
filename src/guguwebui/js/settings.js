@@ -54,7 +54,7 @@ function settingsApp() {
         // 检查登录状态
         async checkLoginStatus() {
             try {
-                const response = await fetch('/api/checkLogin');
+                const response = await fetch('api/checkLogin');
                 const data = await response.json();
                 if (data.status === 'success') {
                     this.userName = data.username;
@@ -68,7 +68,7 @@ function settingsApp() {
         async checkServerStatus() {
             try {
                 this.serverStatus = 'loading';
-                const response = await fetch('/api/get_server_status');
+                const response = await fetch('api/get_server_status');
                 const data = await response.json();
                 this.serverStatus = data.status || 'offline';
             } catch (error) {
@@ -80,7 +80,7 @@ function settingsApp() {
         // 获取配置
         async getConfig() {
             try {
-                const response = await fetch('/api/get_web_config');
+                const response = await fetch('api/get_web_config');
                 const config = await response.json();
                 
                 this.webConfig.host = config.host || '0.0.0.0';
@@ -170,7 +170,7 @@ function settingsApp() {
                     port: parseInt(this.webConfig.port, 10)
                 };
                 
-                const response = await fetch('/api/save_web_config', {
+                const response = await fetch('api/save_web_config', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
@@ -205,7 +205,7 @@ function settingsApp() {
                     superaccount: this.webConfig.super_admin_account.toString().trim()
                 };
 
-                const response = await fetch('/api/save_web_config', {
+                const response = await fetch('api/save_web_config', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
@@ -230,7 +230,7 @@ function settingsApp() {
             try {
                 const apiSetting = setting === 'disable_admin_login_web' ? 'disable_admin_login_web' : 'enable_temp_login_password';
                 
-                const response = await fetch('/api/save_web_config', {
+                const response = await fetch('api/save_web_config', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
@@ -326,7 +326,7 @@ function settingsApp() {
                     requestData.ai_api_url = this.aiApiUrl.trim();
                 }
                 
-                const response = await fetch('/api/save_web_config', {
+                const response = await fetch('api/save_web_config', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
@@ -377,7 +377,7 @@ function settingsApp() {
                 this.showNotification('正在验证API密钥...', 'info');
                 
                 // 直接使用输入框中的API密钥发送测试请求
-                const response = await fetch('/api/deepseek', {
+                const response = await fetch('api/deepseek', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
@@ -481,7 +481,7 @@ function settingsApp() {
                     requestData.repositories = this.repositories;
                 }
                 
-                const response = await fetch('/api/save_web_config', {
+                const response = await fetch('api/save_web_config', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
@@ -516,7 +516,7 @@ function settingsApp() {
                     
                 requestData.mcdr_plugins_url = url;
                 
-                const response = await fetch('/api/save_web_config', {
+                const response = await fetch('api/save_web_config', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
@@ -539,7 +539,7 @@ function settingsApp() {
         // 检查PIM插件状态
         async checkPimStatus() {
             try {
-                const response = await fetch('/api/check_pim_status');
+                const response = await fetch('api/check_pim_status');
                 const result = await response.json();
                 
                 if (result.status === 'success') {
@@ -558,7 +558,7 @@ function settingsApp() {
         async installPimPlugin() {
             try {
                 this.pimStatus = 'installing';
-                const response = await fetch('/api/install_pim_plugin');
+                const response = await fetch('api/install_pim_plugin');
                 const result = await response.json();
                 
                 if (result.status === 'success') {
@@ -593,7 +593,7 @@ function settingsApp() {
                     requestData.repositories = this.repositories;
                 }
                 
-                const response = await fetch('/api/save_web_config', {
+                const response = await fetch('api/save_web_config', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
@@ -640,7 +640,7 @@ function settingsApp() {
                     ssl_keyfile_password: this.webConfig.ssl_keyfile_password
                 };
                 
-                const response = await fetch('/api/save_web_config', {
+                const response = await fetch('api/save_web_config', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
