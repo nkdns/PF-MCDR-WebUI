@@ -25,43 +25,40 @@ WebUI 文档：[WebUI 文档](https://pf-doc.pfingan.com/main.html?root=PF-webui
 
 #### 本地插件管理
 
-  - 列出全部插件
-  - 一键更新
-  - 启动插件
-  - 停止插件
-  - 重载插件
-  - 切换插件版本（第三方仓库不支持）
-  - 插件配置文件的在线编辑器
-  - 插件配置文件的在线表单
+- [x] 列出全部插件
+- [x] 一键更新
+- [x] 启动插件
+- [x] 停止插件
+- [x] 重载插件
+- [x] 切换插件版本（第三方仓库不支持）
+- [x] 插件配置文件的在线编辑器
+- [x] 插件配置文件的在线表单
 
 #### 表单配置功能
 
-- [x] **配置修改:**
-  - 使用在线表单 **或** 在线编辑器进行配置文件的修改（在 **`所有插件`** 选项卡处修改）。
-- [x] **支持的配置:**
-  - `yml文件` 识别每项上一行注释作为中文标题，使用 `::` 分割，第二项为副标题，例 `标题::副标题` ，请注意，使用的是英文的符号；
-  - `json文件` 需要创建同级文件 `需要加标题的配置文件名_lang.josn` 例如 `abc_lang.json` 则会为 `abc.json` 创建中文标题，使用 `[标题,副标题]` 创建标题和副标题，参考示例: [config_lang.json](https://github.com/LoosePrince/PF-MCDR-WebUI/blob/main/config_lang.json)
-  - `html格式`, 使用 `main.json` 在其中使用键对值的方式指定每个配置文件对应的 `html文件` ，届时加载时会加载 `html文件内容` ，如果您有样式请不要使用外链式加载本地css和js，请使用 `style` 和 `script` 标签。
+- [x] **配置修改:** 使用在线表单 **或** 在线编辑器进行配置文件的修改（在 **`所有插件`** 选项卡处修改）。
+- [x] **支持的配置:** `yaml` 、 `json` 、 `html`
+
 
 #### 服务器终端
 
-  - 提供服务器命令执行界面
-  - 支持RCON实时反馈和命令历史记录。
+- [x] 提供服务器命令执行界面
+- [x] 支持RCON实时反馈和命令历史记录。
   
 #### AI辅助
 
-  - 终端集成DeepSeek AI接口
-  - 支持日志分析和问题解答，减少您的反复横跳。
+- [x] 终端集成DeepSeek AI接口
+- [x] 支持日志分析和问题解答，减少您的反复横跳。
 
 #### 主题切换
 
-  - 支持`浅色主题`、`深色主题`，默认为浅色，您可以在右上角切换显示模式
+- [x] 支持`浅色主题`、`深色主题`，默认为浅色，您可以在右上角切换显示模式
 
 #### 在线插件安装仓库
 
-  - 提供一个插件安装管理器
-  - 插件搜索、安装、卸载、更新、查看插件信息。
-  - 多仓库支持，您可以添加多个仓库，并选择不同的仓库进行插件安装，不过请您注意风险。（v1.3.4）
+- [x] 提供一个插件安装管理器
+- [x] 插件搜索、安装、卸载、更新、查看插件信息。
+- [x] 多仓库支持，您可以添加多个仓库，并选择不同的仓库进行插件安装，不过请您注意风险。（v1.3.4）
 
 > [!IMPORTANT]
 > **关于数据:** 重载插件 *本插件* **会** 自动更新 `guguwebui_static` 文件夹中的内容，如果您修改过内部的文件请自行保存，以防您的数据丢失。
@@ -72,11 +69,13 @@ WebUI 文档：[WebUI 文档](https://pf-doc.pfingan.com/main.html?root=PF-webui
 
 ## 依赖配置
 
-**Python 包:** 请确保已安装 [Python™](https://www.python.org/) 和 [pip](https://pypi.org/project/pip/) (pip通常在安装完python后会默认安装)。
+### Python 依赖
 
-**Python 模块:** 参考插件目录内的 `requirements.txt` 文件，使用命令 `pip install -r requirements.txt` 进行安装。
+在v1.4.0起WebUI将自行处理python依赖，在1.4.0前可参考 [requirements.txt](https://github.com/LoosePrince/PF-MCDR-WebUI/blob/main/requirements.txt) 文件，使用命令 `pip install -r requirements.txt` 进行安装。
 
-**前置插件:** PIM插件，已内置WebUI，如有需要可以在设置页面将其安装到外部以为其它可能需要的插件提供帮助。
+### 前置插件
+
+PIM插件，已内置WebUI，如有需要可以在设置页面将其安装到外部以为其它可能需要的插件提供帮助。
 
 ## 使用方式
 
@@ -125,6 +124,16 @@ A:WebUI不打算使用任何插件前置，如果有好的方案我们会考虑�
 
 Q:[PIM插件](https://github.com/LoosePrince/PF-MCDR-WebUI/blob/main/src/guguwebui/utils/PIM.py)是什么？<br>
 A:[PIM插件](https://github.com/LoosePrince/PF-MCDR-WebUI/blob/main/src/guguwebui/utils/PIM.py)是WebUI的插件安装管理器，它可以帮助您安装、卸载、更新插件，并且可以查看插件信息。
+
+Q:对于开发者如何提供配置文件以支持中文描述?
+
+A:如下配置
+> `yml文件` 识别每项上一行注释作为中文标题，使用 `::` 分割，第二项为副标题，例 `标题::副标题` ，请注意，使用的是英文的符号；
+>
+> `json文件` 需要创建同级文件 `需要加标题的配置文件名_lang.josn` 例如 `abc_lang.json` 则会为 `abc.json` 创建中文标题，使用 `[标题,副标题]` 创建标题和副标题，参考示例: [config_lang.json](https://github.com/LoosePrince/PF-MCDR-WebUI/blob/main/config_lang.json)；
+>
+> `html格式`, 使用 `main.json` 在其中使用键对值的方式指定每个配置文件对应的 `html文件` ，届时加载时会加载 `html文件内容` ，如果您有样式请不要使用外链式加载本地css和js，请使用 `style` 和 `script` 标签。
+
 
 ## 示例图
 
