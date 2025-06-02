@@ -235,7 +235,16 @@ def register_command(server:PluginServerInterface, host:str, port:int):
         .then(
             Literal('temp').runs(lambda src, ctx: get_temp_password_command(src, ctx, host, port))
         )
+        .runs(lambda src, ctx: src.reply(__get_help_message()))
+        .then(
+            Literal('help').runs(lambda src, ctx: src.reply(__get_help_message()))
+        )
     )
-    server.register_help_message('!!webui create <account> <password>', '注册 guguwebui 账户')
-    server.register_help_message('!!webui change <account> <old password> <new password>', '修改 guguwebui 账户密码')
-    server.register_help_message('!!webui temp', '获取 guguwebui 临时密码')
+
+    server.register_help_message("!!webui", "GUGUWebUI 相关指令", 3)
+
+def __get_help_message():
+    help_message = "!!webui create <account> <password>: 注册 guguwebui 账户\n"
+    help_message += "!!webui change <account> <old password> <new password>: 修改 guguwebui 账户密码\n"   
+    help_message += "!!webui temp: 获取 guguwebui 临时密码\n"
+    return help_message
