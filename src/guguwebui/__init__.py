@@ -30,7 +30,12 @@ def on_load(server: PluginServerInterface, old):
         
         # 导入其他模块 - 明确导入需要的内容而不是使用通配符
         from fastapi.staticfiles import StaticFiles
-        from .utils.utils import amount_static_files, create_account_command, change_account_command, get_temp_password_command
+        from .utils.utils import (
+            amount_static_files, 
+            create_account_command, 
+            change_account_command, 
+            get_temp_password_command
+        )
         from .utils.constant import user_db
         from .web_server import (
             app, init_app, get_plugins_info, log_watcher, 
@@ -239,6 +244,8 @@ def on_unload(server: PluginServerInterface):
 
 
 def register_command(server:PluginServerInterface, host:str, port:int):
+    from .utils.utils import get_temp_password_command, create_account_command, change_account_command  # 在函数内部导入所有需要的命令函数
+    
     # 注册指令
     server.register_command(
         Literal('!!webui')
@@ -248,27 +255,24 @@ def register_command(server:PluginServerInterface, host:str, port:int):
             .then(
                 Text('account')
                 .then(
-                    Text('password').runs(lambda src, ctx: create_account_command(src, ctx, host, port))
+                    Text('password')
+                    .runs(lambda src, ctx: create_account_command(src, ctx, host, port))
                 )
             )
         )
         .then(
             Literal('change')
             .then(
-                Text('account').suggests(lambda: [i for i in user_db['user'].keys()])
+                Text('account')
                 .then(
-                    Text('old password').then(
-                        Text('new password').runs(lambda src, ctx: change_account_command(src, ctx, host, port))
-                    )
+                    Text('password')
+                    .runs(lambda src, ctx: change_account_command(src, ctx, host, port))
                 )
             )
         )
         .then(
-            Literal('temp').runs(lambda src, ctx: get_temp_password_command(src, ctx, host, port))
-        )
-        .runs(lambda src, ctx: src.reply(__get_help_message()))
-        .then(
-            Literal('help').runs(lambda src, ctx: src.reply(__get_help_message()))
+            Literal('temp')
+            .runs(lambda src, ctx: get_temp_password_command(src, ctx, host, port))
         )
     )
 
