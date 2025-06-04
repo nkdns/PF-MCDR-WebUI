@@ -16,7 +16,7 @@
 
 ## 插件说明
 
-WebUI 文档：[WebUI 文档](https://pf-doc.pfingan.com/main.html?root=PF-webui&path=PF-webui)
+WebUI 文档：[WebUI 文档](https://pf-doc.pfingan.com/main/#PF-webui/)
 
 ### 主要功能
 > 为MCDR提供一个 `在线WebUI管理界面` 和 `MCDR插件管理` 和 `表单配置功能`（可选使用在线编辑器）。
