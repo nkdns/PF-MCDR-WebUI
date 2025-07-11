@@ -93,7 +93,7 @@ function settingsApp() {
                 // 不加载已保存的API密钥，留空等待用户设置新的密钥
                 this.aiApiKey = '';
                 // 如果已配置过密钥，标记为已验证和有效
-                if (config.ai_api_key && config.ai_api_key.trim() !== '') {
+                if (config.ai_api_key_configured) {
                     this.isKeyValid = true;
                     this.keyValidated = true;
                 }

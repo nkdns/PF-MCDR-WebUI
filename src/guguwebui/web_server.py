@@ -919,6 +919,10 @@ async def get_web_config(request: Request):
         )
     server = app.state.server_interface
     config = server.load_config_simple("config.json", DEFALUT_CONFIG, echo_in_console=False)
+    # 检查是否已配置 API 密钥（出于安全考虑不返回实际密钥值）
+    ai_api_key_value = config.get("ai_api_key", "")
+    ai_api_key_configured = bool(ai_api_key_value and ai_api_key_value.strip())
+    
     return JSONResponse(
         {   
             "host": config["host"],
@@ -926,7 +930,8 @@ async def get_web_config(request: Request):
             "super_admin_account": config["super_admin_account"],
             "disable_admin_login_web": config["disable_other_admin"],
             "enable_temp_login_password": config["allow_temp_password"],
-            "ai_api_key": "",
+            "ai_api_key": "",  # 出于安全考虑不返回实际密钥
+            "ai_api_key_configured": ai_api_key_configured,  # 新增：指示是否已配置
             "ai_model": config.get("ai_model", "deepseek-chat"),
             "ai_api_url": config.get("ai_api_url", "https://api.deepseek.com/chat/completions"),
             "mcdr_plugins_url": config.get("mcdr_plugins_url", "https://api.mcdreforged.com/catalogue/everything_slim.json.xz"),

@@ -1414,6 +1414,160 @@
                     </div>
                 </div>
                 
+                <!-- 安装确认模态窗口 -->
+                <div x-show="showInstallConfirmModal" x-transition.opacity class="modal-backdrop">
+                    <div class="modal-content max-w-md" @click.away="closeInstallConfirm()">
+                        <div class="modal-header">
+                            <h3 class="text-lg font-semibold text-gray-900 dark:text-white">安装插件确认</h3>
+                            <button @click="closeInstallConfirm()" class="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        </div>
+                        
+                        <div class="modal-body">
+                            <div class="flex mb-4">
+                                <div class="flex-shrink-0 mr-3">
+                                    <div class="flex items-center justify-center h-10 w-10 rounded-full bg-yellow-100 dark:bg-yellow-900/30">
+                                        <i class="fas fa-exclamation-triangle text-yellow-600 dark:text-yellow-400"></i>
+                                    </div>
+                                </div>
+                                <div class="mt-3 text-center sm:mt-0 sm:text-left">
+                                    <div class="mt-2">
+                                        <p class="text-sm text-gray-500 dark:text-gray-400">
+                                            您即将安装插件 
+                                            <span class="font-medium text-gray-900 dark:text-white" x-text="confirmInstallPlugin ? confirmInstallPlugin.name || confirmInstallPluginId : confirmInstallPluginId"></span>
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="bg-yellow-50 dark:bg-yellow-900/30 rounded-lg border border-yellow-200 dark:border-yellow-800 p-4 mb-4">
+                                <div class="text-yellow-700 dark:text-yellow-200 text-sm">
+                                    <p class="font-medium mb-2">安装风险提示：</p>
+                                    <ul class="list-disc pl-4 space-y-1">
+                                        <li>插件可能修改服务器行为或访问服务器资源</li>
+                                        <li>确保插件来源可信，避免安全风险</li>
+                                        <li>建议在测试环境中先行验证</li>
+                                    </ul>
+                                </div>
+                            </div>
+                            
+                            <p class="text-sm text-gray-500 dark:text-gray-400">
+                                请选择安装方式：
+                            </p>
+                        </div>
+                        
+                        <div class="modal-footer">
+                            <button @click="closeInstallConfirm()" class="inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm text-sm font-medium text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none">
+                                <i class="fas fa-times mr-1.5"></i>
+                                <span>取消</span>
+                            </button>
+                            <button @click="showPluginVersions(confirmInstallPluginId)" class="inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm text-sm font-medium text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none">
+                                <i class="fas fa-tags mr-1.5"></i>
+                                <span>选择版本</span>
+                            </button>
+                            <button @click="installPluginDirectly(confirmInstallPluginId)" class="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none">
+                                <i class="fas fa-download mr-1.5"></i>
+                                <span>安装（最新）</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 版本选择模态窗口 -->
+                <div x-show="showVersionModal" x-transition.opacity class="modal-backdrop">
+                    <div class="modal-content" @click.away="closeVersionModal()">
+                        <div class="modal-header">
+                            <h3 class="text-lg font-semibold text-gray-900 dark:text-white" x-text="'插件版本选择 - ' + (currentVersionPlugin ? currentVersionPlugin.id : '')"></h3>
+                            <button @click="closeVersionModal()" class="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        </div>
+                        
+                        <div class="modal-body">
+                            <!-- 加载状态 -->
+                            <div x-show="versionsLoading" class="flex justify-center items-center py-12">
+                                <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
+                                <span class="ml-3 text-gray-600 dark:text-gray-400">加载插件版本中...</span>
+                            </div>
+                            
+                            <!-- 错误信息 -->
+                            <div x-show="versionError" class="bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-lg p-4 mb-4">
+                                <div class="flex">
+                                    <i class="fas fa-exclamation-circle text-red-500 mr-2 mt-0.5"></i>
+                                    <span class="text-red-700 dark:text-red-300" x-text="versionErrorMessage"></span>
+                                </div>
+                            </div>
+
+                            <!-- 版本列表 -->
+                            <div x-show="!versionsLoading && versions.length === 0 && !versionError" class="text-center py-12">
+                                <i class="fas fa-tag text-4xl text-gray-400 mb-4"></i>
+                                <p class="text-gray-500 dark:text-gray-400">未找到可用版本</p>
+                            </div>
+
+                            <div x-show="!versionsLoading && versions.length > 0" class="space-y-4">
+                                <p class="text-sm text-gray-600 dark:text-gray-300">当前安装版本: <span x-text="installedVersion || '未安装'" class="font-medium"></span></p>
+                                
+                                <div class="grid gap-3">
+                                    <template x-for="version in versions" :key="version.version">
+                                        <div 
+                                            @click="version.installed ? null : switchPluginVersion(version.version)" 
+                                            class="bg-white dark:bg-gray-800 border rounded-lg p-4 transition-shadow"
+                                            :class="[
+                                                version.installed ? 
+                                                    'border-green-500 dark:border-green-600' : 
+                                                    'border-gray-200 dark:border-gray-700 hover:shadow-md cursor-pointer',
+                                                {
+                                                    'opacity-50 cursor-not-allowed': version.processing || version.installed
+                                                }
+                                            ]"
+                                        >
+                                            <div class="flex justify-between items-start mb-2">
+                                                <div class="flex items-center">
+                                                    <span class="text-lg font-semibold" x-text="version.version"></span>
+                                                    <span 
+                                                        x-show="version.installed" 
+                                                        class="ml-2 px-2 py-0.5 bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 text-xs rounded-full"
+                                                    >
+                                                        已安装
+                                                    </span>
+                                                    <span 
+                                                        x-show="version.prerelease" 
+                                                        class="ml-2 px-2 py-0.5 bg-yellow-100 dark:bg-yellow-900 text-yellow-800 dark:text-yellow-200 text-xs rounded-full"
+                                                    >
+                                                        预发布
+                                                    </span>
+                                                </div>
+                                                <span class="text-sm text-gray-500 dark:text-gray-400" x-text="formatDate(version.release_date)"></span>
+                                            </div>
+                                            
+                                            <div class="flex items-center text-sm text-gray-500 dark:text-gray-400 mt-1">
+                                                <i class="fas fa-download mr-1"></i>
+                                                <span x-text="formatNumber(version.download_count)"></span>
+                                            </div>
+                                            
+                                            <div x-show="version.description" class="mt-2 text-sm text-gray-600 dark:text-gray-300">
+                                                <p x-text="version.description"></p>
+                                            </div>
+                                            
+                                            <div x-show="version.processing" class="mt-3 flex items-center text-blue-600 dark:text-blue-400">
+                                                <i class="fas fa-circle-notch fa-spin mr-2"></i>
+                                                <span>正在处理...</span>
+                                            </div>
+                                        </div>
+                                    </template>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="modal-footer">
+                            <button @click="closeVersionModal()" class="inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm text-sm font-medium text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none transition-colors">
+                                <span>关闭</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                
                 <!-- 第三方仓库警告模态窗口 -->
                 <div x-show="showRepoWarningModal" x-transition.opacity class="modal-backdrop">
                     <div class="modal-content" style="max-width: 600px;">

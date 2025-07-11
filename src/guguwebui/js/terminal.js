@@ -519,7 +519,8 @@ document.addEventListener('alpine:init', () => {
             try {
                 const response = await fetch('api/get_web_config');
                 const config = await response.json();
-                return !!(config.ai_api_key && config.ai_api_key.trim() !== '');
+                // 使用新的 ai_api_key_configured 字段来判断是否已配置
+                return !!(config.ai_api_key_configured);
             } catch (error) {
                 console.error('检查API Key状态失败:', error);
                 return false;

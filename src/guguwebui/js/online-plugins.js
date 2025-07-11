@@ -60,6 +60,46 @@ document.addEventListener('alpine:init', () => {
         repositories: [],
         selectedRepository: null,
         
+        // 添加安装确认相关属性
+        showInstallConfirmModal: false,
+        confirmInstallPluginId: '',
+        confirmInstallPlugin: null,
+        
+        // 添加版本选择相关属性
+        showVersionModal: false,
+        versionsLoading: false,
+        versionError: false,
+        versionErrorMessage: '',
+        currentVersionPlugin: null,
+        versions: [],
+        installedVersion: null,
+        
+        // 比较两个版本号的函数 
+        // 返回值: 如果v1 > v2，返回1；如果v1 < v2，返回-1；如果相等，返回0
+        compareVersions(v1, v2) {
+            if (!v1) return -1;
+            if (!v2) return 1;
+            
+            // 移除版本号前的'v'字符
+            v1 = v1.toString().replace(/^v/, '');
+            v2 = v2.toString().replace(/^v/, '');
+            
+            // 分割版本号为数字数组
+            const parts1 = v1.split('.').map(Number);
+            const parts2 = v2.split('.').map(Number);
+            
+            // 比较每个部分
+            for (let i = 0; i < Math.max(parts1.length, parts2.length); i++) {
+                const p1 = i < parts1.length ? parts1[i] : 0;
+                const p2 = i < parts2.length ? parts2[i] : 0;
+                
+                if (p1 > p2) return 1;
+                if (p1 < p2) return -1;
+            }
+            
+            return 0; // 版本相同
+        },
+        
         async checkLoginStatus() {
             try {
                 const response = await fetch('api/checkLogin');
@@ -786,7 +826,197 @@ document.addEventListener('alpine:init', () => {
             this.currentRepoUrl = '';
         },
         
-        async installPlugin(pluginId) {
+        // 显示安装确认模态框
+        showInstallConfirm(pluginId) {
+            const plugin = this.plugins.find(p => p.id === pluginId);
+            this.confirmInstallPluginId = pluginId;
+            this.confirmInstallPlugin = plugin;
+            this.showInstallConfirmModal = true;
+        },
+        
+        // 关闭安装确认模态框
+        closeInstallConfirm() {
+            this.showInstallConfirmModal = false;
+            this.confirmInstallPluginId = '';
+            this.confirmInstallPlugin = null;
+        },
+        
+        // 显示插件版本选择
+        async showPluginVersions(pluginId) {
+            const plugin = this.plugins.find(p => p.id === pluginId);
+            if (!plugin || plugin.id === 'guguwebui') {
+                this.showNotificationMsg('不能为 WebUI 选择版本', 'error');
+                return;
+            }
+            
+            this.versionsLoading = true;
+            this.versionError = false;
+            this.currentVersionPlugin = plugin;
+            this.installedVersion = this.getInstalledPluginVersion(plugin.id);
+            this.versions = [];
+            this.showVersionModal = true;
+            
+            // 关闭确认模态框
+            this.closeInstallConfirm();
+            
+            try {
+                const response = await fetch(`api/pim/plugin_versions_v2?plugin_id=${plugin.id}`);
+                const result = await response.json();
+                
+                if (result.success) {
+                    // 标记哪些版本正在处理中
+                    this.versions = result.versions.map(version => ({
+                        ...version,
+                        processing: false,
+                        // 判断是否已安装
+                        installed: version.version === this.installedVersion
+                    }));
+                    this.installedVersion = result.installed_version;
+                } else {
+                    this.versionError = true;
+                    this.versionErrorMessage = result.error || '获取版本列表失败';
+                }
+            } catch (error) {
+                console.error(`Error loading versions for plugin ${plugin.id}:`, error);
+                this.versionError = true;
+                this.versionErrorMessage = '获取版本列表失败: ' + error.message;
+            } finally {
+                this.versionsLoading = false;
+            }
+        },
+        
+        // 关闭版本选择模态框
+        closeVersionModal() {
+            this.showVersionModal = false;
+            this.currentVersionPlugin = null;
+            this.versions = [];
+            this.versionError = false;
+        },
+        
+        // 切换插件版本
+        async switchPluginVersion(version) {
+            if (!this.currentVersionPlugin || !version) return;
+            
+            const pluginId = this.currentVersionPlugin.id;
+            const versionObj = this.versions.find(v => v.version === version);
+            
+            if (!versionObj || versionObj.processing) return;
+            
+            // 检查是否与当前安装的版本相同
+            if (this.installedVersion && version === this.installedVersion) {
+                this.showNotificationMsg(`当前已安装 ${pluginId} 的 ${version} 版本`, 'info');
+                return;
+            }
+            
+            // 标记此版本为处理中
+            versionObj.processing = true;
+            
+            try {
+                // 获取当前选择的仓库URL
+                let repoUrl = null;
+                if (this.selectedRepository) {
+                    repoUrl = this.selectedRepository.url;
+                }
+                
+                // 先卸载，再安装指定版本
+                if (this.installedVersion) {
+                    const uninstallResponse = await fetch('api/pim/uninstall_plugin', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            plugin_id: pluginId
+                        })
+                    });
+                    
+                    const uninstallResult = await uninstallResponse.json();
+                    
+                    if (uninstallResult.success) {
+                        this.installTaskId = uninstallResult.task_id;
+                        this.installPluginId = pluginId;
+                        this.installStatus = 'running';
+                        this.installProgress = 0;
+                        this.installMessage = `正在卸载 ${pluginId}...`;
+                        this.installLogMessages = [];
+                        this.showInstallModal = true;
+                        
+                        // 开始轮询卸载进度
+                        if (this.installProgressTimer) {
+                            clearInterval(this.installProgressTimer);
+                        }
+                        this.installProgressTimer = setInterval(() => {
+                            this.checkInstallProgress();
+                        }, 2000);
+                        
+                        // 等待卸载完成
+                        while (this.installStatus === 'running') {
+                            await new Promise(resolve => setTimeout(resolve, 1000));
+                        }
+                        
+                        if (this.installStatus === 'failed') {
+                            throw new Error('卸载失败: ' + this.installMessage);
+                        }
+                    }
+                }
+                
+                // 安装指定版本
+                const response = await fetch('api/pim/install_plugin', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        plugin_id: pluginId,
+                        version: version,
+                        repo_url: repoUrl
+                    })
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    this.installTaskId = result.task_id;
+                    this.installPluginId = pluginId;
+                    this.installStatus = 'running';
+                    this.installProgress = 0;
+                    this.installMessage = `正在安装 ${pluginId} v${version}...`;
+                    this.installLogMessages = [];
+                    this.showInstallModal = true;
+                    
+                    // 开始轮询安装进度
+                    if (this.installProgressTimer) {
+                        clearInterval(this.installProgressTimer);
+                    }
+                    this.installProgressTimer = setInterval(() => {
+                        this.checkInstallProgress();
+                    }, 2000);
+                    
+                    // 关闭版本选择模态框
+                    this.closeVersionModal();
+                    
+                    // 刷新插件列表
+                    await this.loadPlugins(true);
+                } else {
+                    throw new Error(result.error || '安装失败');
+                }
+            } catch (error) {
+                console.error(`Error switching plugin ${pluginId} to version ${version}:`, error);
+                this.showNotificationMsg(`切换版本失败: ${error.message}`, 'error');
+                
+                // 清理定时器
+                if (this.installProgressTimer) {
+                    clearInterval(this.installProgressTimer);
+                    this.installProgressTimer = null;
+                }
+            } finally {
+                // 取消标记处理中状态
+                versionObj.processing = false;
+            }
+        },
+        
+        // 安装插件函数（直接安装最新版本）
+        async installPluginDirectly(pluginId) {
             if (this.processingPlugins[pluginId]) return;
             
             // 前端拦截guguwebui安装请求
@@ -794,6 +1024,9 @@ document.addEventListener('alpine:init', () => {
                 this.showNotificationMsg('不允许安装WebUI自身，这可能会导致WebUI无法正常工作', 'error');
                 return;
             }
+            
+            // 关闭确认模态框
+            this.closeInstallConfirm();
             
             this.processingPlugins[pluginId] = true;
             
@@ -861,6 +1094,20 @@ document.addEventListener('alpine:init', () => {
                 this.showNotificationMsg('安装插件失败', 'error');
                 this.processingPlugins[pluginId] = false;
             }
+        },
+        
+        // 主安装函数（显示确认模态框）
+        async installPlugin(pluginId) {
+            if (this.processingPlugins[pluginId]) return;
+            
+            // 前端拦截guguwebui安装请求
+            if (pluginId === "guguwebui") {
+                this.showNotificationMsg('不允许安装WebUI自身，这可能会导致WebUI无法正常工作', 'error');
+                return;
+            }
+            
+            // 显示安装确认模态框
+            this.showInstallConfirm(pluginId);
         },
         
         // 检查安装进度
