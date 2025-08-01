@@ -222,6 +222,11 @@
                                             <i class="fab fa-github mr-1"></i>
                                             <span>GitHub</span>
                                         </a>
+                                        <!-- 添加仓库信息标签 -->
+                                        <span x-show="plugin.repository" class="text-xs px-2 py-1 bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-200 rounded inline-flex items-center">
+                                            <i class="fas fa-server mr-1"></i>
+                                            <span x-text="plugin.repository"></span>
+                                        </span>
                                         <span x-show="plugin.status === true || plugin.status === 'loaded'" class="text-xs px-2 py-1 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-200 rounded">
                                             <i class="fas fa-check-circle mr-1"></i>
                                             <span>已加载</span>
@@ -995,6 +1000,18 @@
 
                     <div x-show="!versionsLoading && versions.length > 0" class="space-y-4">
                         <p class="text-sm text-gray-600 dark:text-gray-300">当前安装版本: <span x-text="installedVersion || '未安装'" class="font-medium"></span></p>
+                        
+                        <!-- 添加仓库信息显示 -->
+                        <div x-show="currentPluginRepository" class="bg-gray-50 dark:bg-gray-800 rounded-lg p-3">
+                            <div class="flex items-center text-sm text-gray-600 dark:text-gray-300">
+                                <i class="fas fa-server mr-2 text-orange-500"></i>
+                                <span>来源仓库: </span>
+                                <span class="font-medium ml-1" x-text="currentPluginRepository.name"></span>
+                                <span x-show="currentPluginRepository.is_official" class="ml-2 px-2 py-0.5 bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 text-xs rounded-full">
+                                    官方
+                                </span>
+                            </div>
+                        </div>
                         
                         <div class="grid gap-3">
                             <template x-for="version in versions" :key="version.version">

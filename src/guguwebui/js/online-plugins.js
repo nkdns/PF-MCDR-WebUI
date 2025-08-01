@@ -860,7 +860,13 @@ document.addEventListener('alpine:init', () => {
             this.closeInstallConfirm();
             
             try {
-                const response = await fetch(`api/pim/plugin_versions_v2?plugin_id=${plugin.id}`);
+                // 构建API URL，包含插件ID和仓库URL
+                let apiUrl = `api/pim/plugin_versions_v2?plugin_id=${plugin.id}`;
+                if (this.selectedRepository) {
+                    apiUrl += `&repo_url=${encodeURIComponent(this.selectedRepository.url)}`;
+                }
+                
+                const response = await fetch(apiUrl);
                 const result = await response.json();
                 
                 if (result.success) {

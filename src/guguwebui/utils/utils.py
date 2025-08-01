@@ -266,7 +266,8 @@ def get_plugins_info(server_interface, detail=False):
                     "version_latest": str(latest_version) if latest_version else str(plugin_metadata.version) if hasattr(plugin_metadata, 'version') else "未知",
                     "status": "loaded" if str(plugin_metadata.id) in loaded_metadata else "disabled" if str(plugin_metadata.id) in disabled_plugins else "unloaded",
                     "path": plugin_name if plugin_name in unloaded_plugins + disabled_plugins else "",
-                    "config_file": bool(find_plugin_config_paths(str(plugin_metadata.id))) if hasattr(plugin_metadata, 'id') else False
+                    "config_file": bool(find_plugin_config_paths(str(plugin_metadata.id))) if hasattr(plugin_metadata, 'id') else False,
+                    "repository": None  # 初始化仓库信息为None，稍后通过API获取
                 })
         except Exception as e:
             # 如果插件信息解析失败，添加基本信息

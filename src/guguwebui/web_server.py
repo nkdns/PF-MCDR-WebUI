@@ -2271,6 +2271,7 @@ async def install_pim_plugin(request: Request, token_valid: bool = Depends(verif
 async def api_get_plugin_versions_v2(
     request: Request, 
     plugin_id: str,
+    repo_url: str = None,
     token_valid: bool = Depends(verify_token)
 ):
     """
@@ -2292,18 +2293,18 @@ async def api_get_plugin_versions_v2(
         server = app.state.server_interface
         
         # 记录请求日志
-        server.logger.debug(f"请求获取插件版本: {plugin_id}")
+        server.logger.debug(f"请求获取插件版本: {plugin_id}, 仓库: {repo_url}")
         
         # 首先尝试使用已初始化的 PluginInstaller 实例
         plugin_installer = getattr(app.state, "plugin_installer", None)
         if plugin_installer:
             server.logger.debug(f"使用已初始化的插件安装器获取版本信息")
-            versions = plugin_installer.get_plugin_versions(plugin_id)
+            versions = plugin_installer.get_plugin_versions(plugin_id, repo_url)
         else:
             # 如果没有预初始化的实例，创建临时安装器
             server.logger.info(f"使用临时创建的安装器获取版本信息")
             installer = create_installer(server)
-            versions = installer.get_plugin_versions(plugin_id)
+            versions = installer.get_plugin_versions(plugin_id, repo_url)
         
         # 记录结果
         if versions:
@@ -2326,6 +2327,176 @@ async def api_get_plugin_versions_v2(
         return JSONResponse(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             content={"success": False, "error": f"获取插件版本失败: {str(e)}"}
+        )
+
+# 添加新的API端点，用于获取插件所属的仓库信息
+@app.get("/api/pim/plugin_repository")
+async def api_get_plugin_repository(
+    request: Request, 
+    plugin_id: str,
+    token_valid: bool = Depends(verify_token)
+):
+    """
+    获取插件所属的仓库信息
+    """
+    if not token_valid:
+        return JSONResponse(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            content={"success": False, "error": "未登录或会话已过期"}
+        )
+    
+    if not plugin_id:
+        return JSONResponse(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            content={"success": False, "error": "缺少插件ID"}
+        )
+    
+    try:
+        server = app.state.server_interface
+        
+        # 记录请求日志
+        server.logger.debug(f"api_get_plugin_repository: Request for plugin_id={plugin_id}")
+        
+        # 获取PIM助手
+        pim_helper = getattr(app.state, "pim_helper", None)
+        if not pim_helper:
+            server.logger.warning("未找到PIM助手实例，无法获取插件仓库信息")
+            return JSONResponse(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                content={"success": False, "error": "PIM助手未初始化"}
+            )
+        
+        # 获取配置中定义的仓库URL
+        config = server.load_config_simple("config.json", DEFALUT_CONFIG, echo_in_console=False)
+        server.logger.debug(f"api_get_plugin_repository: Raw config: {config}")
+        
+        official_repo_url = config.get("mcdr_plugins_url", "https://api.mcdreforged.com/catalogue/everything_slim.json.xz")
+        configured_repos = [official_repo_url]  # 始终包含官方仓库
+        
+        # 添加内置的第三方仓库（与前端保持一致）
+        loose_repo_url = "https://looseprince.github.io/Plugin-Catalogue/plugins.json"
+        configured_repos.append(loose_repo_url)
+        server.logger.debug(f"api_get_plugin_repository: Added built-in repository URL: {loose_repo_url}")
+        
+        # 添加配置中的其他仓库URL
+        if "repositories" in config and isinstance(config["repositories"], list):
+            server.logger.debug(f"api_get_plugin_repository: Found repositories in config: {config['repositories']}")
+            for repo in config["repositories"]:
+                if isinstance(repo, dict) and "url" in repo:
+                    # 避免重复添加内置仓库
+                    if repo["url"] != loose_repo_url:
+                        configured_repos.append(repo["url"])
+                        server.logger.debug(f"api_get_plugin_repository: Added repository URL: {repo['url']}")
+        else:
+            server.logger.debug(f"api_get_plugin_repository: No repositories found in config or not a list")
+        
+        server.logger.debug(f"api_get_plugin_repository: Configured repositories: {configured_repos}")
+        
+        # 创建一个命令源模拟对象
+        class FakeSource:
+            def __init__(self, server):
+                self.server = server
+            
+            def reply(self, message):
+                if isinstance(message, str):
+                    self.server.logger.debug(f"[仓库查找] {message}")
+            
+            def get_server(self):
+                return self.server
+        
+        source = FakeSource(server)
+        
+        # 遍历所有配置的仓库，查找插件
+        # 优先检查官方仓库
+        official_found = False
+        third_party_found = None
+        
+        for repo_url in configured_repos:
+            server.logger.debug(f"api_get_plugin_repository: Checking repository: {repo_url}")
+            try:
+                # 获取仓库元数据
+                meta_registry = pim_helper.get_cata_meta(source, ignore_ttl=False, repo_url=repo_url)
+                if not meta_registry or not hasattr(meta_registry, 'get_plugin_data'):
+                    server.logger.debug(f"api_get_plugin_repository: Failed to get meta_registry or get_plugin_data for {repo_url}")
+                    continue
+                
+                # 查找插件
+                plugin_data = meta_registry.get_plugin_data(plugin_id)
+                if plugin_data:
+                    server.logger.debug(f"api_get_plugin_repository: Plugin {plugin_id} found in {repo_url}")
+                    # 找到插件
+                    if repo_url == official_repo_url:
+                        # 官方仓库中找到，直接返回
+                        repo_name = "官方仓库"
+                        server.logger.debug(f"在官方仓库中找到插件 {plugin_id}")
+                        
+                        return JSONResponse(
+                            content={
+                                "success": True,
+                                "repository": {
+                                    "name": repo_name,
+                                    "url": repo_url,
+                                    "is_official": True
+                                }
+                            }
+                        )
+                    else:
+                        # 第三方仓库中找到，记录但不立即返回
+                        if not third_party_found:
+                            repo_name = "第三方仓库"
+                            
+                            # 检查是否是内置仓库
+                            if repo_url == loose_repo_url:
+                                repo_name = "树梢的仓库"
+                            else:
+                                # 尝试从配置中获取仓库名称
+                                if "repositories" in config:
+                                    for repo in config["repositories"]:
+                                        if isinstance(repo, dict) and repo.get("url") == repo_url:
+                                            repo_name = repo.get("name", "第三方仓库")
+                                            break
+                            
+                            third_party_found = {
+                                "name": repo_name,
+                                "url": repo_url,
+                                "is_official": False
+                            }
+                            server.logger.debug(f"在第三方仓库 {repo_name} 中找到插件 {plugin_id}")
+                else:
+                    server.logger.debug(f"api_get_plugin_repository: Plugin {plugin_id} NOT found in {repo_url}")
+            except Exception as e:
+                server.logger.warning(f"检查仓库 {repo_url} 时出错: {e}")
+                import traceback
+                server.logger.debug(traceback.format_exc())
+                continue
+        
+        # 如果官方仓库中没有找到，但第三方仓库中有，返回第三方仓库信息
+        if third_party_found:
+            server.logger.debug(f"插件 {plugin_id} 在第三方仓库中找到: {third_party_found['name']}")
+            return JSONResponse(
+                content={
+                    "success": True,
+                    "repository": third_party_found
+                }
+            )
+        
+        # 未找到插件
+        server.logger.debug(f"未找到插件 {plugin_id} 所属的仓库")
+        return JSONResponse(
+            content={
+                "success": False,
+                "error": "未找到插件所属的仓库"
+            }
+        )
+        
+    except Exception as e:
+        server = app.state.server_interface
+        server.logger.error(f"获取插件仓库信息失败: {e}")
+        import traceback
+        server.logger.debug(traceback.format_exc())
+        return JSONResponse(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            content={"success": False, "error": f"获取插件仓库信息失败: {str(e)}"}
         )
 
 # Pip包管理相关模型

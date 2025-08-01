@@ -2275,22 +2275,18 @@ class PIMHelper:
         os.makedirs(cache_dir_path, exist_ok=True)
         return cache_dir_path
 
-    def get_plugin_versions(self, plugin_id: str) -> List[Dict[str, Any]]:
+    def get_plugin_versions(self, plugin_id: str, repo_url: str = None) -> List[Dict[str, Any]]:
         """
         获取指定插件的所有可用版本
         
         Args:
             plugin_id: 插件ID
+            repo_url: 可选的仓库URL，如果指定则从该仓库获取版本信息
             
         Returns:
             包含版本信息的列表，每个版本包含版本号、发布日期、下载次数等信息
         """
         try:
-            # 获取 PIMHelper 实例
-            global pim_helper
-            if pim_helper is None:
-                pim_helper = PIMHelper(self.server)
-            
             # 创建临时的命令源，用于记录消息
             class TempCommandSource:
                 def __init__(self, logger):
@@ -2305,16 +2301,18 @@ class PIMHelper:
             source = TempCommandSource(self.logger)
             
             # 使用 PIMHelper 的 get_cata_meta 方法获取元数据
-            # 忽略缓存TTL以强制刷新
-            cata_meta = pim_helper.get_cata_meta(source, ignore_ttl=True)
+            # 如果指定了仓库URL，则使用该仓库；否则使用默认仓库
+            # 优先使用本地缓存，不强制刷新
+            self.logger.debug(f"获取插件 {plugin_id} 版本信息，优先使用缓存，仓库: {repo_url or '默认仓库'}")
+            cata_meta = self.get_cata_meta(source, ignore_ttl=False, repo_url=repo_url)
             if not cata_meta:
-                self.logger.warning(f"无法获取仓库元数据")
+                self.logger.warning(f"无法获取仓库元数据: {repo_url or '默认仓库'}")
                 return []
             
             # 查找插件数据
             plugin_data = cata_meta.get_plugin_data(plugin_id)
-            if not plugin_data or not plugin_data.releases:
-                self.logger.debug(f"插件 {plugin_id} 无可用版本或不存在")
+            if not plugin_data:
+                self.logger.debug(f"插件 {plugin_id} 在仓库 {repo_url or '默认仓库'} 中不存在")
                 return []
             
             # 获取当前已安装版本（如果有）
@@ -2325,32 +2323,182 @@ class PIMHelper:
                     metadata = self.server.get_plugin_metadata(plugin_id)
                     installed_version = str(metadata.version) if metadata else 'unknown'
             
-            # 收集所有版本信息
+            # 检查是否有版本信息
             versions = []
-            for release in plugin_data.releases:
-                version = release.tag_name.lstrip('v') if release.tag_name else ""
-                if not version:
-                    continue
+            
+            # 如果是第三方仓库且没有releases信息，直接尝试从GitHub API获取
+            if repo_url and not plugin_data.releases:
+                self.logger.debug(f"第三方仓库 {repo_url} 中插件 {plugin_id} 无版本信息，直接尝试从GitHub API获取")
+                versions = self._get_versions_from_github(plugin_data, installed_version)
+            elif plugin_data.releases:
+                # 从仓库获取版本信息
+                for release in plugin_data.releases:
+                    version = release.tag_name.lstrip('v') if release.tag_name else ""
+                    if not version:
+                        continue
+                    
+                    version_info = {
+                        'version': version,
+                        'release_date': release.created_at,
+                        'download_count': release.download_count,
+                        'download_url': release.browser_download_url,
+                        'description': release.description,
+                        'prerelease': release.prerelease,
+                        'installed': version == installed_version
+                    }
+                    versions.append(version_info)
                 
-                version_info = {
-                    'version': version,
-                    'release_date': release.created_at,
-                    'download_count': release.download_count,
-                    'download_url': release.browser_download_url,
-                    'description': release.description,
-                    'prerelease': release.prerelease,
-                    'installed': version == installed_version
-                }
-                versions.append(version_info)
+                self.logger.debug(f"从仓库获取到插件 {plugin_id} 的 {len(versions)} 个版本")
+                
+                # 如果是第三方仓库，尝试从GitHub API补充版本信息和详细信息
+                if repo_url:
+                    self.logger.debug(f"第三方仓库 {repo_url} 中插件 {plugin_id} 版本数量({len(versions)})，尝试从GitHub API补充")
+                    github_versions = self._get_versions_from_github(plugin_data, installed_version)
+                    if github_versions:
+                        # 创建GitHub版本的映射，用于查找和补充
+                        github_version_map = {v['version']: v for v in github_versions}
+                        
+                        # 补充已有版本的详细信息
+                        supplemented_count = 0
+                        for version_info in versions:
+                            version = version_info['version']
+                            if version in github_version_map:
+                                github_info = github_version_map[version]
+                                # 补充缺失的字段
+                                supplemented = False
+                                if not version_info.get('description') and github_info.get('description'):
+                                    version_info['description'] = github_info['description']
+                                    supplemented = True
+                                if not version_info.get('download_count') and github_info.get('download_count'):
+                                    version_info['download_count'] = github_info['download_count']
+                                    supplemented = True
+                                if not version_info.get('size') and github_info.get('size'):
+                                    version_info['size'] = github_info['size']
+                                    supplemented = True
+                                if not version_info.get('file_name') and github_info.get('file_name'):
+                                    version_info['file_name'] = github_info['file_name']
+                                    supplemented = True
+                                if supplemented:
+                                    supplemented_count += 1
+                                    self.logger.debug(f"补充版本 {version} 的详细信息")
+                        
+                        if supplemented_count > 0:
+                            self.logger.debug(f"共补充了 {supplemented_count} 个版本的详细信息")
+                        
+                        # 添加GitHub中独有的版本
+                        existing_versions = {v['version'] for v in versions}
+                        added_count = 0
+                        for github_version in github_versions:
+                            if github_version['version'] not in existing_versions:
+                                versions.append(github_version)
+                                existing_versions.add(github_version['version'])
+                                added_count += 1
+                                self.logger.debug(f"添加新版本: {github_version['version']}")
+                        
+                        if added_count > 0:
+                            self.logger.debug(f"共添加了 {added_count} 个新版本")
+            else:
+                # 官方仓库或其他情况，尝试从GitHub API获取
+                self.logger.debug(f"插件 {plugin_id} 在仓库 {repo_url or '默认仓库'} 中无版本信息，尝试从GitHub API获取")
+                versions = self._get_versions_from_github(plugin_data, installed_version)
             
             # 按发布日期排序（最新的在前）
             versions.sort(key=lambda x: x.get('release_date', ''), reverse=True)
             
-            self.logger.debug(f"获取到插件 {plugin_id} 的 {len(versions)} 个版本")
+            self.logger.debug(f"最终获取到插件 {plugin_id} 的 {len(versions)} 个版本")
             return versions
             
         except Exception as e:
             self.logger.error(f"获取插件 {plugin_id} 版本信息失败: {e}")
+            import traceback
+            self.logger.debug(traceback.format_exc())
+            return []
+
+    def _get_versions_from_github(self, plugin_data: PluginData, installed_version: str = None) -> List[Dict[str, Any]]:
+        """
+        从GitHub API获取插件版本信息
+        
+        Args:
+            plugin_data: 插件数据
+            installed_version: 已安装的版本号
+            
+        Returns:
+            版本信息列表
+        """
+        try:
+            # 检查是否有GitHub链接
+            if not plugin_data.link or 'github.com' not in plugin_data.link:
+                self.logger.debug(f"插件 {plugin_data.id} 没有GitHub链接，无法从GitHub获取版本信息")
+                return []
+            
+            # 解析GitHub仓库信息
+            owner = plugin_data.repos_owner
+            repo = plugin_data.repos_name
+            
+            if not owner or not repo:
+                self.logger.debug(f"无法解析插件 {plugin_data.id} 的GitHub仓库信息")
+                return []
+            
+            # 调用GitHub API
+            api_url = f"https://api.github.com/repos/{owner}/{repo}/releases?access_token="
+            self.logger.debug(f"从GitHub API获取版本信息: {api_url}")
+            
+            response = requests.get(api_url, timeout=10)
+            if response.status_code != 200:
+                self.logger.warning(f"GitHub API请求失败: {response.status_code} - {response.text}")
+                return []
+            
+            releases_data = response.json()
+            if not releases_data:
+                self.logger.debug(f"GitHub仓库 {owner}/{repo} 没有发布版本")
+                return []
+            
+            versions = []
+            for release in releases_data:
+                version = release.get('tag_name', '').lstrip('v')
+                if not version:
+                    continue
+                
+                # 查找适合的下载文件
+                download_url = None
+                download_count = 0
+                size = 0
+                file_name = ""
+                
+                assets = release.get('assets', [])
+                for asset in assets:
+                    # 查找.py文件或.zip文件
+                    asset_name = asset.get('name', '').lower()
+                    if asset_name.endswith('.py') or asset_name.endswith('.zip'):
+                        download_url = asset.get('browser_download_url')
+                        download_count = asset.get('download_count', 0)
+                        size = asset.get('size', 0)
+                        file_name = asset.get('name', '')
+                        break
+                
+                # 如果没有找到合适的资源文件，使用zipball_url
+                if not download_url:
+                    download_url = release.get('zipball_url')
+                    file_name = f"{repo}-{version}.zip"
+                
+                version_info = {
+                    'version': version,
+                    'release_date': release.get('created_at', ''),
+                    'download_count': download_count,
+                    'download_url': download_url,
+                    'description': release.get('body', ''),
+                    'prerelease': release.get('prerelease', False),
+                    'installed': version == installed_version,
+                    'size': size,
+                    'file_name': file_name
+                }
+                versions.append(version_info)
+            
+            self.logger.debug(f"从GitHub API获取到插件 {plugin_data.id} 的 {len(versions)} 个版本")
+            return versions
+            
+        except Exception as e:
+            self.logger.error(f"从GitHub API获取插件 {plugin_data.id} 版本信息失败: {e}")
             import traceback
             self.logger.debug(traceback.format_exc())
             return []
@@ -2874,8 +3022,8 @@ class PIMHelper:
             source.reply(f"仓库信息不完整: {owner}/{repo}@{tag}")
             return None
         
-        # 构建GitHub API URL - 不使用token
-        api_url = f"https://api.github.com/repos/{owner}/{repo}/releases/tags/{tag}?access_token="
+        # 构建GitHub API URL - 获取所有releases
+        api_url = f"https://api.github.com/repos/{owner}/{repo}/releases?access_token="
         
         try:
             source.reply(f"正在通过GitHub API获取 {owner}/{repo} 的 {tag} 版本信息...")
@@ -2888,32 +3036,46 @@ class PIMHelper:
             response = requests.get(api_url, headers=headers, timeout=30)
             
             if response.status_code == 200:
-                release_data = response.json()
+                releases_data = response.json()
                 
-                # 遍历资产列表，查找mcdr文件
-                if 'assets' in release_data and release_data['assets']:
-                    for asset in release_data['assets']:
+                # 查找指定tag的release
+                target_release = None
+                self.logger.debug(f"在GitHub releases中查找tag: {tag}")
+                for release in releases_data:
+                    release_tag = release.get('tag_name', '')
+                    self.logger.debug(f"检查release tag: {release_tag}")
+                    # 尝试多种匹配方式
+                    if (release_tag == tag or 
+                        release_tag == f"v{tag}" or 
+                        release_tag == tag.lstrip('v') or
+                        f"v{release_tag.lstrip('v')}" == f"v{tag.lstrip('v')}"):
+                        target_release = release
+                        self.logger.debug(f"找到匹配的release: {release_tag}")
+                        break
+                
+                if target_release and 'assets' in target_release and target_release['assets']:
+                    # 遍历资产列表，查找mcdr文件
+                    for asset in target_release['assets']:
                         # 优先选择.mcdr或.pyz文件
                         if asset['name'].endswith('.mcdr') or asset['name'].endswith('.pyz'):
-                            # source.reply(f"找到插件下载链接: {asset['name']}")
                             source.reply(f"找到插件下载链接: {asset['name']}, URL: {asset['browser_download_url']}")
                             self.logger.debug(f"找到插件下载链接: {asset['name']}, URL: {asset['browser_download_url']}")
                             return asset['browser_download_url']
                     
                     # 如果没有找到.mcdr或.pyz文件，使用第一个资产
-                    source.reply(f"未找到.mcdr或.pyz文件，使用第一个资产: {release_data['assets'][0]['name']}")
-                    self.logger.debug(f"未找到.mcdr或.pyz文件，使用第一个资产: {release_data['assets'][0]['name']}")
-                    return release_data['assets'][0]['browser_download_url']
+                    source.reply(f"未找到.mcdr或.pyz文件，使用第一个资产: {target_release['assets'][0]['name']}")
+                    self.logger.debug(f"未找到.mcdr或.pyz文件，使用第一个资产: {target_release['assets'][0]['name']}")
+                    return target_release['assets'][0]['browser_download_url']
                 else:
-                    source.reply(f"发布 {tag} 没有可下载的资产")
-                    self.logger.warning(f"发布 {tag} 没有可下载的资产")
+                    source.reply(f"发布 {tag} 没有可下载的资产或不存在")
+                    self.logger.warning(f"发布 {tag} 没有可下载的资产或不存在")
             else:
                 source.reply(f"获取GitHub版本信息失败: HTTP {response.status_code}")
                 self.logger.error(f"获取GitHub版本信息失败: HTTP {response.status_code}, API URL: {api_url}")
                 
                 if response.status_code == 404:
-                    source.reply(f"版本标签 '{tag}' 可能不存在，请检查")
-                    self.logger.warning(f"版本标签 '{tag}' 可能不存在，仓库: {owner}/{repo}")
+                    source.reply(f"仓库 '{owner}/{repo}' 可能不存在，请检查")
+                    self.logger.warning(f"仓库 '{owner}/{repo}' 可能不存在")
                 elif response.status_code == 403:
                     source.reply("GitHub API请求次数已达上限，请稍后再试")
                     self.logger.warning("GitHub API请求次数已达上限")
@@ -2943,12 +3105,13 @@ class PluginInstaller:
         self.install_tasks = PluginInstaller._all_tasks  # 使用类共享的任务字典
         self._lock = PluginInstaller._global_lock  # 使用类共享的锁
         
-    def get_plugin_versions(self, plugin_id: str) -> List[Dict[str, Any]]:
+    def get_plugin_versions(self, plugin_id: str, repo_url: str = None) -> List[Dict[str, Any]]:
         """
         获取指定插件的所有可用版本
         
         Args:
             plugin_id: 插件ID
+            repo_url: 可选的仓库URL，如果指定则从该仓库获取版本信息
             
         Returns:
             包含版本信息的列表，每个版本包含版本号、发布日期、下载次数等信息
@@ -2960,7 +3123,7 @@ class PluginInstaller:
                 pim_helper = PIMHelper(self.server)
                 
             # 调用 PIMHelper 的 get_plugin_versions 方法
-            return pim_helper.get_plugin_versions(plugin_id)
+            return pim_helper.get_plugin_versions(plugin_id, repo_url)
         except Exception as e:
             self.logger.error(f"获取插件 {plugin_id} 版本信息失败: {e}")
             return []
@@ -3301,14 +3464,18 @@ class PluginInstaller:
                 
                 # 寻找指定版本
                 target_release = None
+                self.logger.debug(f"在仓库releases中查找版本: {version}")
                 for release in plugin_data.releases:
                     # 标准化版本号（去掉 'v' 前缀）
                     release_version = release.tag_name.lstrip('v') if release.tag_name else ""
                     version_to_match = version.lstrip('v') if version is not None else ""
                     
+                    self.logger.debug(f"检查release: {release.tag_name} -> {release_version}, 匹配: {version_to_match}")
+                    
                     # 精确匹配
                     if release_version == version_to_match:
                         target_release = release
+                        self.logger.debug(f"找到精确匹配: {release.tag_name}")
                         break
                 
                 # 如果没找到精确匹配，尝试前缀匹配
@@ -3321,7 +3488,59 @@ class PluginInstaller:
                             target_release = release
                             break
                 
-                # 如果仍未找到，使用最新版本
+                # 如果仍未找到，尝试通过GitHub API获取指定版本
+                if not target_release and version:
+                    source.reply(f"在仓库中未找到版本 '{version}'，尝试通过GitHub API获取...")
+                    
+                    # 确保有GitHub仓库信息
+                    if not plugin_data.repos_owner or not plugin_data.repos_name:
+                        repo_url = plugin_data.link or ""
+                        if repo_url and 'github.com' in repo_url:
+                            try:
+                                parts = repo_url.split('github.com/')[1].split('/')
+                                if len(parts) >= 2:
+                                    plugin_data.repos_owner = parts[0]
+                                    plugin_data.repos_name = parts[1]
+                            except:
+                                pass
+                    
+                    if plugin_data.repos_owner and plugin_data.repos_name:
+                        # 通过GitHub API获取指定版本的下载链接
+                        # 确保版本格式正确（添加v前缀如果不存在）
+                        github_version = version if version.startswith('v') else f"v{version}"
+                        self.logger.debug(f"调用GitHub API获取版本: {github_version}")
+                        download_url = local_pim_helper.get_github_release_asset_url(
+                            source,
+                            plugin_data.repos_owner,
+                            plugin_data.repos_name,
+                            github_version  # 使用正确格式的版本
+                        )
+                        
+                        if download_url:
+                            # 创建一个临时的ReleaseData对象
+                            from dataclasses import dataclass
+                            target_release = ReleaseData(
+                                name=version,
+                                tag_name=version,
+                                created_at="",
+                                description="",
+                                prerelease=False,
+                                url="",
+                                browser_download_url=download_url,
+                                download_count=0,
+                                size=0,
+                                file_name=download_url.split('/')[-1] if '/' in download_url else f"{plugin_id}.mcdr"
+                            )
+                            source.reply(f"通过GitHub API成功获取版本 '{version}' 的下载链接")
+                            self.logger.debug(f"创建了临时ReleaseData对象，下载链接: {download_url}")
+                        else:
+                            source.reply(f"无法通过GitHub API获取版本 '{version}'，将使用最新版本")
+                            target_release = plugin_data.get_latest_release()
+                    else:
+                        source.reply(f"无法获取GitHub仓库信息，将使用最新版本")
+                        target_release = plugin_data.get_latest_release()
+                
+                # 如果仍然没有找到，使用最新版本
                 if not target_release:
                     source.reply(f"未找到版本 '{version}'，将使用最新版本")
                     target_release = plugin_data.get_latest_release()
@@ -3368,8 +3587,10 @@ class PluginInstaller:
                 
                 # 如果没有下载链接，尝试通过GitHub API获取
                 if not target_release.browser_download_url:
+                    source.reply(f"版本 {target_release.tag_name} 没有下载链接，尝试通过GitHub API获取...")
+                    
+                    # 确保有GitHub仓库信息
                     if not plugin_data.repos_owner or not plugin_data.repos_name:
-                        # 尝试从URL解析仓库信息
                         repo_url = plugin_data.link or ""
                         if repo_url and 'github.com' in repo_url:
                             try:
@@ -3380,33 +3601,44 @@ class PluginInstaller:
                             except:
                                 pass
                     
-                    # 使用GitHub API获取下载链接
-                    browser_download_url = local_pim_helper.get_github_release_asset_url(
-                        source,
-                        plugin_data.repos_owner,
-                        plugin_data.repos_name,
-                        target_release.tag_name
-                    )
-                    
-                    if not browser_download_url:
-                        source.reply(f"无法获取插件 {plugin_id} 的下载链接")
+                    if plugin_data.repos_owner and plugin_data.repos_name:
+                        # 通过GitHub API获取下载链接
+                        download_url = local_pim_helper.get_github_release_asset_url(
+                            source,
+                            plugin_data.repos_owner,
+                            plugin_data.repos_name,
+                            target_release.tag_name
+                        )
+                        
+                        if download_url:
+                            # 更新下载链接
+                            target_release.browser_download_url = download_url
+                            source.reply(f"通过GitHub API成功获取版本 {target_release.tag_name} 的下载链接")
+                            
+                            # 更新文件名
+                            if '/' in download_url:
+                                filename = download_url.split('/')[-1]
+                                if filename:
+                                    target_release.file_name = filename
+                                    target_path = os.path.join(plugin_dir, filename)
+                        else:
+                            source.reply(f"无法通过GitHub API获取版本 {target_release.tag_name} 的下载链接")
+                            with self._lock:
+                                if task_id in self.install_tasks:
+                                    self.install_tasks[task_id]['status'] = 'failed'
+                                    self.install_tasks[task_id]['message'] = f"无法获取插件 {plugin_id} 的下载链接"
+                                    self.install_tasks[task_id]['end_time'] = time.time()
+                                    self.install_tasks[task_id]['all_messages'] = source.messages
+                            return
+                    else:
+                        source.reply(f"无法获取GitHub仓库信息")
                         with self._lock:
                             if task_id in self.install_tasks:
                                 self.install_tasks[task_id]['status'] = 'failed'
-                                self.install_tasks[task_id]['message'] = f"无法获取插件 {plugin_id} 的下载链接"
+                                self.install_tasks[task_id]['message'] = f"插件 {plugin_id} 没有下载链接且无法获取GitHub仓库信息"
                                 self.install_tasks[task_id]['end_time'] = time.time()
                                 self.install_tasks[task_id]['all_messages'] = source.messages
                         return
-                    
-                    # 更新下载链接
-                    target_release.browser_download_url = browser_download_url
-                    
-                    # 更新文件名
-                    if '/' in browser_download_url:
-                        filename = browser_download_url.split('/')[-1]
-                        if filename:
-                            target_release.file_name = filename
-                            target_path = os.path.join(plugin_dir, filename)
                 
                 # 下载插件
                 download_success = downloader.download(target_release.browser_download_url, target_path)

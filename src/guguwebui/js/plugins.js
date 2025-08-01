@@ -48,6 +48,7 @@ document.addEventListener('alpine:init', () => {
         currentVersionPlugin: null, 
         versions: [],
         installedVersion: null,
+        currentPluginRepository: null, // 添加当前插件仓库信息
 
         // 比较两个版本号的函数 
         // 返回值: 如果v1 > v2，返回1；如果v1 < v2，返回-1；如果相等，返回0
@@ -116,12 +117,41 @@ document.addEventListener('alpine:init', () => {
                             this.processingPlugins[plugin.id] = false;
                         }
                     });
+                    
+                    // 异步获取每个插件的仓库信息
+                    this.loadPluginRepositories();
                 }
             } catch (error) {
                 console.error('Error loading plugins:', error);
                 this.loading = false;
                 this.showNotificationMsg('加载插件列表失败', 'error');
             }
+        },
+        
+        // 添加获取插件仓库信息的函数
+        async loadPluginRepositories() {
+            // 为每个插件获取仓库信息
+            const promises = this.plugins.map(async (plugin) => {
+                if (plugin.id === 'guguwebui') return; // 跳过WebUI插件
+                
+                try {
+                    const repoResponse = await fetch(`api/pim/plugin_repository?plugin_id=${plugin.id}`);
+                    const repoResult = await repoResponse.json();
+                    
+                    if (repoResult.success && repoResult.repository) {
+                        plugin.repository = repoResult.repository.name;
+                        console.log(`插件 ${plugin.id} 所属仓库: ${repoResult.repository.name}`);
+                    } else {
+                        plugin.repository = null;
+                    }
+                } catch (error) {
+                    console.warn(`获取插件 ${plugin.id} 仓库信息失败:`, error);
+                    plugin.repository = null;
+                }
+            });
+            
+            // 并行执行所有请求
+            await Promise.all(promises);
         },
 
         async togglePlugin(pluginId, targetStatus) {
@@ -959,7 +989,32 @@ document.addEventListener('alpine:init', () => {
             this.showVersionModal = true;
             
             try {
-                const response = await fetch(`api/pim/plugin_versions_v2?plugin_id=${plugin.id}`);
+                // 首先获取插件所属的仓库信息
+                let repoUrl = null;
+                try {
+                    const repoResponse = await fetch(`api/pim/plugin_repository?plugin_id=${plugin.id}`);
+                    const repoResult = await repoResponse.json();
+                    
+                    if (repoResult.success && repoResult.repository) {
+                        repoUrl = repoResult.repository.url;
+                        this.currentPluginRepository = repoResult.repository; // 保存仓库信息
+                        console.log(`插件 ${plugin.id} 所属仓库: ${repoResult.repository.name} (${repoUrl})`);
+                    } else {
+                        console.log(`插件 ${plugin.id} 未找到所属仓库，使用默认仓库`);
+                        this.currentPluginRepository = null;
+                    }
+                } catch (error) {
+                    console.warn(`获取插件 ${plugin.id} 仓库信息失败:`, error);
+                    this.currentPluginRepository = null;
+                }
+                
+                // 构建版本API URL，包含插件ID和仓库URL
+                let apiUrl = `api/pim/plugin_versions_v2?plugin_id=${plugin.id}`;
+                if (repoUrl) {
+                    apiUrl += `&repo_url=${encodeURIComponent(repoUrl)}`;
+                }
+                
+                const response = await fetch(apiUrl);
                 const result = await response.json();
                 
                 if (result.success) {
@@ -1047,15 +1102,22 @@ document.addEventListener('alpine:init', () => {
                 }
                 
                 // 安装指定版本
+                const installData = {
+                    plugin_id: pluginId,
+                    version: version
+                };
+                
+                // 如果有仓库信息，添加到安装数据中
+                if (this.currentPluginRepository && this.currentPluginRepository.url) {
+                    installData.repo_url = this.currentPluginRepository.url;
+                }
+                
                 const response = await fetch('api/pim/install_plugin', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
                     },
-                    body: JSON.stringify({
-                        plugin_id: pluginId,
-                        version: version
-                    })
+                    body: JSON.stringify(installData)
                 });
                 
                 const result = await response.json();
@@ -1105,6 +1167,7 @@ document.addEventListener('alpine:init', () => {
             this.currentVersionPlugin = null;
             this.versions = [];
             this.versionError = false;
+            this.currentPluginRepository = null; // 清理仓库信息
         },
         
         // 格式化日期显示
@@ -1154,6 +1217,7 @@ document.addEventListener('alpine:init', () => {
             this.currentVersionPlugin = null;
             this.versions = [];
             this.installedVersion = null;
+            this.currentPluginRepository = null; // 初始化仓库信息
             
             // 每60秒自动刷新服务器状态
             setInterval(() => this.checkServerStatus(), 10001);
