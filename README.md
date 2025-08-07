@@ -18,6 +18,13 @@
 
 WebUI 文档：[WebUI 文档](https://pf-doc.pfingan.com/main/#PF-webui/)
 
+### 演示站
+
+> [!NOTE]
+> **演示站地址：** [https://looseprince.github.io/PF-MCDR-WebUI/](https://looseprince.github.io/PF-MCDR-WebUI/)
+> 
+> **重要说明：** 该演示站仅为UI界面和功能演示，**没有实际功能**。所有操作均为模拟演示，不会对真实的MCDR服务器产生任何影响。如需体验完整功能，请按照下方说明安装到您的MCDR服务器中。
+
 ### 主要功能
 > 为MCDR提供一个 `在线WebUI管理界面` 和 `MCDR插件管理` 和 `表单配置功能`（可选使用在线编辑器）。
 
