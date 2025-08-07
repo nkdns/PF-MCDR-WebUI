@@ -1,0 +1,8 @@
+{
+  "default_level": 1,
+  "owner": ["admin"],
+  "admin": ["moderator1", "moderator2"],
+  "helper": ["helper1", "helper2"],
+  "user": ["player1", "player2", "player3"],
+  "guest": ["visitor1"]
+}

@@ -1,0 +1,25 @@
+{
+  "status": "success",
+  "packages": [
+    {
+      "name": "requests",
+      "version": "2.31.0"
+    },
+    {
+      "name": "fastapi",
+      "version": "0.104.1"
+    },
+    {
+      "name": "uvicorn",
+      "version": "0.24.0"
+    },
+    {
+      "name": "jinja2",
+      "version": "3.1.2"
+    },
+    {
+      "name": "python-multipart",
+      "version": "0.0.6"
+    }
+  ]
+}

@@ -1,0 +1,11 @@
+{
+  "status": "success",
+  "completed": true,
+  "success": true,
+  "output": [
+    "正在安装包...",
+    "收集包信息...",
+    "下载包文件...",
+    "安装完成！"
+  ]
+}

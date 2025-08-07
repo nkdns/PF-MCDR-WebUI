@@ -1,0 +1,45 @@
+{
+  "status": "success",
+  "suggestions": [
+    {
+      "command": "!!MCDR plugin list",
+      "description": "列出所有已加载的插件"
+    },
+    {
+      "command": "!!MCDR plugin reload <plugin_name>",
+      "description": "重新加载指定插件"
+    },
+    {
+      "command": "!!MCDR plugin unload <plugin_name>",
+      "description": "卸载指定插件"
+    },
+    {
+      "command": "!!MCDR plugin load <plugin_name>",
+      "description": "加载指定插件"
+    },
+    {
+      "command": "!!MCDR permission list",
+      "description": "列出所有权限组"
+    },
+    {
+      "command": "!!MCDR permission add <player> <level>",
+      "description": "为玩家添加权限"
+    },
+    {
+      "command": "!!MCDR permission remove <player>",
+      "description": "移除玩家权限"
+    },
+    {
+      "command": "!!MCDR help",
+      "description": "显示MCDR帮助信息"
+    },
+    {
+      "command": "!!MCDR status",
+      "description": "显示MCDR状态信息"
+    },
+    {
+      "command": "!!MCDR stop",
+      "description": "停止MCDR服务器"
+    }
+  ]
+}

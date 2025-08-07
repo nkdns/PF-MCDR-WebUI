@@ -1,0 +1,859 @@
+<!DOCTYPE html>
+<html lang="zh-CN" class="h-full" x-data="{ darkMode: localStorage.getItem('darkMode') === 'true', sidebarOpen: window.innerWidth >= 1024 }" :class="{ 'dark': darkMode }">
+<head>
+    <meta charset="UTF-8">
+    
+    <title>MCDR WebUI - MCDR配置</title>
+    <!-- 主题预加载脚本 - 防止闪烁 -->
+    <script src="../js/theme-preload.js"></script>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Alpine.js -->
+    <script defer src="../js/alpine.min.js"></script>
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <!-- 自定义CSS -->
+    <link rel="stylesheet" href="../css/main.css">
+    <!-- MCDR配置JS -->
+    <script defer src="../js/mcdr-config.js"></script>
+    <!-- Tailwind配置 -->
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        primary: {
+                            50: '#f0f9ff',
+                            100: '#e0f2fe',
+                            200: '#bae6fd',
+                            300: '#7dd3fc',
+                            400: '#38bdf8',
+                            500: '#0ea5e9',
+                            600: '#0284c7',
+                            700: '#0369a1',
+                            800: '#075985',
+                            900: '#0c4a6e',
+                        },
+                    },
+                    animation: {
+                        'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+                        'float': 'float 3s ease-in-out infinite',
+                    },
+                    keyframes: {
+                        float: {
+                            '0%, 100%': { transform: 'translateY(0)' },
+                            '50%': { transform: 'translateY(-5px)' },
+                        }
+                    }
+                },
+            },
+        }
+    </script>
+</head>
+<body class="h-full bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100 transition-colors duration-300">
+    <div x-data="mcdrConfigApp()" x-init="init()">
+        <!-- 侧边栏 -->
+        <div id="sidebar" :class="{'translate-x-0': sidebarOpen, '-translate-x-full': !sidebarOpen}" class="sidebar-width fixed top-0 left-0 bottom-0 z-30 transform transition-transform duration-300 ease-in-out bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 shadow-lg overflow-y-auto">
+    <div class="p-4 flex flex-col h-full">
+        <!-- Logo -->
+        <div class="flex items-center justify-center mb-8 mt-2">
+            <div class="w-12 h-12 rounded-full bg-gradient-to-r from-blue-400 to-purple-500 flex items-center justify-center mr-3 shadow-lg">
+                <i class="fas fa-server text-white text-xl"></i>
+            </div>
+            <div>
+                <h1 class="text-xl font-bold text-gray-800 dark:text-white">MCDR WebUI</h1>
+                <p class="text-xs text-gray-500 dark:text-gray-400">服务器管理平台</p>
+            </div>
+        </div>
+        
+        <!-- 导航菜单 -->
+        <div class="flex-1 overflow-y-auto">
+            <nav class="space-y-1">
+                <a href="../index.html" class="menu-link">
+                    <i class="fas fa-home w-6 text-center"></i>
+                    <span class="ml-3">仪表盘</span>
+                </a>
+                
+                <a href="mcdr.html" class="menu-link active">
+                    <i class="fas fa-cogs w-6 text-center"></i>
+                    <span class="ml-3">MCDR 配置</span>
+                </a>
+                
+                <a href="mc.html" class="menu-link">
+                    <i class="fas fa-gamepad w-6 text-center"></i>
+                    <span class="ml-3">MC 服务器配置</span>
+                </a>
+                
+                <a href="plugins.html" class="menu-link">
+                    <i class="fas fa-puzzle-piece w-6 text-center"></i>
+                    <span class="ml-3">本地插件</span>
+                </a>
+                
+                <a href="online-plugins.html" class="menu-link">
+                    <i class="fas fa-cloud-download-alt w-6 text-center"></i>
+                    <span class="ml-3">在线插件</span>
+                </a>
+
+                <a href="terminal.html" class="menu-link">
+                    <i class="fas fa-terminal w-6 text-center"></i>
+                    <span class="ml-3">终端日志</span>
+                </a>
+                
+                <a href="gugubot.html" class="menu-link">
+                    <i class="fas fa-robot w-6 text-center"></i>
+                    <span class="ml-3">GUGUBot 管理</span>
+                </a>
+                
+                <a href="cq.html" class="menu-link">
+                    <i class="fas fa-comments w-6 text-center"></i>
+                    <span class="ml-3">CQ-QQ-API</span>
+                </a>
+            </nav>
+        </div>
+        
+        <!-- 底部功能区 -->
+        <div class="pt-4 mt-6 border-t border-gray-200 dark:border-gray-700">
+            <a href="settings.html" class="menu-link">
+                <i class="fas fa-cog w-6 text-center"></i>
+                <span class="ml-3">Web设置</span>
+            </a>
+            
+            <a href="about.html" class="menu-link">
+                <i class="fas fa-info-circle w-6 text-center"></i>
+                <span class="ml-3">关于</span>
+            </a>
+            
+            <button class="menu-link logout-btn w-full text-left">
+                <i class="fas fa-sign-out-alt w-6 text-center"></i>
+                <span class="ml-3">退出登录</span>
+            </button>
+        </div>
+    </div>
+</div>
+        
+        <!-- 主内容区 -->
+        <div id="main-content" :class="{'sidebar-open': sidebarOpen}" class="main-content min-h-screen transition-all duration-300">
+            <!-- 顶部导航栏 -->
+            <header id="header" class="bg-white dark:bg-gray-800 shadow-sm border-b border-gray-200 dark:border-gray-700 h-16 fixed top-0 right-0 left-0 z-20" :class="{'left-0': !sidebarOpen, 'left-[260px]': sidebarOpen}">
+                <div class="h-full px-4 sm:px-6 flex items-center justify-between">
+                    <!-- 左侧部分 -->
+                    <div class="flex items-center">
+                        <!-- 移动端菜单按钮 -->
+                        <button @click="sidebarOpen = !sidebarOpen" class="inline-flex items-center justify-center p-2 rounded-md text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 focus:outline-none transition-colors">
+                            <i :class="sidebarOpen ? 'fa-times' : 'fa-bars'" class="fas"></i>
+                        </button>
+                        
+                        <!-- 页面标题 -->
+                        <h1 class="ml-4 text-xl font-semibold text-gray-800 dark:text-white">MCDR 配置</h1>
+                        <span class="ml-3 px-2 py-1 bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-200 text-xs rounded-full font-medium">
+                            <i class="fas fa-flask mr-1"></i>
+                            演示模式
+                        </span>
+                    </div>
+                    
+                    <!-- 右侧部分 -->
+                    <div class="flex items-center space-x-4">
+                        <!-- 公告 -->
+                        <div class="nav-notice hidden md:flex items-center bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-300 px-3 py-1 rounded-full text-xs font-medium mr-2">
+                            <span class="nav-notice-text"><i class="fas fa-circle-notch fa-spin mr-1.5"></i> 加载公告中...</span>
+                        </div>
+                    
+                        <!-- 服务器状态 -->
+                        <div class="hidden sm:flex items-center">
+                            <div class="px-3 py-1 rounded-full text-xs font-medium flex items-center" :class="{
+                                'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300': serverStatus === 'online',
+                                'bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300': serverStatus === 'offline',
+                                'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300': serverStatus === 'error',
+                                'bg-gray-100 dark:bg-gray-900/30 text-gray-800 dark:text-gray-300': serverStatus === 'loading'
+                            }">
+                                <span x-show="serverStatus === 'online'" class="flex items-center">
+                                    <i class="fas fa-circle mr-1 text-xs"></i>
+                                    <span>在线</span>
+                                </span>
+                                <span x-show="serverStatus === 'offline'" class="flex items-center">
+                                    <i class="fas fa-circle mr-1 text-xs"></i>
+                                    <span>离线</span>
+                                </span>
+                                <span x-show="serverStatus === 'error'" class="flex items-center">
+                                    <i class="fas fa-exclamation-triangle mr-1"></i>
+                                    <span>错误</span>
+                                </span>
+                                <span x-show="serverStatus === 'loading'" class="flex items-center">
+                                    <i class="fas fa-circle-notch fa-spin mr-1 text-xs"></i>
+                                    <span>加载中</span>
+                                </span>
+                            </div>
+                        </div>
+                        
+                        <!-- 配置文件选择 -->
+                        <div class="hidden md:flex items-center space-x-2">
+                            <button 
+                                @click="loadConfig('config.yml')" 
+                                :class="{'active': activeConfigFile === 'config.yml'}"
+                                class="config-file-btn">
+                                config.yml
+                            </button>
+                            <button 
+                                @click="loadConfig('permission.yml')" 
+                                :class="{'active': activeConfigFile === 'permission.yml'}"
+                                class="config-file-btn">
+                                permission.yml
+                            </button>
+                        </div>
+                        
+                        <!-- 主题切换 -->
+                        <button @click="darkMode = !darkMode; localStorage.setItem('darkMode', darkMode)" class="inline-flex items-center justify-center p-2 rounded-md text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 focus:outline-none transition-colors">
+                            <i class="fas" :class="darkMode ? 'fa-sun' : 'fa-moon'"></i>
+                        </button>
+                        
+                        <!-- 用户信息 -->
+                        <div class="flex items-center">
+                            <div class="w-8 h-8 rounded-full bg-blue-500 flex items-center justify-center text-white user-avatar overflow-hidden">
+                                <i class="fas fa-user"></i>
+                            </div>
+                            <span class="ml-2 text-sm font-medium text-gray-700 dark:text-gray-300 js-username" x-text="userName || '用户'"></span>
+                        </div>
+                    </div>
+                </div>
+            </header>
+            
+            <!-- 主内容 -->
+            <main class="pt-24 px-4 sm:px-6 md:px-8 pb-8">
+                <!-- 移动端配置文件选择 -->
+                <div class="flex md:hidden items-center space-x-2 mb-6">
+                    <button 
+                        @click="loadConfig('config.yml')" 
+                        :class="{'active': activeConfigFile === 'config.yml'}"
+                        class="config-file-btn flex-1 py-2">
+                        config.yml
+                    </button>
+                    <button 
+                        @click="loadConfig('permission.yml')" 
+                        :class="{'active': activeConfigFile === 'permission.yml'}"
+                        class="config-file-btn flex-1 py-2">
+                        permission.yml
+                    </button>
+                </div>
+                
+                <!-- 顶部介绍信息 -->
+                <div class="about-list mb-6">
+                    <div class="about-item">
+                        <p class="font-medium">MCDReforged 的​​配置文件</p>
+                        <p class="text-gray-500 dark:text-gray-400 mt-1">检查 <a href="https://docs.mcdreforged.com/zh-cn/latest/configuration.html#basic-configuration" target="_blank" class="text-blue-600 dark:text-blue-400 hover:underline">官方文档</a> 了解详细信息</p>
+                        <div class="flex flex-wrap gap-2 mt-2">
+                            <a href="https://docs.mcdreforged.com/zh-cn/latest/configuration.html#basic-configuration" target="_blank" class="text-xs px-3 py-1.5 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded hover:bg-blue-200 dark:hover:bg-blue-800/30 transition">
+                                <i class="fas fa-book mr-1"></i>查看官方配置文档
+                            </a>
+                            <a href="https://mcdreforged.com/zh-CN" target="_blank" class="text-xs px-3 py-1.5 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 rounded hover:bg-green-200 dark:hover:bg-green-800/30 transition">
+                                <i class="fas fa-globe mr-1"></i>访问MCDReforged官网
+                            </a>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- CONFIG.YML 配置表单 -->
+                <div id="config-yml-form" x-show="activeConfigFile === 'config.yml'" class="config-section">
+                    <h2 class="config-title">MCDR基本配置</h2>
+                    
+                <div class="config-item">
+                        <label class="config-label" for="language">
+                            MCDR 用于输出信息的语言
+                            <span class="config-tip">默认值: en_us 可用选项: en_us, zh_cn</span>
+                        </label>
+                        <select id="language" class="config-select" data-key="language">
+                            <option value="en_us">英语 (en_us)</option>
+                            <option value="zh_cn">简体中文 (zh_cn)</option>
+                        </select>
+                    </div>
+                    
+                    <div class="config-item">
+                        <label class="config-label" for="working_directory">
+                            服务端的工作目录
+                            <span class="config-tip">默认值: server, 通常不建议修改</span>
+                        </label>
+                        <input type="text" id="working_directory" class="config-input w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white" data-key="working_directory">
+                    </div>
+                    
+                    <div class="config-item">
+                        <label class="config-label" for="start_command">
+                            启动服务端的控制台命令
+                            <span class="config-tip">将你的启动命令粘贴于此（如需使用 exec模式 请修改配置文件）</span>
+                        </label>
+                        <div class="about-list">
+                            <div class="about-item">
+                                <p>示例（fabric启动命令）: java -Xmx16G -jar fabric-server-launch.jar nogui</p>
+                                <p class="mt-1">如果命令中存在一些 YAML 不喜欢的字符（如 "、\）, 详细信息请查看: <a href="https://docs.mcdreforged.com/zh-cn/latest/configuration.html#start-command" target="_blank">官方文档</a></p>
+                            </div>
+                        </div>
+                        <input type="text" id="start_command" class="config-input w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white" data-key="start_command">
+                    </div>
+                    
+                    <div class="config-item">
+                        <label class="config-label" for="handler">
+                            服务端处理器
+                            <span class="config-tip">默认值: vanilla_handler</span>
+                        </label>
+                        <div class="about-list">
+                            <div class="about-item">
+                                <p>不同服务端有着截然不同的输出和命令。服务端处理器是用于在各种服务端之间进行处理的模块, 也是 MCDR 控制服务端的接入点</p>
+                                <p class="mt-1">处理器确定解析服务端标准输出文本的特定方法, 并使用正确的命令控制服务端</p>
+                                <p class="mt-1">目前支持的处理器:</p>
+                                <ul>
+                                    <li><span class="font-medium">vanilla_handler</span> - 用于 原版 / Carpet / Fabric 服务端。只要服务端足够原版就行</li>
+                                    <li><span class="font-medium">beta18_handler</span> - 用于低版本的原版服务端, 如 MC &lt; 1.7 的低版本, 甚至到 beta1.8 版本</li>
+                                    <li><span class="font-medium">bukkit_handler</span> - 用于 1.14 版本以下的 Bukkit / Spigot 服务端, 以及所有版本的 Paper / Mohistmc 服务端</li>
+                                    <li><span class="font-medium">bukkit14_handler</span> - 用于 1.14 或以上版本的 Bukkit / Spigot 服务端</li>
+                                    <li><span class="font-medium">forge_handler</span> - 用于 Forge 服务端</li>
+                                    <li><span class="font-medium">cat_server_handler</span> - 适用于 CatServer 服务端</li>
+                                    <li><span class="font-medium">arclight_handler</span> - 适用于 Arclight 服务端</li>
+                                    <li><span class="font-medium">bungeecord_handler</span> - 用于 BungeeCord 服务端</li>
+                                    <li><span class="font-medium">waterfall_handler</span> - 用于 WaterFall 服务端</li>
+                                    <li><span class="font-medium">velocity_handler</span> - 用于 Velocity 服务端</li>
+                                    <li><span class="font-medium">basic_handler</span> - 不进行任何分析并返回原始文本的处理器</li>
+                                </ul>
+                            </div>
+                        </div>
+                        <select id="handler" class="config-select" data-key="handler">
+                            <option value="vanilla_handler">原版处理器 (vanilla_handler)</option>
+                            <option value="beta18_handler">Beta 1.8处理器 (beta18_handler)</option>
+                            <option value="bukkit_handler">Bukkit处理器 (bukkit_handler)</option>
+                            <option value="bukkit14_handler">Bukkit 1.14+处理器 (bukkit14_handler)</option>
+                            <option value="forge_handler">Forge处理器 (forge_handler)</option>
+                            <option value="cat_server_handler">CatServer处理器 (cat_server_handler)</option>
+                            <option value="arclight_handler">Arclight处理器 (arclight_handler)</option>
+                            <option value="bungeecord_handler">BungeeCord处理器 (bungeecord_handler)</option>
+                            <option value="waterfall_handler">WaterFall处理器 (waterfall_handler)</option>
+                            <option value="velocity_handler">Velocity处理器 (velocity_handler)</option>
+                            <option value="basic_handler">基础处理器 (basic_handler)</option>
+                        </select>
+                    </div>
+                    
+                    <div class="config-item">
+                        <label class="config-label" for="encoding">
+                            MCDR -> Server (encoding)
+                            <span class="config-tip">默认值: utf8</span>
+                        </label>
+                        <div class="about-list">
+                            <div class="about-item">
+                                <p>encoding, decoding 用于编码消息至服务端标准输入 / 从服务端标准输出解码消息时, 所用的编码 / 解码格式</p>
+                            </div>
+                        </div>
+                        <select id="encoding" class="config-select" data-key="encoding">
+                            <option value="utf8">UTF-8</option>
+                            <option value="gbk">GBK</option>
+                        </select>
+                    </div>
+                    
+                    <div class="config-item">
+                        <label class="config-label" for="decoding">
+                            Server -> MCDR (decoding)
+                            <span class="config-tip">默认值: utf8</span>
+                        </label>
+                        <select id="decoding" class="config-select" data-key="decoding">
+                            <option value="utf8">UTF-8</option>
+                            <option value="gbk">GBK</option>
+                        </select>
+                    </div>
+                    
+                    <div class="config-item">
+                        <label class="config-label" for="plugin_directories">
+                            插件的目录列表
+                            <span class="config-tip">MCDR 搜索将要加载插件的目录列表, 不建议修改</span>
+                        </label>
+                        <input type="text" id="plugin_directories" class="config-input multiple-input w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white" data-key="plugin_directories">
+                    </div>
+                    
+                    <div class="config-item">
+                        <div class="flex items-center">
+                            <input type="checkbox" id="check_update" class="config-input h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:ring-offset-gray-800" data-key="check_update">
+                            <label class="config-label ml-2" for="check_update">
+                                检查更新
+                                <span class="config-tip">默认值: true, 开启后 MCDR 将会每隔 24 小时执行一次更新检测</span>
+                            </label>
+                        </div>
+                    </div>
+                    
+                    <div class="config-item">
+                        <div class="flex items-center">
+                            <input type="checkbox" id="advanced_console" class="config-input h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:ring-offset-gray-800" data-key="advanced_console">
+                            <label class="config-label ml-2" for="advanced_console">
+                                高级控制台
+                                <span class="config-tip">基于 prompt-toolkit, 如果你需要重定向 MCDR 的标准输入/输出, 或者仅仅是不喜欢这个高级控制台, 把它设置为 false (关闭)</span>
+                            </label>
+                        </div>
+                    </div>
+                    
+                    <div class="config-item">
+                        <div class="flex items-center">
+                            <input type="checkbox" id="disable_console_thread" class="config-input h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:ring-offset-gray-800" data-key="disable_console_thread">
+                            <label class="config-label ml-2" for="disable_console_thread">
+                                关闭启动控制台线程来处理控制台命令输入
+                                <span class="config-tip">请保持默认值, 除非你清楚地知道这是什么</span>
+                            </label>
+                        </div>
+                    </div>
+                    
+                    <div class="config-item">
+                        <div class="flex items-center">
+                            <input type="checkbox" id="disable_console_color" class="config-input h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:ring-offset-gray-800" data-key="disable_console_color">
+                            <label class="config-label ml-2" for="disable_console_color">
+                                关闭控制台样式
+                                <span class="config-tip">设置为 true 时, MCDR 将在所有消息打印到控制台之前删除所有控制台字体格式化程序代码</span>
+                            </label>
+                        </div>
+                    </div>
+                    
+                    <div class="config-item">
+                        <label class="config-label" for="custom_handlers">
+                            自定义 服务端处理器 类
+                            <span class="config-tip">多条请直接修改配置文件</span>
+                        </label>
+                        <div class="about-list">
+                            <div class="about-item">
+                                <p>自定义 服务端处理器 类所组成的列表。这些类应当是 ServerHandler 的子类</p>
+                                <p class="mt-1">这样你就可以在 handler 选项中通过处理器的名称指派其解析标准输出文本</p>
+                                <p class="mt-1">处理器名称通过 get_name() 方法定义</p>
+                                <p class="mt-1">详细信息请查看: <a href="https://docs.mcdreforged.com/zh-cn/latest/configuration.html#custom-handlers" target="_blank">官方文档</a></p>
+                            </div>
+                        </div>
+                        <input type="text" id="custom_handlers" class="config-input multiple-input w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white" data-key="custom_handlers">
+                    </div>
+                    
+                    <div class="config-item">
+                        <label class="config-label" for="custom_info_reactors">
+                            处理 info 对象的自定义 Info 响应器 类
+                        </label>
+                        <div class="about-list">
+                            <div class="about-item">
+                                <p>用于处理 info 对象的自定义 Info 响应器 类所组成的列表。这些类应当是 AbstractInfoReactor 的子类</p>
+                                <p class="mt-1">所有自定义 info 响应器都将注册到反应堆列表中, 以处理来自服务端的信息</p>
+                                <p class="mt-1">详细信息请查看: <a href="https://docs.mcdreforged.com/zh-cn/latest/configuration.html#custom-info-reactors" target="_blank">官方文档</a></p>
+                            </div>
+                        </div>
+                        <input type="text" id="custom_info_reactors" class="config-input multiple-input w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white" data-key="custom_info_reactors">
+                    </div>
+                    
+                    <div class="config-item">
+                        <label class="config-label" for="watchdog_threshold">
+                            <a href="https://docs.mcdreforged.com/zh-cn/latest/plugin_dev/watchdog.html" target="_blank">看门狗</a> 响应时间阈值
+                            <span class="config-tip">使得 看门狗 认为任务执行者线程已经未响应所需的时间间隔。将其设为 0 以禁用 看门狗</span>
+                        </label>
+                        <input type="text" id="watchdog_threshold" class="config-input w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white" data-key="watchdog_threshold">
+                    </div>
+                    
+                    <div class="config-item">
+                        <div class="flex items-center">
+                            <input type="checkbox" id="handler_detection" class="config-input h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:ring-offset-gray-800" data-key="handler_detection">
+                            <label class="config-label ml-2" for="handler_detection">
+                                服务端处理器检测逻辑
+                            </label>
+                        </div>
+                        <div class="about-list mt-2">
+                            <div class="about-item">
+                                <p>在默认情况下, MCDR 会在启动时弃用服务端处理器正确性检测, 并运行一段时间, 用于检测可能出现的 服务端处理器 配置错误</p>
+                                <p class="mt-1">将其设为 false 以禁用服务端处理器检测逻辑, 以减少部分 MCDR 开始运行时的性能损耗。这主要在性能分析 MCDR 时使用</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="config-item">
+                        <label class="config-label" for="catalogue_meta_cache_ttl">
+                            拉取的插件仓库元信息的缓存有效期
+                            <span class="config-tip">MCDR 会在缓存的有效期内, 使用缓存的元信息作为后续与插件仓库有关操作的数据源</span>
+                        </label>
+                        <input type="text" id="catalogue_meta_cache_ttl" class="config-input w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white" data-key="catalogue_meta_cache_ttl">
+                    </div>
+                    
+                    <div class="config-item">
+                        <label class="config-label" for="catalogue_meta_fetch_timeout">
+                            拉取插件仓库元信息的超时时间
+                            <span class="config-tip">单位: 秒</span>
+                        </label>
+                        <input type="text" id="catalogue_meta_fetch_timeout" class="config-input w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white" data-key="catalogue_meta_fetch_timeout">
+                    </div>
+                    
+                    <div class="config-item">
+                        <label class="config-label" for="catalogue_meta_url">
+                            重写用于拉取插件仓库元信息链接
+                            <span class="config-tip">指向的 "everything.json" 或 "everything_slim.json" 文件的 URL, 若它以 ".gz" (gzip) 或 ".xz" (lzma) 结尾，则将自动应用对应的解压操作</span>
+                        </label>
+                        <input type="text" id="catalogue_meta_url" class="config-input w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white" data-key="catalogue_meta_url">
+                    </div>
+                    
+                    <div class="config-item">
+                        <label class="config-label" for="plugin_download_url">
+                            重写插件文件的下载链接
+                            <span class="config-tip">应该是一个合法的 str.format() 字符串</span>
+                        </label>
+                        <div class="about-list">
+                            <div class="about-item">
+                                <p>详细信息请查看: <a href="https://docs.mcdreforged.com/zh-cn/latest/configuration.html#plugin-download-url" target="_blank">官方文档</a></p>
+                                <p class="mt-1">可用的变量:</p>
+                                <ul>
+                                    <li><span class="font-medium">{url}</span>: 原始的 GitHub asset 下载链接</li>
+                                    <li><span class="font-medium">{repos_owner}</span>: 插件的 GitHub 仓库的所有者名</li>
+                                    <li><span class="font-medium">{repos_name}</span>: 插件的 GitHub 仓库的仓库名</li>
+                                    <li><span class="font-medium">{tag}</span>: 与该 release 关联的 git tag 的名字</li>
+                                    <li><span class="font-medium">{asset_name}</span>: asset 的名字，即要被下载的插件文件的文件名</li>
+                                    <li><span class="font-medium">{asset_id}</span>: GitHub asset ID</li>
+                                </ul>
+                                <p class="mt-1">示例: <span class="text-gray-600 dark:text-gray-400">https://github.com/{repos_owner}/{repos_name}/releases/download/{tag}/{asset_name}</span></p>
+                            </div>
+                        </div>
+                        <input type="text" id="plugin_download_url" class="config-input w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white" data-key="plugin_download_url">
+                    </div>
+                    
+                    <div class="config-item">
+                        <label class="config-label" for="plugin_download_timeout">
+                            下载插件文件的超时时间
+                            <span class="config-tip">单位: 秒</span>
+                        </label>
+                        <input type="text" id="plugin_download_timeout" class="config-input w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white" data-key="plugin_download_timeout">
+                    </div>
+                    
+                    <div class="config-item">
+                        <label class="config-label" for="plugin_pip_install_extra_args">
+                            在插件安装过程中，安装插件依赖的 python 包时，传递给 pip 子进程的额外参数
+                        </label>
+                        <input type="text" id="plugin_pip_install_extra_args" class="config-input w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white" data-key="plugin_pip_install_extra_args">
+                    </div>
+                    
+                    <div class="config-item">
+                        <label class="config-label" for="http_proxy">
+                            http_proxy
+                        </label>
+                        <div class="about-list">
+                            <div class="about-item">
+                                <p>为 MCDR 所有对外的 HTTP 请求的代理设置</p>
+                                <p class="mt-1">如果打算配置，建议同时配置 http_proxy 和 https_proxy 的值</p>
+                                <p class="mt-1">取值举例:</p>
+                                <ul>
+                                    <li>http_proxy: 'http://127.0.0.1:1081'</li>
+                                    <li>https_proxy: 'http://127.0.0.1:1081'</li>
+                                    <li>或者</li>
+                                    <li>http_proxy: 'http://user:pass@192.168.0.1:8888'</li>
+                                    <li>https_proxy: 'http://user:pass@192.168.0.1:8888'</li>
+                                </ul>
+                            </div>
+                        </div>
+                        <input type="text" id="http_proxy" class="config-input w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white" data-key="http_proxy">
+                    </div>
+                    
+                    <div class="config-item">
+                        <label class="config-label" for="https_proxy">
+                            https_proxy
+                        </label>
+                        <input type="text" id="https_proxy" class="config-input w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white" data-key="https_proxy">
+                    </div>
+                    
+                    <!-- RCON配置 -->
+                    <div class="config-group">
+                        <h3 class="config-group-title">RCON</h3>
+                        <p class="text-sm text-gray-600 dark:text-gray-400 mb-4">若启用 rcon，则在 Minecraft rcon 服务端启动后，MCDR将自动连接到 rcon 服务端。这样插件就可以通过 rcon 向服务端发送命令</p>
+                        
+                        <div class="config-item-child">
+                            <div class="config-item">
+                                <div class="flex items-center">
+                                    <input type="checkbox" id="rcon.enable" class="config-input h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:ring-offset-gray-800" data-key="rcon.enable">
+                                    <label class="config-label ml-2" for="rcon.enable">
+                                        开启RCON
+                                        <span class="config-tip">默认值: false</span>
+                                    </label>
+                                </div>
+                            </div>
+                            
+                            <div class="config-item">
+                                <label class="config-label" for="rcon.address">
+                                    RCON连接地址
+                                    <span class="config-tip">默认值: 127.0.0.1</span>
+                                </label>
+                                <input type="text" id="rcon.address" class="config-input w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white" data-key="rcon.address">
+                            </div>
+                            
+                            <div class="config-item">
+                                <label class="config-label" for="rcon.port">
+                                    RCON端口
+                                    <span class="config-tip">默认值: 25575</span>
+                                </label>
+                                <input type="text" id="rcon.port" class="config-input w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white" data-key="rcon.port">
+                            </div>
+                            
+                            <div class="config-item">
+                                <label class="config-label" for="rcon.password">
+                                    RCON密码
+                                    <span class="config-tip">默认值: password</span>
+                                </label>
+                                <input type="text" id="rcon.password" class="config-input w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white" data-key="rcon.password">
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- 调试配置 -->
+                    <div class="config-group">
+                        <h3 class="config-group-title">调试日志模式</h3>
+                        <p class="text-sm text-gray-600 dark:text-gray-400 mb-4">将 all 设置为 true 以启用所有的调试输出。也可以打开部分选项，以启用某些调试输出。默认全部为 false (关闭)</p>
+                        
+                        <div class="config-item-child">
+                            <div class="config-item">
+                                <div class="flex items-center">
+                                    <input type="checkbox" id="debug.all" class="config-input h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:ring-offset-gray-800" data-key="debug.all">
+                                    <label class="config-label ml-2" for="debug.all">
+                                        全部
+                                        <span class="config-tip">开启所有调试日志输出</span>
+                                    </label>
+                                </div>
+                            </div>
+                            
+                            <div class="config-item">
+                                <div class="flex items-center">
+                                    <input type="checkbox" id="debug.mcdr" class="config-input h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:ring-offset-gray-800" data-key="debug.mcdr">
+                                    <label class="config-label ml-2" for="debug.mcdr">
+                                        MCDR 内部日志
+                                    </label>
+                                </div>
+                            </div>
+                            
+                            <div class="config-item">
+                                <div class="flex items-center">
+                                    <input type="checkbox" id="debug.handler" class="config-input h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:ring-offset-gray-800" data-key="debug.handler">
+                                    <label class="config-label ml-2" for="debug.handler">
+                                        服务端处理器日志
+                                    </label>
+                                </div>
+                            </div>
+                            
+                            <div class="config-item">
+                                <div class="flex items-center">
+                                    <input type="checkbox" id="debug.reactor" class="config-input h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:ring-offset-gray-800" data-key="debug.reactor">
+                                    <label class="config-label ml-2" for="debug.reactor">
+                                        Info 响应器日志
+                                    </label>
+                                </div>
+                            </div>
+                            
+                            <div class="config-item">
+                                <div class="flex items-center">
+                                    <input type="checkbox" id="debug.plugin" class="config-input h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:ring-offset-gray-800" data-key="debug.plugin">
+                                    <label class="config-label ml-2" for="debug.plugin">
+                                        插件日志
+                                    </label>
+                                </div>
+                            </div>
+                            
+                            <div class="config-item">
+                                <div class="flex items-center">
+                                    <input type="checkbox" id="debug.permission" class="config-input h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:ring-offset-gray-800" data-key="debug.permission">
+                                    <label class="config-label ml-2" for="debug.permission">
+                                        权限管理日志
+                                    </label>
+                                </div>
+                            </div>
+                            
+                            <div class="config-item">
+                                <div class="flex items-center">
+                                    <input type="checkbox" id="debug.command" class="config-input h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:ring-offset-gray-800" data-key="debug.command">
+                                    <label class="config-label ml-2" for="debug.command">
+                                        命令处理器日志
+                                    </label>
+                                </div>
+                            </div>
+                            
+                            <div class="config-item">
+                                <div class="flex items-center">
+                                    <input type="checkbox" id="debug.task_executor" class="config-input h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:ring-offset-gray-800" data-key="debug.task_executor">
+                                    <label class="config-label ml-2" for="debug.task_executor">
+                                        任务执行器日志
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="btn-save" @click="saveConfig('config.yml')">保存设置</div>
+                </div>
+
+                <!-- PERMISSION.YML 配置表单 -->
+                <div id="permission-yml-form" x-show="activeConfigFile === 'permission.yml'" class="config-section">
+                    <h2 class="config-title">MCDR权限配置</h2>
+                    <p class="text-sm text-gray-600 dark:text-gray-400 mb-6">MCDReforged 使用权限系统来控制不同用户执行命令和使用功能的权限</p>
+                    
+                    <div class="config-item">
+                        <label class="config-label" for="default_level">
+                            默认权限等级
+                            <span class="config-tip">新玩家的默认权限等级</span>
+                        </label>
+                        <select id="default_level" class="config-select" data-key="default_level">
+                            <option value="0">游客 (0级)</option>
+                            <option value="1">用户 (1级)</option>
+                            <option value="2">协助者 (2级)</option>
+                            <option value="3">管理员 (3级)</option>
+                            <option value="4">服主 (4级)</option>
+                        </select>
+                    </div>
+                    
+                    <div class="config-item">
+                        <label class="config-label" for="owner">
+                            服主(4级, owner)
+                            <span class="config-tip">最高权限, 所有者, 具有控制物理服务器的能力。例子: 服务器拥有者</span>
+                        </label>
+                        <div class="tags-input-wrapper" x-data="{ tags: [], inputValue: '' }" x-init="
+                            $watch('configData', () => {
+                                const value = getNestedValue(configData, 'owner');
+                                tags = Array.isArray(value) ? value.map(String) : [];
+                            }, { immediate: true })
+                        ">
+                            <div class="tags-input-container">
+                                <template x-for="(tag, index) in tags" :key="index">
+                                    <span class="tag-item">
+                                        <span x-text="tag"></span>
+                                        <span class="close" @click="tags.splice(index, 1)"><i class="fas fa-times"></i></span>
+                                    </span>
+                                </template>
+                                <input type="text" class="tags-input" x-model="inputValue" placeholder="输入玩家名称并按Enter添加" 
+                                    @keydown.enter.prevent="if(inputValue.trim() !== '') { tags.push(inputValue.trim()); inputValue = ''; }">
+                            </div>
+                            <input type="hidden" id="owner" class="config-input multiple-input" data-key="owner" 
+                                :value="JSON.stringify(tags)">
+                            <button type="button" class="add-tag-btn" @click="if(inputValue.trim() !== '') { tags.push(inputValue.trim()); inputValue = ''; }">
+                                <i class="fas fa-plus"></i>添加玩家
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="config-item">
+                        <label class="config-label" for="admin">
+                            管理员(3级, admin)
+                            <span class="config-tip">管理员, 拥有控制 MCDR 与 Minecraft 服务器的能力。例子: Minecraft 中的 OP</span>
+                        </label>
+                        <div class="tags-input-wrapper" x-data="{ tags: [], inputValue: '' }" x-init="
+                            $watch('configData', () => {
+                                const value = getNestedValue(configData, 'admin');
+                                tags = Array.isArray(value) ? value.map(String) : [];
+                            }, { immediate: true })
+                        ">
+                            <div class="tags-input-container">
+                                <template x-for="(tag, index) in tags" :key="index">
+                                    <span class="tag-item">
+                                        <span x-text="tag"></span>
+                                        <span class="close" @click="tags.splice(index, 1)"><i class="fas fa-times"></i></span>
+                                    </span>
+                                </template>
+                                <input type="text" class="tags-input" x-model="inputValue" placeholder="输入玩家名称并按Enter添加" 
+                                    @keydown.enter.prevent="if(inputValue.trim() !== '') { tags.push(inputValue.trim()); inputValue = ''; }">
+                            </div>
+                            <input type="hidden" id="admin" class="config-input multiple-input" data-key="admin" 
+                                :value="JSON.stringify(tags)">
+                            <button type="button" class="add-tag-btn" @click="if(inputValue.trim() !== '') { tags.push(inputValue.trim()); inputValue = ''; }">
+                                <i class="fas fa-plus"></i>添加玩家
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="config-item">
+                        <label class="config-label" for="helper">
+                            协助者(2级, helper)
+                            <span class="config-tip">助手, 可以协助管理员进行服务器管理。提示: QB是2级权限, 例子: 值得信赖的成员</span>
+                        </label>
+                        <div class="tags-input-wrapper" x-data="{ tags: [], inputValue: '' }" x-init="
+                            $watch('configData', () => {
+                                const value = getNestedValue(configData, 'helper');
+                                tags = Array.isArray(value) ? value.map(String) : [];
+                            }, { immediate: true })
+                        ">
+                            <div class="tags-input-container">
+                                <template x-for="(tag, index) in tags" :key="index">
+                                    <span class="tag-item">
+                                        <span x-text="tag"></span>
+                                        <span class="close" @click="tags.splice(index, 1)"><i class="fas fa-times"></i></span>
+                                    </span>
+                                </template>
+                                <input type="text" class="tags-input" x-model="inputValue" placeholder="输入玩家名称并按Enter添加" 
+                                    @keydown.enter.prevent="if(inputValue.trim() !== '') { tags.push(inputValue.trim()); inputValue = ''; }">
+                            </div>
+                            <input type="hidden" id="helper" class="config-input multiple-input" data-key="helper" 
+                                :value="JSON.stringify(tags)">
+                            <button type="button" class="add-tag-btn" @click="if(inputValue.trim() !== '') { tags.push(inputValue.trim()); inputValue = ''; }">
+                                <i class="fas fa-plus"></i>添加玩家
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="config-item">
+                        <label class="config-label" for="user">
+                            用户(1级, user)
+                            <span class="config-tip">普通玩家, 可以进行游戏。例子: 普通玩家</span>
+                        </label>
+                        <div class="tags-input-wrapper" x-data="{ tags: [], inputValue: '' }" x-init="
+                            $watch('configData', () => {
+                                const value = getNestedValue(configData, 'user');
+                                tags = Array.isArray(value) ? value.map(String) : [];
+                            }, { immediate: true })
+                        ">
+                            <div class="tags-input-container">
+                                <template x-for="(tag, index) in tags" :key="index">
+                                    <span class="tag-item">
+                                        <span x-text="tag"></span>
+                                        <span class="close" @click="tags.splice(index, 1)"><i class="fas fa-times"></i></span>
+                                    </span>
+                                </template>
+                                <input type="text" class="tags-input" x-model="inputValue" placeholder="输入玩家名称并按Enter添加" 
+                                    @keydown.enter.prevent="if(inputValue.trim() !== '') { tags.push(inputValue.trim()); inputValue = ''; }">
+                            </div>
+                            <input type="hidden" id="user" class="config-input multiple-input" data-key="user" 
+                                :value="JSON.stringify(tags)">
+                            <button type="button" class="add-tag-btn" @click="if(inputValue.trim() !== '') { tags.push(inputValue.trim()); inputValue = ''; }">
+                                <i class="fas fa-plus"></i>添加玩家
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="config-item">
+                        <label class="config-label" for="guest">
+                            游客(0级, guest)
+                            <span class="config-tip">游客, 只能查看服务器信息。例子: 最低权限, 如访客或者熊孩子</span>
+                        </label>
+                        <div class="tags-input-wrapper" x-data="{ tags: [], inputValue: '' }" x-init="
+                            $watch('configData', () => {
+                                const value = getNestedValue(configData, 'guest');
+                                tags = Array.isArray(value) ? value.map(String) : [];
+                            }, { immediate: true })
+                        ">
+                            <div class="tags-input-container">
+                                <template x-for="(tag, index) in tags" :key="index">
+                                    <span class="tag-item">
+                                        <span x-text="tag"></span>
+                                        <span class="close" @click="tags.splice(index, 1)"><i class="fas fa-times"></i></span>
+                                    </span>
+                                </template>
+                                <input type="text" class="tags-input" x-model="inputValue" placeholder="输入玩家名称并按Enter添加" 
+                                    @keydown.enter.prevent="if(inputValue.trim() !== '') { tags.push(inputValue.trim()); inputValue = ''; }">
+                            </div>
+                            <input type="hidden" id="guest" class="config-input multiple-input" data-key="guest" 
+                                :value="JSON.stringify(tags)">
+                            <button type="button" class="add-tag-btn" @click="if(inputValue.trim() !== '') { tags.push(inputValue.trim()); inputValue = ''; }">
+                                <i class="fas fa-plus"></i>添加玩家
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="btn-save" @click="saveConfig('permission.yml')">保存设置</div>
+                </div>
+                
+                <!-- 页脚 -->
+                <footer class="mt-12 text-center text-sm text-gray-500 dark:text-gray-400">
+                    <p>MCDR WebUI &copy; <span id="year"></span></p>
+                </footer>
+            </main>
+        </div>
+
+        <!-- 导入main.js -->
+        <script src="../js/main.js"></script>
+        <!-- 导入mcdr-config.js -->
+        <script src="../js/mcdr-config.js"></script>
+        
+        <!-- 公告脚本 -->
+        <script src="../js/notice.js"></script>
+    </div>
+</body>
+</html>

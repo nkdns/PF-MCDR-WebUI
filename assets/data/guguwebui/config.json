@@ -1,0 +1,16 @@
+{
+    "host": "127.0.0.1",
+    "port": 8000,
+    "super_admin_account": 1377820366,
+    "disable_other_admin": false,
+    "allow_temp_password": true,
+    "mcdr_plugins_url": "https://api.mcdreforged.com/catalogue/everything_slim.json.xz",
+    "repositories": [],
+    "ai_api_key": "sk-1231321a5dsdasldjaskldjkalsjdl",
+    "ai_model": "Pro/deepseek-ai/DeepSeek-V3",
+    "ai_api_url": "https://api.siliconflow.cn/v1/chat/completions",
+    "ssl_enabled": false,
+    "ssl_certfile": "./config/guguwebui/ssl/cert.pem",
+    "ssl_keyfile": "./config/guguwebui/ssl/key.pem",
+    "ssl_keyfile_password": ""
+}

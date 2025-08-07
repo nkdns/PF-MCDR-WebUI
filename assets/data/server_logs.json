@@ -1,0 +1,127 @@
+{
+  "status": "success",
+  "logs": [
+    {
+      "counter": 1,
+      "line_number": 1,
+      "content": "[INFO] Starting MCDR server...",
+      "timestamp": "2024-01-01 12:00:01"
+    },
+    {
+      "counter": 2,
+      "line_number": 2,
+      "content": "[INFO] MCDR version 2.0.0 loaded successfully",
+      "timestamp": "2024-01-01 12:00:02"
+    },
+    {
+      "counter": 3,
+      "line_number": 3,
+      "content": "[INFO] Loading plugins...",
+      "timestamp": "2024-01-01 12:00:03"
+    },
+    {
+      "counter": 4,
+      "line_number": 4,
+      "content": "[INFO] Plugin 'guguwebui' loaded successfully",
+      "timestamp": "2024-01-01 12:00:04"
+    },
+    {
+      "counter": 5,
+      "line_number": 5,
+      "content": "[INFO] Plugin 'permission_api' loaded successfully",
+      "timestamp": "2024-01-01 12:00:05"
+    },
+    {
+      "counter": 6,
+      "line_number": 6,
+      "content": "[INFO] Starting Minecraft server...",
+      "timestamp": "2024-01-01 12:00:06"
+    },
+    {
+      "counter": 7,
+      "line_number": 7,
+      "content": "[INFO] Minecraft server started successfully",
+      "timestamp": "2024-01-01 12:00:07"
+    },
+    {
+      "counter": 8,
+      "line_number": 8,
+      "content": "[INFO] Server running on port 25565",
+      "timestamp": "2024-01-01 12:00:08"
+    },
+    {
+      "counter": 9,
+      "line_number": 9,
+      "content": "[INFO] Player '演示用户' joined the game",
+      "timestamp": "2024-01-01 12:01:00"
+    },
+    {
+      "counter": 10,
+      "line_number": 10,
+      "content": "[INFO] Player '演示用户' executed command: /time set day",
+      "timestamp": "2024-01-01 12:01:30"
+    },
+    {
+      "counter": 11,
+      "line_number": 11,
+      "content": "[SUCCESS] Time set to day",
+      "timestamp": "2024-01-01 12:01:31"
+    },
+    {
+      "counter": 12,
+      "line_number": 12,
+      "content": "[WARN] High memory usage detected: 85%",
+      "timestamp": "2024-01-01 12:02:00"
+    },
+    {
+      "counter": 13,
+      "line_number": 13,
+      "content": "[INFO] Player '演示用户' executed command: /weather clear",
+      "timestamp": "2024-01-01 12:02:15"
+    },
+    {
+      "counter": 14,
+      "line_number": 14,
+      "content": "[SUCCESS] Weather changed to clear",
+      "timestamp": "2024-01-01 12:02:16"
+    },
+    {
+      "counter": 15,
+      "line_number": 15,
+      "content": "[INFO] Player '演示用户' left the game",
+      "timestamp": "2024-01-01 12:05:00"
+    },
+    {
+      "counter": 16,
+      "line_number": 16,
+      "content": "[INFO] Auto-save completed",
+      "timestamp": "2024-01-01 12:10:00"
+    },
+    {
+      "counter": 17,
+      "line_number": 17,
+      "content": "[INFO] Backup created: world_backup_20240101_121000.zip",
+      "timestamp": "2024-01-01 12:10:01"
+    },
+    {
+      "counter": 18,
+      "line_number": 18,
+      "content": "[ERROR] Failed to connect to external API: Connection timeout",
+      "timestamp": "2024-01-01 12:15:00"
+    },
+    {
+      "counter": 19,
+      "line_number": 19,
+      "content": "[WARN] Retrying connection in 30 seconds...",
+      "timestamp": "2024-01-01 12:15:01"
+    },
+    {
+      "counter": 20,
+      "line_number": 20,
+      "content": "[INFO] Connection restored successfully",
+      "timestamp": "2024-01-01 12:15:35"
+    }
+  ],
+  "total_lines": 20,
+  "current_end": 20
+}

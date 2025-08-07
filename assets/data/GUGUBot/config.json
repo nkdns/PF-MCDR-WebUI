@@ -1,0 +1,69 @@
+{
+    "admin_id": [
+        1377820366
+    ],
+    "admin_group_id": [
+        1122334455
+    ],
+    "group_id": [
+        878592206
+    ],
+    "friend_is_admin": false,
+    "is_main_server": true,
+    "server_name": "",
+    "custom_group_name": {
+        "726741344": "定制的显示群名",
+        "726741344": "定制的显示群名"
+    },
+    "bound_notice": true,
+    "command": {
+        "ban_word": true,
+        "execute_command": false,
+        "group_admin": false,
+        "ingame_key_word": true,
+        "key_word": true,
+        "list": true,
+        "mc": true,
+        "name": true,
+        "qq": true,
+        "shenhe": false,
+        "start_command": true,
+        "whitelist": false
+    },
+    "forward": {
+        "forward_other_bot": false,
+        "keep_raw_image_link": false,
+        "mc_achievement": true,
+        "mc_death": true,
+        "mc_to_qq": true,
+        "mc_to_qq_command": false,
+        "player_notice": false,
+        "bot_notice": false,
+        "qq_to_mc": true,
+        "show_group_notice": false,
+        "farward_other_bot": false
+    },
+    "command_prefix": "#",
+    "dict_address": {
+        "ban_word_dict": ".//config//GUGUbot//ban_word.json",
+        "bound_image_path": ".//config//GUGUbot//bound.jpg",
+        "customized_help_path": ".//config//GUGUbot//help_msg.json",
+        "extra_style_path": "",
+        "font_path": ".//config//GUGUbot//fonts//MicrosoftYaHei-01.ttf",
+        "key_word_dict": ".//config//GUGUbot//key_word.json",
+        "key_word_ingame_dict": ".//config//GUGUbot//key_word_ingame.json",
+        "shenhe_log": ".//config//GUGUbot//shenhe_log.txt",
+        "shenheman": ".//config//GUGUbot//shenheman.json",
+        "start_command_dict": ".//config//GUGUbot//start_commands.json",
+        "uuid_qqid": ".//config//GUGUbot//uuid_qqid.json",
+        "whitelist": ".//server//whitelist.json"
+    },
+    "font_limit": 150,
+    "max_bound": 1,
+    "random_template": true,
+    "show_message_in_console": true,
+    "style": "雌小鬼",
+    "style_cooldown": 0,
+    "whitelist_add_with_bound": true,
+    "whitelist_remove_with_leave": true
+}

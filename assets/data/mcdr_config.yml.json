@@ -1,0 +1,41 @@
+{
+  "language": "zh_cn",
+  "working_directory": "server",
+  "start_command": "java -Xmx16G -jar fabric-server-launch.jar nogui",
+  "handler": "vanilla_handler",
+  "encoding": "utf8",
+  "decoding": "utf8",
+  "plugin_directories": ["plugins", "plugins"],
+  "check_update": true,
+  "advanced_console": true,
+  "disable_console_thread": false,
+  "disable_console_color": false,
+  "custom_handlers": [],
+  "custom_info_reactors": [],
+  "watchdog_threshold": 30,
+  "handler_detection": true,
+  "catalogue_meta_cache_ttl": 3600,
+  "catalogue_meta_fetch_timeout": 10,
+  "catalogue_meta_url": "",
+  "plugin_download_url": "",
+  "plugin_download_timeout": 30,
+  "plugin_pip_install_extra_args": [],
+  "http_proxy": "",
+  "https_proxy": "",
+  "rcon": {
+    "enable": false,
+    "address": "127.0.0.1",
+    "port": 25575,
+    "password": "password"
+  },
+  "debug": {
+    "all": false,
+    "mcdr": false,
+    "handler": false,
+    "reactor": false,
+    "plugin": false,
+    "permission": false,
+    "command": false,
+    "task_executor": false
+  }
+}

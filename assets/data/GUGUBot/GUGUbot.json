@@ -1,0 +1,17 @@
+{
+    "123456789": ["demo_admin"],
+    "987654321": ["test_player1", "test_player2"],
+    "111222333": ["sample_user"],
+    "444555666": ["demo_builder"],
+    "777888999": ["test_moderator"],
+    "123123123": ["example_player"],
+    "456456456": ["demo_tester"],
+    "789789789": ["sample_builder"],
+    "321321321": ["test_admin"],
+    "654654654": ["演示用户1", "演示用户2"],
+    "987987987": ["sample_mod"],
+    "147147147": ["test_builder"],
+    "258258258": ["demo_player"],
+    "369369369": ["sample_admin"],
+    "159159159": ["test_user"]
+}

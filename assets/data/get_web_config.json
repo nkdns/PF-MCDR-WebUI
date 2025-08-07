@@ -1,0 +1,6 @@
+{
+  "status": "success",
+  "ai_api_key_configured": true,
+  "web_port": 8080,
+  "theme": "auto"
+}

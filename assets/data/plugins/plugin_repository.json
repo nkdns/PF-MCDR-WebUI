@@ -1,0 +1,14 @@
+[
+    {
+        "success": true,
+        "repository": {
+            "name": "官方仓库",
+            "url": "https://api.mcdreforged.com/catalogue/everything_slim.json.xz",
+            "is_official": true
+        }
+    },
+    {
+        "success":false,
+        "error":"未找到插件所属的仓库"
+    }
+]

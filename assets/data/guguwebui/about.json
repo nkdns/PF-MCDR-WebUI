@@ -1,0 +1,25 @@
+{
+    "gugubot_plugins": [
+        {
+            "id": "player_ip_logger",
+            "version": "1.1.0",
+            "name": "Player IP Logger",
+            "status": "loaded",
+            "path": ""
+        },
+        {
+            "id": "online_player_api",
+            "version": "1.0.0",
+            "name": "OnlinePlayerAPI",
+            "status": "loaded",
+            "path": ""
+        },
+        {
+            "id": "guguwebui",
+            "version": "1.4.3",
+            "name": "GUGU WebUI",
+            "status": "loaded",
+            "path": ""
+        }
+    ]
+}
