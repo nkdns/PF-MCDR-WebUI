@@ -399,9 +399,10 @@ def get_java_server_info():
 #============================================================#
 # move file from MCDR package
 def __copyFile(server, path, target_path): 
-    if "custom" in Path(target_path).parts and os.path.exists(target_path):
-        return
+    # 对 custom 目录默认不覆盖，但对 server_lang.json 例外：始终覆盖为最新
     target_path = Path(target_path)
+    if "custom" in target_path.parts and target_path.exists() and target_path.name != "server_lang.json":
+        return
     target_path.parent.mkdir(parents=True, exist_ok=True)
     with server.open_bundled_file(path) as file_handler: # extract from MCDR file
         message = file_handler.read()
