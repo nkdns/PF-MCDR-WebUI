@@ -385,46 +385,70 @@ def _normalize_lang_code(raw_code: str) -> str:
     return base
 
 def _parse_inline_and_prev_comments(file_text: str):
-    """Parse inline '# ...' or previous-line comments for top-level keys.
-    Returns: { key: comment_text }
-    规则：优先使用同行的注释；没有则用前一行的普通注释（非语言块/非管道格式）。
+    """解析 YAML 文件中的行内注释与前一行普通注释，支持子项并生成完整键路径。
+
+    返回: { full.key.path: comment_text }
+    规则：
+    - 优先使用同行注释（key: value # comment）
+    - 否则使用与键同缩进层级、紧邻上一行的普通注释（排除语言块头与管道格式）
+    - 根据缩进维护父子关系，生成如 command.ban_word 的完整键
     """
-    result = {}
-    last_plain_comment = None
+    result: dict[str, str] = {}
+    # (indent_level, key_name) 栈
+    indent_stack: list[tuple[int, str]] = []
+    # 记录“上一行普通注释”，按缩进层级区分
+    last_plain_comment_by_indent: dict[int, str] = {}
+
     for raw in file_text.splitlines():
         line = raw.rstrip("\n\r")
-        stripped = line.strip()
-        # 普通注释行（排除语言块与管道格式）
-        if stripped.startswith("#"):
-            content = stripped[1:].strip()
-            if content.startswith("[") and content.endswith("]"):
-                # 语言块头部，不作为普通注释
-                last_plain_comment = None
-                continue
-            # 形如: key | name::desc 的语言行，跳过
-            if "|" in content:
-                continue
-            # 记录普通注释
-            last_plain_comment = content
+        if not line.strip():
+            # 空行重置上一行注释，避免跨空行误关联
+            last_plain_comment_by_indent.clear()
             continue
 
-        # 匹配一级键: key: value 形式
-        m = re.match(r"^([A-Za-z0-9_]+)\s*:\s*(.*?)\s*(#\s*(.*))?$", line)
-        if m:
-            key = m.group(1)
-            inline_comment = m.group(4) or ""
-            if inline_comment:
-                result[key] = inline_comment.strip()
-                last_plain_comment = None
-            elif last_plain_comment:
-                result[key] = last_plain_comment.strip()
-                last_plain_comment = None
-            else:
-                # 无注释
-                pass
+        indent = len(line) - len(line.lstrip())  # 包含空格与\t
+        stripped = line.strip()
+
+        # 注释行
+        if stripped.startswith("#"):
+            content = stripped[1:].strip()
+            # 语言块头或语言定义行不计入普通注释
+            if content.startswith("[") and content.endswith("]"):
+                last_plain_comment_by_indent.pop(indent, None)
+                continue
+            if "|" in content:
+                # 形如 key | name::desc
+                continue
+            last_plain_comment_by_indent[indent] = content
+            continue
+
+        # YAML 键行：key: value（value 可为空）
+        logical = line.lstrip()
+        m = re.match(r"^([A-Za-z0-9_.-]+)\s*:\s*(.*?)\s*(#\s*(.*))?$", logical)
+        if not m:
+            # 不是键定义，清空普通注释缓存，避免串行
+            last_plain_comment_by_indent.clear()
+            continue
+
+        key = m.group(1)
+        inline_comment = (m.group(4) or "").strip()
+
+        # 维护缩进栈：当前缩进小于等于栈顶则出栈
+        while indent_stack and indent_stack[-1][0] >= indent:
+            indent_stack.pop()
+        indent_stack.append((indent, key))
+
+        full_key = ".".join(k for _, k in indent_stack)
+
+        if inline_comment:
+            result[full_key] = inline_comment
+            # 使用了行内注释，清除此缩进上的上一行注释
+            last_plain_comment_by_indent.pop(indent, None)
         else:
-            # 非键行，清空上一条普通注释的延续作用
-            last_plain_comment = None
+            prev = last_plain_comment_by_indent.pop(indent, None)
+            if prev:
+                result[full_key] = prev.strip()
+
     return result
 
 def _parse_language_blocks(file_text: str):
@@ -465,6 +489,43 @@ def _parse_language_blocks(file_text: str):
                     continue
     return lang_order, lang_map
 
+def _nest_translation_map(flat_map: dict) -> dict:
+    """将扁平 full.key 映射转换为带 children 容器的嵌套结构，避免与实际键名冲突。
+
+    输出节点结构：
+    {
+      key: {
+        "name": str|None,
+        "desc": str|None,
+        "children": { sub_key: same-structure }
+      }
+    }
+    """
+    nested: dict = {}
+    for full_key, meta in (flat_map or {}).items():
+        if not isinstance(full_key, str):
+            continue
+        parts = [p for p in full_key.split(".") if p]
+        if not parts:
+            continue
+        cur = nested
+        for i, part in enumerate(parts):
+            if part not in cur or not isinstance(cur.get(part), dict):
+                cur[part] = {"name": None, "desc": None, "children": {}}
+            # 最末级设置 name/desc
+            if i == len(parts) - 1 and isinstance(meta, dict):
+                if meta.get("name") is not None:
+                    cur[part]["name"] = meta.get("name")
+                if "desc" in meta:
+                    cur[part]["desc"] = meta.get("desc")
+            # 下降到 children 容器
+            next_children = cur[part].get("children")
+            if not isinstance(next_children, dict):
+                cur[part]["children"] = {}
+                next_children = cur[part]["children"]
+            cur = next_children
+    return nested
+
 def build_yaml_i18n_translations(yaml_config: dict, file_text: str) -> dict:
     """根据两种方案提取多语言注释并返回统一结构。
 
@@ -501,7 +562,7 @@ def build_yaml_i18n_translations(yaml_config: dict, file_text: str) -> dict:
     if not default_lang:
         default_lang = lang_order[0] if lang_order else "zh-CN"
 
-    # 构造 translations
+    # 构造 translations（扁平）
     translations = OrderedDict()
     # 先填充语言块
     for lang in lang_order:
@@ -516,19 +577,24 @@ def build_yaml_i18n_translations(yaml_config: dict, file_text: str) -> dict:
                     desc = str(arr[1])
             elif isinstance(arr, str):
                 name = arr
-            if name:
+            if name is not None:
                 translations[lang][key] = {"name": name, "desc": desc}
 
-    # 对默认语言：为缺失键补齐方案一注释
-    if default_lang not in translations:
-        translations[default_lang] = {}
+    # 使用方案一注释构建 zh-CN（扁平）。避免将中文注释混入默认语言（如 en-US）。
+    zh_cn_key = "zh-CN"
+    if zh_cn_key not in translations:
+        translations[zh_cn_key] = {}
     for key, text in inline_map.items():
-        if key not in translations[default_lang]:
+        if key not in translations[zh_cn_key]:
             if "::" in text:
                 name_part, desc_part = [i.strip() for i in text.split("::", 1)]
-                translations[default_lang][key] = {"name": name_part, "desc": desc_part}
+                translations[zh_cn_key][key] = {"name": name_part, "desc": desc_part}
             else:
-                translations[default_lang][key] = {"name": text.strip(), "desc": None}
+                translations[zh_cn_key][key] = {"name": text.strip(), "desc": None}
+
+    # 将每种语言的扁平键转换为嵌套结构
+    for lang in list(translations.keys()):
+        translations[lang] = _nest_translation_map(translations[lang])
 
     return {"default": default_lang, "translations": translations}
 
@@ -565,7 +631,7 @@ def build_json_i18n_translations(json_obj: dict) -> dict:
         ])
         return list(cands)
 
-    # 构建 translations
+    # 构建 translations（扁平）
     translations = OrderedDict()
     avail_keys = set(json_obj.keys())
     for target in ["zh-CN", "en-US"]:
@@ -609,6 +675,10 @@ def build_json_i18n_translations(json_obj: dict) -> dict:
                     translations[normalized][k] = {"name": name, "desc": desc}
                 elif isinstance(v, str):
                     translations[normalized][k] = {"name": v, "desc": None}
+
+    # 将扁平结构转换为嵌套结构
+    for lang in list(translations.keys()):
+        translations[lang] = _nest_translation_map(translations[lang])
 
     default_lang = "zh-CN" if "zh-CN" in translations else (next(iter(translations.keys())) if translations else "zh-CN")
     return {"default": default_lang, "translations": translations}

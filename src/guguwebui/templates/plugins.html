@@ -461,21 +461,8 @@
                                             <template x-for="(value, key) in configData || {}" :key="key">
                                                 <div class="form-group">
                                                     <label class="block text-sm font-medium mb-1 config-label">
-                                                        <!-- 如果有翻译且是数组 (标题+副标题) -->
-                                                        <template x-if="configTranslations[key] && Array.isArray(configTranslations[key]) && configTranslations[key].length > 0">
-                                                            <div>
-                                                                <span class="config-label-title" x-text="configTranslations[key][0] || key"></span>
-                                                                <span x-show="configTranslations[key].length > 1" class="config-label-subtitle" x-text="configTranslations[key][1]"></span>
-                                                            </div>
-                                                        </template>
-                                                        <!-- 如果有翻译且是字符串 (只有标题) -->
-                                                        <template x-if="configTranslations[key] && !Array.isArray(configTranslations[key])">
-                                                            <span class="config-label-title" x-text="configTranslations[key]"></span>
-                                                        </template>
-                                                        <!-- 没有翻译时显示原键名 -->
-                                                        <template x-if="!configTranslations[key]">
-                                                            <span class="config-label-title" x-text="key"></span>
-                                                        </template>
+                                                        <span class="config-label-title" x-text="trTitle(configTranslations, key)"></span>
+                                                        <span class="config-label-subtitle" x-text="trSubtitle(configTranslations, key)"></span>
                                                     </label>
                                                     
                                                     <!-- 根据值类型渲染不同控件 -->
@@ -500,32 +487,8 @@
                                                             <template x-for="(nestedValue, nestedKey) in value" :key="nestedKey">
                                                                 <div class="form-group">
                                                                     <label class="block text-sm font-medium mb-1 config-label">
-                                                                        <!-- 尝试使用嵌套路径查找翻译，如果找不到，尝试直接使用属性名 -->
-                                                                        <template x-if="configTranslations[key + '.' + nestedKey] && Array.isArray(configTranslations[key + '.' + nestedKey])">
-                                                                            <div>
-                                                                                <span class="config-label-title" x-text="configTranslations[key + '.' + nestedKey][0] || nestedKey"></span>
-                                                                                <span x-show="configTranslations[key + '.' + nestedKey].length > 1" class="config-label-subtitle" x-text="configTranslations[key + '.' + nestedKey][1]"></span>
-                                                                            </div>
-                                                                        </template>
-                                                                        <template x-if="configTranslations[key + '.' + nestedKey] && !Array.isArray(configTranslations[key + '.' + nestedKey])">
-                                                                            <span class="config-label-title" x-text="configTranslations[key + '.' + nestedKey]"></span>
-                                                                        </template>
-                                                                        
-                                                                        <!-- 尝试直接使用属性名查找翻译（如果嵌套路径没有找到） -->
-                                                                        <template x-if="!configTranslations[key + '.' + nestedKey] && configTranslations[nestedKey] && Array.isArray(configTranslations[nestedKey])">
-                                                                            <div>
-                                                                                <span class="config-label-title" x-text="configTranslations[nestedKey][0] || nestedKey"></span>
-                                                                                <span x-show="configTranslations[nestedKey].length > 1" class="config-label-subtitle" x-text="configTranslations[nestedKey][1]"></span>
-                                                                            </div>
-                                                                        </template>
-                                                                        <template x-if="!configTranslations[key + '.' + nestedKey] && configTranslations[nestedKey] && !Array.isArray(configTranslations[nestedKey])">
-                                                                            <span class="config-label-title" x-text="configTranslations[nestedKey]"></span>
-                                                                        </template>
-                                                                        
-                                                                        <!-- 如果没有找到任何翻译 -->
-                                                                        <template x-if="!configTranslations[key + '.' + nestedKey] && !configTranslations[nestedKey]">
-                                                                            <span class="config-label-title" x-text="nestedKey"></span>
-                                                                        </template>
+                                                                        <span class="config-label-title" x-text="trTitle(configTranslations, nestedKey, key)"></span>
+                                                                        <span class="config-label-subtitle" x-text="trSubtitle(configTranslations, nestedKey, key)"></span>
                                                                     </label>
                                                                     
                                                                     <!-- 处理嵌套对象中的值类型 -->
@@ -594,32 +557,8 @@
                                                                             <template x-for="(thirdValue, thirdKey) in nestedValue" :key="thirdKey">
                                                                                 <div class="form-group">
                                                                                     <label class="block text-sm font-medium mb-1 config-label">
-                                                                                        <!-- 尝试使用嵌套路径查找翻译 -->
-                                                                                        <template x-if="configTranslations[key + '.' + nestedKey + '.' + thirdKey] && Array.isArray(configTranslations[key + '.' + nestedKey + '.' + thirdKey])">
-                                                                                            <div>
-                                                                                                <span class="config-label-title" x-text="configTranslations[key + '.' + nestedKey + '.' + thirdKey][0] || thirdKey"></span>
-                                                                                                <span x-show="configTranslations[key + '.' + nestedKey + '.' + thirdKey].length > 1" class="config-label-subtitle" x-text="configTranslations[key + '.' + nestedKey + '.' + thirdKey][1]"></span>
-                                                                                            </div>
-                                                                                        </template>
-                                                                                        <template x-if="configTranslations[key + '.' + nestedKey + '.' + thirdKey] && !Array.isArray(configTranslations[key + '.' + nestedKey + '.' + thirdKey])">
-                                                                                            <span class="config-label-title" x-text="configTranslations[key + '.' + nestedKey + '.' + thirdKey]"></span>
-                                                                                        </template>
-                                                                                        
-                                                                                        <!-- 尝试直接使用属性名查找翻译 -->
-                                                                                        <template x-if="!configTranslations[key + '.' + nestedKey + '.' + thirdKey] && configTranslations[thirdKey] && Array.isArray(configTranslations[thirdKey])">
-                                                                                            <div>
-                                                                                                <span class="config-label-title" x-text="configTranslations[thirdKey][0] || thirdKey"></span>
-                                                                                                <span x-show="configTranslations[thirdKey].length > 1" class="config-label-subtitle" x-text="configTranslations[thirdKey][1]"></span>
-                                                                                            </div>
-                                                                                        </template>
-                                                                                        <template x-if="!configTranslations[key + '.' + nestedKey + '.' + thirdKey] && configTranslations[thirdKey] && !Array.isArray(configTranslations[thirdKey])">
-                                                                                            <span class="config-label-title" x-text="configTranslations[thirdKey]"></span>
-                                                                                        </template>
-                                                                                        
-                                                                                        <!-- 如果没有找到任何翻译 -->
-                                                                                        <template x-if="!configTranslations[key + '.' + nestedKey + '.' + thirdKey] && !configTranslations[thirdKey]">
-                                                                                            <span class="config-label-title" x-text="thirdKey"></span>
-                                                                                        </template>
+                                                                                        <span class="config-label-title" x-text="trTitle(configTranslations, thirdKey, key + '.' + nestedKey)"></span>
+                                                                                        <span class="config-label-subtitle" x-text="trSubtitle(configTranslations, thirdKey, key + '.' + nestedKey)"></span>
                                                                                     </label>
                                                                                     
                                                                                     <!-- 处理第三层对象中的值类型 -->
@@ -690,32 +629,8 @@
                                                                                             <template x-for="(fourthValue, fourthKey) in thirdValue" :key="fourthKey">
                                                                                                 <div class="form-group">
                                                                                                     <label class="block text-sm font-medium mb-1 config-label">
-                                                                                                        <!-- 尝试使用嵌套路径查找翻译 -->
-                                                                                                        <template x-if="configTranslations[key + '.' + nestedKey + '.' + thirdKey + '.' + fourthKey] && Array.isArray(configTranslations[key + '.' + nestedKey + '.' + thirdKey + '.' + fourthKey])">
-                                                                                                            <div>
-                                                                                                                <span class="config-label-title" x-text="configTranslations[key + '.' + nestedKey + '.' + thirdKey + '.' + fourthKey][0] || fourthKey"></span>
-                                                                                                                <span x-show="configTranslations[key + '.' + nestedKey + '.' + thirdKey + '.' + fourthKey].length > 1" class="config-label-subtitle" x-text="configTranslations[key + '.' + nestedKey + '.' + thirdKey + '.' + fourthKey][1]"></span>
-                                                                                                            </div>
-                                                                                                        </template>
-                                                                                                        <template x-if="configTranslations[key + '.' + nestedKey + '.' + thirdKey + '.' + fourthKey] && !Array.isArray(configTranslations[key + '.' + nestedKey + '.' + thirdKey + '.' + fourthKey])">
-                                                                                                            <span class="config-label-title" x-text="configTranslations[key + '.' + nestedKey + '.' + thirdKey + '.' + fourthKey]"></span>
-                                                                                                        </template>
-                                                                                                        
-                                                                                                        <!-- 尝试直接使用属性名查找翻译 -->
-                                                                                                        <template x-if="!configTranslations[key + '.' + nestedKey + '.' + thirdKey + '.' + fourthKey] && configTranslations[fourthKey] && Array.isArray(configTranslations[fourthKey])">
-                                                                                                            <div>
-                                                                                                                <span class="config-label-title" x-text="configTranslations[fourthKey][0] || fourthKey"></span>
-                                                                                                                <span x-show="configTranslations[fourthKey].length > 1" class="config-label-subtitle" x-text="configTranslations[fourthKey][1]"></span>
-                                                                                                            </div>
-                                                                                                        </template>
-                                                                                                        <template x-if="!configTranslations[key + '.' + nestedKey + '.' + thirdKey + '.' + fourthKey] && configTranslations[fourthKey] && !Array.isArray(configTranslations[fourthKey])">
-                                                                                                            <span class="config-label-title" x-text="configTranslations[fourthKey]"></span>
-                                                                                                        </template>
-                                                                                                        
-                                                                                                        <!-- 如果没有找到任何翻译 -->
-                                                                                                        <template x-if="!configTranslations[key + '.' + nestedKey + '.' + thirdKey + '.' + fourthKey] && !configTranslations[fourthKey]">
-                                                                                                            <span class="config-label-title" x-text="fourthKey"></span>
-                                                                                                        </template>
+                                                                                                        <span class="config-label-title" x-text="trTitle(configTranslations, fourthKey, key + '.' + nestedKey + '.' + thirdKey)"></span>
+                                                                                                        <span class="config-label-subtitle" x-text="trSubtitle(configTranslations, fourthKey, key + '.' + nestedKey + '.' + thirdKey)"></span>
                                                                                                     </label>
                                                                                                     
                                                                                                     <!-- 处理第四层对象中的值类型 -->

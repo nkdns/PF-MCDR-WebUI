@@ -69,9 +69,10 @@ document.addEventListener('alpine:init', () => {
         configFiles: [], // 存储从API获取的原始文件信息 { path: string, type: string, id: string, label: string }
         configPaths: {}, // 存储 tabId 到 文件路径的映射
         configTabs: [], // 存储选项卡信息 { id: string, label: string }
+        mainConfigPath: null, // 记录 config.yml 路径，便于语言切换时刷新翻译
 
-        // 翻译数据 (动态加载)
-        translations: {}, // 存储配置项的翻译
+        // 翻译数据 (动态加载，嵌套结构)
+        translations: {}, // { key: { name, desc, subKey: {...} } }
         
         // 初始化
         async init() {
@@ -79,12 +80,15 @@ document.addEventListener('alpine:init', () => {
                 // 语言包
                 await this.loadLangDict();
                 // 监听语言切换
-                document.addEventListener('i18n:changed', (e) => {
+                document.addEventListener('i18n:changed', async (e) => {
                     const nextLang = (e && e.detail && e.detail.lang) ? e.detail.lang : this.guguLang;
                     this.guguLang = nextLang.toLowerCase().startsWith('zh') ? 'zh-CN' : 'en-US';
-                    this.loadLangDict().then(() => {
-                        this.rebuildTabLabels();
-                    });
+                    await this.loadLangDict();
+                    this.rebuildTabLabels();
+                    // 先刷新主配置翻译（依赖 this.guguLang）
+                    await this.reloadMainTranslations();
+                    // 强制触发UI更新
+                    this.$nextTick(() => {});
                 });
 
                 // 加载用户信息
@@ -198,7 +202,8 @@ document.addEventListener('alpine:init', () => {
                 // 初始化配置文件列表
                 this.configFiles = [];
                 
-                // 添加主配置
+                // 记录并添加主配置
+                this.mainConfigPath = mainConfigPath;
                 this.configFiles.push({
                     path: mainConfigPath,
                     type: 'yml',
@@ -392,35 +397,59 @@ document.addEventListener('alpine:init', () => {
             return tab ? tab.label : tabId;
         },
         
-        // 获取配置项名称 (优先使用翻译)
-        getConfigName(key) {
-            // 尝试从翻译中获取，translations[key] 可能是字符串或数组
-            const translation = this.translations[key];
-            if (typeof translation === 'string') {
-                return translation;
-            } else if (Array.isArray(translation) && translation.length > 0) {
-                return translation[0]; // 取数组第一个元素作为名称
+        // 根据路径获取翻译节点（支持 children 容器）
+        getTransNode(path) {
+            if (!path) return null;
+            const parts = String(path).split('.').filter(Boolean);
+            let cursor = this.translations;
+            for (let i = 0; i < parts.length; i++) {
+                const part = parts[i];
+                if (!cursor || typeof cursor !== 'object' || !(part in cursor)) return null;
+                const node = cursor[part]; // 期望为节点对象 { name, desc, children }
+                if (i === parts.length - 1) {
+                    // 最后一个段，返回节点对象
+                    return node && typeof node === 'object' ? node : null;
+                }
+                // 进入下一层的容器
+                if (!node || typeof node !== 'object' || !node.children || typeof node.children !== 'object') return null;
+                cursor = node.children;
             }
-            return key; // 没有翻译则返回原始 key
+            return null;
+        },
+        // 获取配置项名称 (支持父路径)
+        getConfigName(key, parentPath = null) {
+            const fullPath = parentPath ? `${parentPath}.${key}` : key;
+            const node = this.getTransNode(fullPath) || this.getTransNode(key);
+            if (node && node.name != null) return String(node.name);
+            return key;
         },
         
-        // 获取配置项描述 (优先使用翻译)
-        getConfigDescription(key) {
-            // 尝试从翻译中获取，取数组第二个元素作为描述
-             const translation = this.translations[key];
-            if (Array.isArray(translation) && translation.length > 1) {
-                return translation[1];
-            }
-            return ''; // 没有翻译或翻译格式不对则返回空
+        // 获取配置项描述 (支持父路径)
+        getConfigDescription(key, parentPath = null) {
+            const fullPath = parentPath ? `${parentPath}.${key}` : key;
+            const node = this.getTransNode(fullPath) || this.getTransNode(key);
+            if (node && node.desc != null) return String(node.desc);
+            return '';
         },
 
-        // 归一化后端返回的多语言结构（YAML/JSON）到旧格式
+        // 重新加载主配置 config.yml 的翻译（用于语言切换）
+        async reloadMainTranslations() {
+            try {
+                if (!this.mainConfigPath) return;
+                const res = await fetch(`api/load_config?path=${encodeURIComponent(this.mainConfigPath)}&translation=true`);
+                if (!res.ok) return;
+                const data = await res.json();
+                this.translations = this.normalizeAnyTranslations(data);
+            } catch (e) {
+                console.warn('reloadMainTranslations failed:', e);
+            }
+        },
+
+        // 归一化后端返回的多语言结构到嵌套结构（不再扁平化）
         normalizeAnyTranslations(data) {
             if (!data || typeof data !== 'object') return {};
-            // YAML/JSON 统一结构 { default, translations }
             if ('translations' in data) {
-                const translations = data.translations || {};
-                const ui = (window.I18n && window.I18n.lang) || 'zh-CN';
+                const ui = this.guguLang || (window.I18n && window.I18n.lang) || 'zh-CN';
                 const norm = (s) => {
                     if (!s) return 'zh-CN';
                     const t = String(s).replace('_', '-');
@@ -429,25 +458,13 @@ document.addEventListener('alpine:init', () => {
                     if (t.includes('-')) { const [a,b] = t.split('-',2); return `${a.toLowerCase()}-${(b||'').toUpperCase()}`; }
                     return t;
                 };
+                const translations = data.translations || {};
                 const current = norm(ui);
                 const def = norm(data.default || 'zh-CN');
                 const pick = translations[current] || translations[def] || translations[Object.keys(translations)[0]] || {};
-                const out = {};
-                Object.keys(pick).forEach(k => {
-                    const entry = pick[k];
-                    if (Array.isArray(entry)) {
-                        out[k] = entry.length > 1 ? [String(entry[0]||''), String(entry[1]||'')] : String(entry[0]||'');
-                    } else if (entry && typeof entry === 'object') {
-                        const name = entry.name != null ? String(entry.name) : '';
-                        const desc = entry.desc != null ? String(entry.desc) : undefined;
-                        out[k] = desc != null ? [name, desc] : name;
-                    } else if (typeof entry === 'string') {
-                        out[k] = entry;
-                    }
-                });
-                return out;
+                // pick 是嵌套结构，直接返回
+                return pick;
             }
-            // 旧格式：直接返回
             return data;
         },
         

@@ -36,40 +36,44 @@ document.addEventListener('alpine:init', () => {
             const ui = (this.pluginsLang || (window.I18n && window.I18n.lang) || 'zh-CN');
             return this.normalizeLangCode(ui);
         },
+        // 新版：保持嵌套结构，返回当前语言的树
         normalizeYamlTranslations(data) {
             if (!data || typeof data !== 'object') return {};
-            // 兼容旧格式：直接返回
             if (!('translations' in data) || !('default' in data)) return data;
             const translations = data.translations || {};
             const defaultLang = this.normalizeLangCode(data.default || 'zh-CN');
             const currentLang = this.getCurrentUiLang();
-            const firstLang = Object.keys(translations)[0] || defaultLang;
-            const pickLang = (lang) => translations[this.normalizeLangCode(lang)] || null;
-            const curMap = pickLang(currentLang);
-            const defMap = pickLang(defaultLang);
-            const fstMap = pickLang(firstLang);
-            const out = {};
-            const keys = new Set([
-                ...Object.keys(curMap || {}),
-                ...Object.keys(defMap || {}),
-                ...Object.keys(fstMap || {})
-            ]);
-            for (const k of keys) {
-                const entry = (curMap && curMap[k]) || (defMap && defMap[k]) || (fstMap && fstMap[k]);
-                if (!entry) continue;
-                if (Array.isArray(entry)) {
-                    const name = entry[0] != null ? String(entry[0]) : '';
-                    const desc = entry[1] != null ? String(entry[1]) : undefined;
-                    out[k] = desc != null ? [name, desc] : name;
-                } else if (typeof entry === 'object') {
-                    const name = entry.name != null ? String(entry.name) : '';
-                    const desc = entry.desc != null ? String(entry.desc) : undefined;
-                    out[k] = desc != null ? [name, desc] : name;
-                } else if (typeof entry === 'string') {
-                    out[k] = entry;
+            const pick = translations[currentLang] || translations[defaultLang] || translations[Object.keys(translations)[0]] || {};
+            return pick; // 嵌套结构
+        },
+        // 嵌套翻译助手（支持 children 容器）
+        trNode(dict, path) {
+            if (!dict || !path) return null;
+            const parts = String(path).split('.').filter(Boolean);
+            let cursor = dict;
+            for (let i = 0; i < parts.length; i++) {
+                const part = parts[i];
+                if (!cursor || typeof cursor !== 'object' || !(part in cursor)) return null;
+                const node = cursor[part]; // 期望为 { name, desc, children }
+                if (i === parts.length - 1) {
+                    return node && typeof node === 'object' ? node : null;
                 }
+                if (!node || typeof node !== 'object' || !node.children || typeof node.children !== 'object') return null;
+                cursor = node.children;
             }
-            return out;
+            return null;
+        },
+        trTitle(dict, key, parentPath = null) {
+            const full = parentPath ? `${parentPath}.${key}` : key;
+            const node = this.trNode(dict, full) || this.trNode(dict, key);
+            if (node && node.name != null) return String(node.name);
+            return key;
+        },
+        trSubtitle(dict, key, parentPath = null) {
+            const full = parentPath ? `${parentPath}.${key}` : key;
+            const node = this.trNode(dict, full) || this.trNode(dict, key);
+            if (node && node.desc != null) return String(node.desc);
+            return '';
         },
         async loadLangDict() {
             const stored = localStorage.getItem('lang') || (navigator.language || 'zh-CN');

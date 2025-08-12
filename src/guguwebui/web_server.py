@@ -1139,6 +1139,44 @@ async def load_config(request: Request, path:str, translation:bool = False, type
 
     # Translation for xxx.json -> xxx_lang.json
     if translation:
+        # 为前端提供兼容：将扁平的 translations[lang]["a.b"] 结构转换为嵌套结构
+        def _nest_translation_map_simple(flat_map: dict) -> dict:
+            nested = {}
+            for full_key, meta in (flat_map or {}).items():
+                if not isinstance(full_key, str):
+                    continue
+                parts = [p for p in full_key.split(".") if p]
+                if not parts:
+                    continue
+                cur = nested
+                for i, part in enumerate(parts):
+                    if part not in cur or not isinstance(cur.get(part), dict):
+                        cur[part] = {"name": None, "desc": None, "children": {}}
+                    if i == len(parts) - 1 and isinstance(meta, dict):
+                        if "name" in meta:
+                            cur[part]["name"] = meta.get("name")
+                        if "desc" in meta:
+                            cur[part]["desc"] = meta.get("desc")
+                    if "children" not in cur[part] or not isinstance(cur[part]["children"], dict):
+                        cur[part]["children"] = {}
+                    cur = cur[part]["children"]
+            return nested
+
+        def _maybe_nest_i18n(i18n: dict) -> dict:
+            try:
+                if not isinstance(i18n, dict):
+                    return i18n
+                trans = i18n.get("translations", {})
+                # 若 zh-CN 缺失但存在中文注释生成内容，则确保添加
+                if isinstance(trans, dict):
+                    for lang, mapping in list(trans.items()):
+                        # 扁平 -> 嵌套
+                        if isinstance(mapping, dict) and any(isinstance(k, str) and "." in k for k in mapping.keys()):
+                            trans[lang] = _nest_translation_map_simple(mapping)
+                i18n["translations"] = trans
+                return i18n
+            except Exception:
+                return i18n
         if path.suffix in [".json", ".properties"]:
             path = path.with_stem(f"{path.stem}_lang")
         if path.suffix == ".properties":
@@ -1178,7 +1216,7 @@ async def load_config(request: Request, path:str, translation:bool = False, type
                 try:
                     # 支持JSON多语言结构：统一输出 default+translations
                     i18n = build_json_i18n_translations(config)
-                    return JSONResponse(i18n)
+                    return JSONResponse(_maybe_nest_i18n(i18n))
                 except Exception:
                     pass
             # 原有行为回退
@@ -1188,7 +1226,7 @@ async def load_config(request: Request, path:str, translation:bool = False, type
         elif path.suffix in [".yml", ".yaml"]:
             try:
                 i18n = build_yaml_i18n_translations(config, raw_text or "")
-                return JSONResponse(i18n)
+                return JSONResponse(_maybe_nest_i18n(i18n))
             except Exception:
                 # 回退到原有的注释抽取
                 return JSONResponse(get_comment(config))

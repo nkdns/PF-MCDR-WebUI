@@ -572,7 +572,7 @@
                                                      <template x-for="(subValue, subKey) in value" :key="subKey">
                                                          <div class="config-item p-3 border dark:border-gray-600 rounded mb-2">
                                                              <div class="flex justify-between items-center mb-2">
-                                                                 <span class="text-sm font-medium text-gray-700 dark:text-gray-300" x-text="getConfigName(subKey) + ' (' + subKey + ')'"></span>
+                                                                 <span class="text-sm font-medium text-gray-700 dark:text-gray-300" x-text="getConfigName(subKey, key) + ' (' + subKey + ')'"></span>
                                                                  <button 
                                                                      class="p-1 text-xs text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300"
                                                                      @click="removeMainConfigObjectProperty(key, subKey)"
@@ -581,7 +581,7 @@
                                                                      <i class="fas fa-trash-alt"></i>
                                                                  </button>
                                                              </div>
-                                                              <div class="config-description text-xs mb-2" x-text="getConfigDescription(subKey)"></div>
+                                                               <div class="config-description text-xs mb-2" x-text="getConfigDescription(subKey, key)"></div>
                                                              <!-- 子对象的输入控件 -->
                                                              <template x-if="typeof subValue === 'boolean'">
                                                                  <label class="toggle-switch">
