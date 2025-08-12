@@ -20,9 +20,13 @@ document.addEventListener('alpine:init', () => {
             const stored = localStorage.getItem('lang') || (navigator.language || 'zh-CN');
             this.opLang = stored.toLowerCase().startsWith('zh') ? 'zh-CN' : 'en-US';
             try {
-                const resp = await fetch(`lang/${this.opLang}.json`, { cache: 'no-cache' });
-                if (resp.ok) {
-                    this.opDict = await resp.json();
+                if (window.I18n && typeof window.I18n.fetchLangDict === 'function') {
+                    this.opDict = await window.I18n.fetchLangDict(this.opLang);
+                } else {
+                    const resp = await fetch(`lang/${this.opLang}.json`, { cache: 'no-cache' });
+                    if (resp.ok) {
+                        this.opDict = await resp.json();
+                    }
                 }
             } catch (e) {
                 console.warn('online-plugins loadLangDict failed:', e);

@@ -26,9 +26,13 @@ async function loadNoticeLangDict() {
     const stored = localStorage.getItem('lang') || (navigator.language || 'zh-CN');
     noticeLang = stored.toLowerCase().startsWith('zh') ? 'zh-CN' : 'en-US';
     try {
-        const resp = await fetch(`lang/${noticeLang}.json`, { cache: 'no-cache' });
-        if (resp.ok) {
-            noticeDict = await resp.json();
+        if (window.I18n && typeof window.I18n.fetchLangDict === 'function') {
+            noticeDict = await window.I18n.fetchLangDict(noticeLang);
+        } else {
+            const resp = await fetch(`lang/${noticeLang}.json`, { cache: 'no-cache' });
+            if (resp.ok) {
+                noticeDict = await resp.json();
+            }
         }
     } catch (e) {
         // 忽略，保持空字典，使用 fallback

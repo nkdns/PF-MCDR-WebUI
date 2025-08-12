@@ -21,9 +21,13 @@ function appData() {
             const stored = localStorage.getItem('lang') || (navigator.language || 'zh-CN');
             this.aboutLang = stored.toLowerCase().startsWith('zh') ? 'zh-CN' : 'en-US';
             try {
-                const resp = await fetch(`lang/${this.aboutLang}.json`, { cache: 'no-cache' });
-                if (resp.ok) {
-                    this.aboutDict = await resp.json();
+                if (window.I18n && typeof window.I18n.fetchLangDict === 'function') {
+                    this.aboutDict = await window.I18n.fetchLangDict(this.aboutLang);
+                } else {
+                    const resp = await fetch(`lang/${this.aboutLang}.json`, { cache: 'no-cache' });
+                    if (resp.ok) {
+                        this.aboutDict = await resp.json();
+                    }
                 }
             } catch (e) {
                 console.warn('about loadLangDict failed:', e);

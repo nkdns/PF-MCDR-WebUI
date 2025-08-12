@@ -17,11 +17,15 @@ document.addEventListener('alpine:init', () => {
             const stored = localStorage.getItem('lang') || (navigator.language || 'zh-CN');
             this.indexLang = stored.toLowerCase().startsWith('zh') ? 'zh-CN' : 'en-US';
             try {
-                const resp = await fetch(`lang/${this.indexLang}.json`, { cache: 'no-cache' });
-                if (resp.ok) {
-                    this.indexDict = await resp.json();
+                if (window.I18n && typeof window.I18n.fetchLangDict === 'function') {
+                    this.indexDict = await window.I18n.fetchLangDict(this.indexLang);
                 } else {
-                    this.indexDict = {};
+                    const resp = await fetch(`lang/${this.indexLang}.json`, { cache: 'no-cache' });
+                    if (resp.ok) {
+                        this.indexDict = await resp.json();
+                    } else {
+                        this.indexDict = {};
+                    }
                 }
             } catch (e) {
                 console.warn('index loadLangDict failed:', e);

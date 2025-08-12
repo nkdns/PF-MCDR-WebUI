@@ -35,9 +35,13 @@ document.addEventListener('alpine:init', () => {
             const stored = localStorage.getItem('lang') || (navigator.language || 'zh-CN');
             this.mcLang = stored.toLowerCase().startsWith('zh') ? 'zh-CN' : 'en-US';
             try {
-                const resp = await fetch(`lang/${this.mcLang}.json`, { cache: 'no-cache' });
-                if (resp.ok) {
-                    this.mcDict = await resp.json();
+                if (window.I18n && typeof window.I18n.fetchLangDict === 'function') {
+                    this.mcDict = await window.I18n.fetchLangDict(this.mcLang);
+                } else {
+                    const resp = await fetch(`lang/${this.mcLang}.json`, { cache: 'no-cache' });
+                    if (resp.ok) {
+                        this.mcDict = await resp.json();
+                    }
                 }
             } catch (e) {
                 // 忽略，保持空字典，使用 fallback

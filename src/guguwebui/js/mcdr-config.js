@@ -20,11 +20,15 @@ window.mcdrConfigApp = function() {
             const stored = localStorage.getItem('lang') || (navigator.language || 'zh-CN');
             this.mcdrLang = stored.toLowerCase().startsWith('zh') ? 'zh-CN' : 'en-US';
             try {
-                const resp = await fetch(`lang/${this.mcdrLang}.json`, { cache: 'no-cache' });
-                if (resp.ok) {
-                    this.mcdrDict = await resp.json();
+                if (window.I18n && typeof window.I18n.fetchLangDict === 'function') {
+                    this.mcdrDict = await window.I18n.fetchLangDict(this.mcdrLang);
                 } else {
-                    this.mcdrDict = {};
+                    const resp = await fetch(`lang/${this.mcdrLang}.json`, { cache: 'no-cache' });
+                    if (resp.ok) {
+                        this.mcdrDict = await resp.json();
+                    } else {
+                        this.mcdrDict = {};
+                    }
                 }
             } catch (e) {
                 console.warn('mcdr loadLangDict failed:', e);

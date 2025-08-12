@@ -22,11 +22,15 @@ document.addEventListener('alpine:init', () => {
             const stored = localStorage.getItem('lang') || (navigator.language || 'zh-CN');
             this.guguLang = stored.toLowerCase().startsWith('zh') ? 'zh-CN' : 'en-US';
             try {
-                const resp = await fetch(`lang/${this.guguLang}.json`, { cache: 'no-cache' });
-                if (resp.ok) {
-                    this.guguDict = await resp.json();
+                if (window.I18n && typeof window.I18n.fetchLangDict === 'function') {
+                    this.guguDict = await window.I18n.fetchLangDict(this.guguLang);
                 } else {
-                    this.guguDict = {};
+                    const resp = await fetch(`lang/${this.guguLang}.json`, { cache: 'no-cache' });
+                    if (resp.ok) {
+                        this.guguDict = await resp.json();
+                    } else {
+                        this.guguDict = {};
+                    }
                 }
             } catch (e) {
                 console.warn('loadLangDict failed:', e);

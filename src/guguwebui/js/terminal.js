@@ -17,11 +17,15 @@ document.addEventListener('alpine:init', () => {
             const stored = localStorage.getItem('lang') || (navigator.language || 'zh-CN');
             this.termLang = stored.toLowerCase().startsWith('zh') ? 'zh-CN' : 'en-US';
             try {
-                const resp = await fetch(`lang/${this.termLang}.json`, { cache: 'no-cache' });
-                if (resp.ok) {
-                    this.termDict = await resp.json();
+                if (window.I18n && typeof window.I18n.fetchLangDict === 'function') {
+                    this.termDict = await window.I18n.fetchLangDict(this.termLang);
                 } else {
-                    this.termDict = {};
+                    const resp = await fetch(`lang/${this.termLang}.json`, { cache: 'no-cache' });
+                    if (resp.ok) {
+                        this.termDict = await resp.json();
+                    } else {
+                        this.termDict = {};
+                    }
                 }
             } catch (e) {
                 console.warn('terminal loadLangDict failed:', e);

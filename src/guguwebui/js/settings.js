@@ -22,8 +22,12 @@ function settingsApp() {
             const stored = localStorage.getItem('lang') || (navigator.language || 'zh-CN');
             this.settingsLang = stored.toLowerCase().startsWith('zh') ? 'zh-CN' : 'en-US';
             try {
-                const resp = await fetch(`lang/${this.settingsLang}.json`, { cache: 'no-cache' });
-                if (resp.ok) this.settingsDict = await resp.json();
+                if (window.I18n && typeof window.I18n.fetchLangDict === 'function') {
+                    this.settingsDict = await window.I18n.fetchLangDict(this.settingsLang);
+                } else {
+                    const resp = await fetch(`lang/${this.settingsLang}.json`, { cache: 'no-cache' });
+                    if (resp.ok) this.settingsDict = await resp.json();
+                }
             } catch (e) {
                 console.warn('settings loadLangDict failed:', e);
             }

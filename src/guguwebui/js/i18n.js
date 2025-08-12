@@ -9,13 +9,71 @@
     dict: {},
   };
 
+  // 本地缓存（24小时）
+  const CACHE_PREFIX = 'i18n_cache_';
+  const CACHE_TTL_MS = 24 * 60 * 60 * 1000; // 24h
+
+  function getCacheKey(lang) {
+    return `${CACHE_PREFIX}${lang}`;
+  }
+
+  function readCachedDict(lang) {
+    try {
+      const raw = localStorage.getItem(getCacheKey(lang));
+      if (!raw) return null;
+      const obj = JSON.parse(raw);
+      if (!obj || typeof obj.ts !== 'number' || obj.dict == null) return null;
+      if (Date.now() - obj.ts > CACHE_TTL_MS) return null; // 过期
+      return obj.dict;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  function writeCachedDict(lang, dict) {
+    try {
+      localStorage.setItem(
+        getCacheKey(lang),
+        JSON.stringify({ ts: Date.now(), dict })
+      );
+    } catch (_) {
+      // 忽略容量/隐私模式错误
+    }
+  }
+
+  // 仅获取字典，不改变全局状态（供其它模块复用）
+  async function fetchLangDict(lang) {
+    const cached = readCachedDict(lang);
+    if (cached) return cached;
+    const resp = await fetch(`lang/${lang}.json`, { cache: 'no-cache' });
+    if (!resp.ok) throw new Error('lang load failed');
+    const dict = await resp.json();
+    writeCachedDict(lang, dict);
+    return dict;
+  }
+
   async function loadLang(lang) {
+    // 先尝试读取缓存，命中直接使用，避免频繁请求
+    const cached = readCachedDict(lang);
+    if (cached) {
+      state.dict = cached;
+      state.lang = lang;
+      localStorage.setItem('lang', lang);
+      applyTranslations();
+      document.documentElement.setAttribute('lang', lang);
+      document.dispatchEvent(new CustomEvent('i18n:changed', { detail: { lang } }));
+      return;
+    }
+
+    // 缓存未命中或过期，走网络请求并写回缓存
     try {
       const resp = await fetch(`lang/${lang}.json`, { cache: 'no-cache' });
       if (!resp.ok) throw new Error('lang load failed');
-      state.dict = await resp.json();
+      const dict = await resp.json();
+      state.dict = dict;
       state.lang = lang;
       localStorage.setItem('lang', lang);
+      writeCachedDict(lang, dict);
       applyTranslations();
       document.documentElement.setAttribute('lang', lang);
       document.dispatchEvent(new CustomEvent('i18n:changed', { detail: { lang } }));
@@ -170,7 +228,7 @@
   }
 
   // 暴露到全局
-  window.I18n = { loadLang, t, applyTranslations, get lang() { return state.lang; } };
+  window.I18n = { loadLang, t, applyTranslations, fetchLangDict, get lang() { return state.lang; } };
 
   // 初始化
   document.addEventListener('DOMContentLoaded', () => {
