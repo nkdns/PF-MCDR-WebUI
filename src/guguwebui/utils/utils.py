@@ -360,6 +360,258 @@ def get_comment(config:dict)->dict:
             name_map.update(get_comment(v))
 
     return name_map
+
+#============================================================#
+# i18n helpers for YAML comment parsing
+import re
+from collections import OrderedDict
+
+def _normalize_lang_code(raw_code: str) -> str:
+    """Normalize language code to common forms like zh-CN / en-US.
+    Fallback: keep original if unrecognized.
+    """
+    code = (raw_code or "").strip().strip("[] ")
+    if not code:
+        return "zh-CN"
+    base = code.replace("_", "-")
+    lower = base.lower()
+    if lower in ("zh", "zh-cn", "zh_hans"):
+        return "zh-CN"
+    if lower in ("en", "en-us"):
+        return "en-US"
+    if "-" in base:
+        parts = base.split("-", 1)
+        return f"{parts[0].lower()}-{parts[1].upper()}"
+    return base
+
+def _parse_inline_and_prev_comments(file_text: str):
+    """Parse inline '# ...' or previous-line comments for top-level keys.
+    Returns: { key: comment_text }
+    规则：优先使用同行的注释；没有则用前一行的普通注释（非语言块/非管道格式）。
+    """
+    result = {}
+    last_plain_comment = None
+    for raw in file_text.splitlines():
+        line = raw.rstrip("\n\r")
+        stripped = line.strip()
+        # 普通注释行（排除语言块与管道格式）
+        if stripped.startswith("#"):
+            content = stripped[1:].strip()
+            if content.startswith("[") and content.endswith("]"):
+                # 语言块头部，不作为普通注释
+                last_plain_comment = None
+                continue
+            # 形如: key | name::desc 的语言行，跳过
+            if "|" in content:
+                continue
+            # 记录普通注释
+            last_plain_comment = content
+            continue
+
+        # 匹配一级键: key: value 形式
+        m = re.match(r"^([A-Za-z0-9_]+)\s*:\s*(.*?)\s*(#\s*(.*))?$", line)
+        if m:
+            key = m.group(1)
+            inline_comment = m.group(4) or ""
+            if inline_comment:
+                result[key] = inline_comment.strip()
+                last_plain_comment = None
+            elif last_plain_comment:
+                result[key] = last_plain_comment.strip()
+                last_plain_comment = None
+            else:
+                # 无注释
+                pass
+        else:
+            # 非键行，清空上一条普通注释的延续作用
+            last_plain_comment = None
+    return result
+
+def _parse_language_blocks(file_text: str):
+    """Parse blocks like:
+    # [en-US]
+    # key | name::desc
+    返回：(语言顺序列表, 语言->(key->[name,desc?]))
+    """
+    lang_order = []
+    lang_map = {}
+    current_lang = None
+    for raw in file_text.splitlines():
+        line = raw.rstrip("\n\r")
+        stripped = line.strip()
+        if stripped.startswith("#"):
+            content = stripped[1:].strip()
+            # 语言块头
+            if content.startswith("[") and content.endswith("]") and len(content) >= 3:
+                current_lang = _normalize_lang_code(content)
+                if current_lang not in lang_map:
+                    lang_map[current_lang] = {}
+                    lang_order.append(current_lang)
+                continue
+            # 管道行：key | name::desc
+            if current_lang and "|" in content:
+                try:
+                    key_part, right = [i.strip() for i in content.split("|", 1)]
+                    if not key_part:
+                        continue
+                    # 右侧 name::desc 或仅 name
+                    if "::" in right:
+                        name_part, desc_part = [i.strip() for i in right.split("::", 1)]
+                        value = [name_part, desc_part]
+                    else:
+                        value = [right]
+                    lang_map[current_lang][key_part] = value
+                except Exception:
+                    continue
+    return lang_order, lang_map
+
+def build_yaml_i18n_translations(yaml_config: dict, file_text: str) -> dict:
+    """根据两种方案提取多语言注释并返回统一结构。
+
+    返回结构：
+    {
+      "default": "zh-CN",
+      "translations": {
+        "zh-CN": { key: {"name": str, "desc": str|null} },
+        "en-US": { ... }
+      }
+    }
+    规则：
+    - 优先使用语言块（方案二）；
+    - 方案一回退：若语言块缺失或某个键缺失，则使用同行注释或前一行注释；
+    - default 语言优先使用配置中的 language 值，其次使用第一个语言块，否则 zh-CN。
+    """
+    file_text = file_text or ""
+    # 语言块解析
+    lang_order, lang_block_map = _parse_language_blocks(file_text)
+
+    # 解析同行/上一行注释（方案一）
+    inline_map = _parse_inline_and_prev_comments(file_text)
+
+    # 从配置里识别默认语言
+    default_lang = None
+    try:
+        conf_lang = None
+        if isinstance(yaml_config, dict):
+            conf_lang = yaml_config.get("language")
+        if isinstance(conf_lang, str) and conf_lang.strip():
+            default_lang = _normalize_lang_code(conf_lang)
+    except Exception:
+        pass
+    if not default_lang:
+        default_lang = lang_order[0] if lang_order else "zh-CN"
+
+    # 构造 translations
+    translations = OrderedDict()
+    # 先填充语言块
+    for lang in lang_order:
+        translations[lang] = {}
+        for key, arr in lang_block_map.get(lang, {}).items():
+            name = None
+            desc = None
+            if isinstance(arr, list):
+                if len(arr) >= 1:
+                    name = str(arr[0])
+                if len(arr) >= 2:
+                    desc = str(arr[1])
+            elif isinstance(arr, str):
+                name = arr
+            if name:
+                translations[lang][key] = {"name": name, "desc": desc}
+
+    # 对默认语言：为缺失键补齐方案一注释
+    if default_lang not in translations:
+        translations[default_lang] = {}
+    for key, text in inline_map.items():
+        if key not in translations[default_lang]:
+            if "::" in text:
+                name_part, desc_part = [i.strip() for i in text.split("::", 1)]
+                translations[default_lang][key] = {"name": name_part, "desc": desc_part}
+            else:
+                translations[default_lang][key] = {"name": text.strip(), "desc": None}
+
+    return {"default": default_lang, "translations": translations}
+
+
+def build_json_i18n_translations(json_obj: dict) -> dict:
+    """将 JSON 多语言结构转换为统一结构。
+
+    接受形如：
+    {
+      "zh_cn": { key: [name, desc], ... },
+      "en_us": { ... }
+    }
+
+    返回：
+    {
+      "default": "zh-CN",
+      "translations": {
+        "zh-CN": { key: {"name": str, "desc": str|null} },
+        "en-US": { ... }
+      }
+    }
+    """
+    if not isinstance(json_obj, dict):
+        return {"default": "zh-CN", "translations": {}}
+
+    def normalize_candidates(lang_code: str) -> list[str]:
+        base = _normalize_lang_code(lang_code)
+        a, b = (base.split('-', 1) + [""])[:2]
+        cands = set([
+            base,  # zh-CN
+            base.lower(),  # zh-cn
+            f"{a.lower()}_{b.lower()}",  # zh_cn
+            a.lower(),  # zh
+        ])
+        return list(cands)
+
+    # 构建 translations
+    translations = OrderedDict()
+    avail_keys = set(json_obj.keys())
+    for target in ["zh-CN", "en-US"]:
+        cands = normalize_candidates(target)
+        picked = None
+        for c in cands:
+            if c in json_obj:
+                picked = c
+                break
+        if picked and isinstance(json_obj[picked], dict):
+            translations[target] = {}
+            for k, v in json_obj[picked].items():
+                if isinstance(v, list) and len(v) >= 1:
+                    name = str(v[0]) if v[0] is not None else ""
+                    desc = str(v[1]) if len(v) >= 2 and v[1] is not None else None
+                    translations[target][k] = {"name": name, "desc": desc}
+                elif isinstance(v, dict):
+                    name = str(v.get("name", ""))
+                    desc_val = v.get("desc", None)
+                    desc = str(desc_val) if desc_val is not None else None
+                    translations[target][k] = {"name": name, "desc": desc}
+                elif isinstance(v, str):
+                    translations[target][k] = {"name": v, "desc": None}
+
+    # 如果没有匹配到预期语言，但存在其它键，则收集一个作为默认
+    if not translations and avail_keys:
+        any_key = next(iter(avail_keys))
+        normalized = _normalize_lang_code(any_key)
+        inner = json_obj.get(any_key, {})
+        translations[normalized] = {}
+        if isinstance(inner, dict):
+            for k, v in inner.items():
+                if isinstance(v, list) and len(v) >= 1:
+                    name = str(v[0]) if v[0] is not None else ""
+                    desc = str(v[1]) if len(v) >= 2 and v[1] is not None else None
+                    translations[normalized][k] = {"name": name, "desc": desc}
+                elif isinstance(v, dict):
+                    name = str(v.get("name", ""))
+                    desc_val = v.get("desc", None)
+                    desc = str(desc_val) if desc_val is not None else None
+                    translations[normalized][k] = {"name": name, "desc": desc}
+                elif isinstance(v, str):
+                    translations[normalized][k] = {"name": v, "desc": None}
+
+    default_lang = "zh-CN" if "zh-CN" in translations else (next(iter(translations.keys())) if translations else "zh-CN")
+    return {"default": default_lang, "translations": translations}
 #============================================================#
 # read server status
 import socket

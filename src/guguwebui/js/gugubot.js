@@ -271,7 +271,8 @@ document.addEventListener('alpine:init', () => {
                 try {
                     const transResponse = await fetch(`api/load_config?path=${encodeURIComponent(mainConfigPath)}&translation=true`);
                     if (transResponse.ok) {
-                        this.translations = await transResponse.json();
+                        const tdata = await transResponse.json();
+                        this.translations = this.normalizeAnyTranslations(tdata);
                     } else {
                         console.warn(this.t('page.gugubot.msg.load_translations_failed', '加载翻译数据失败') + `: ${transResponse.status}`);
                         this.translations = {}; // 即使失败也继续
@@ -407,6 +408,43 @@ document.addEventListener('alpine:init', () => {
                 return translation[1];
             }
             return ''; // 没有翻译或翻译格式不对则返回空
+        },
+
+        // 归一化后端返回的多语言结构（YAML/JSON）到旧格式
+        normalizeAnyTranslations(data) {
+            if (!data || typeof data !== 'object') return {};
+            // YAML/JSON 统一结构 { default, translations }
+            if ('translations' in data) {
+                const translations = data.translations || {};
+                const ui = (window.I18n && window.I18n.lang) || 'zh-CN';
+                const norm = (s) => {
+                    if (!s) return 'zh-CN';
+                    const t = String(s).replace('_', '-');
+                    if (t.toLowerCase().startsWith('zh')) return 'zh-CN';
+                    if (t.toLowerCase() === 'en' || t.toLowerCase() === 'en-us') return 'en-US';
+                    if (t.includes('-')) { const [a,b] = t.split('-',2); return `${a.toLowerCase()}-${(b||'').toUpperCase()}`; }
+                    return t;
+                };
+                const current = norm(ui);
+                const def = norm(data.default || 'zh-CN');
+                const pick = translations[current] || translations[def] || translations[Object.keys(translations)[0]] || {};
+                const out = {};
+                Object.keys(pick).forEach(k => {
+                    const entry = pick[k];
+                    if (Array.isArray(entry)) {
+                        out[k] = entry.length > 1 ? [String(entry[0]||''), String(entry[1]||'')] : String(entry[0]||'');
+                    } else if (entry && typeof entry === 'object') {
+                        const name = entry.name != null ? String(entry.name) : '';
+                        const desc = entry.desc != null ? String(entry.desc) : undefined;
+                        out[k] = desc != null ? [name, desc] : name;
+                    } else if (typeof entry === 'string') {
+                        out[k] = entry;
+                    }
+                });
+                return out;
+            }
+            // 旧格式：直接返回
+            return data;
         },
         
         // 判断是否应该显示主配置中的项 (过滤掉 dict_address 本身)

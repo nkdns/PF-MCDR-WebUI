@@ -20,6 +20,57 @@ document.addEventListener('alpine:init', () => {
             }
             return text;
         },
+        normalizeLangCode(lang) {
+            if (!lang) return 'zh-CN';
+            const s = String(lang).trim().replace('_', '-');
+            const lower = s.toLowerCase();
+            if (lower.startsWith('zh')) return 'zh-CN';
+            if (lower === 'en' || lower === 'en-us') return 'en-US';
+            if (s.includes('-')) {
+                const [a, b] = s.split('-', 2);
+                return `${a.toLowerCase()}-${(b || '').toUpperCase()}`;
+            }
+            return s;
+        },
+        getCurrentUiLang() {
+            const ui = (this.pluginsLang || (window.I18n && window.I18n.lang) || 'zh-CN');
+            return this.normalizeLangCode(ui);
+        },
+        normalizeYamlTranslations(data) {
+            if (!data || typeof data !== 'object') return {};
+            // 兼容旧格式：直接返回
+            if (!('translations' in data) || !('default' in data)) return data;
+            const translations = data.translations || {};
+            const defaultLang = this.normalizeLangCode(data.default || 'zh-CN');
+            const currentLang = this.getCurrentUiLang();
+            const firstLang = Object.keys(translations)[0] || defaultLang;
+            const pickLang = (lang) => translations[this.normalizeLangCode(lang)] || null;
+            const curMap = pickLang(currentLang);
+            const defMap = pickLang(defaultLang);
+            const fstMap = pickLang(firstLang);
+            const out = {};
+            const keys = new Set([
+                ...Object.keys(curMap || {}),
+                ...Object.keys(defMap || {}),
+                ...Object.keys(fstMap || {})
+            ]);
+            for (const k of keys) {
+                const entry = (curMap && curMap[k]) || (defMap && defMap[k]) || (fstMap && fstMap[k]);
+                if (!entry) continue;
+                if (Array.isArray(entry)) {
+                    const name = entry[0] != null ? String(entry[0]) : '';
+                    const desc = entry[1] != null ? String(entry[1]) : undefined;
+                    out[k] = desc != null ? [name, desc] : name;
+                } else if (typeof entry === 'object') {
+                    const name = entry.name != null ? String(entry.name) : '';
+                    const desc = entry.desc != null ? String(entry.desc) : undefined;
+                    out[k] = desc != null ? [name, desc] : name;
+                } else if (typeof entry === 'string') {
+                    out[k] = entry;
+                }
+            }
+            return out;
+        },
         async loadLangDict() {
             const stored = localStorage.getItem('lang') || (navigator.language || 'zh-CN');
             this.pluginsLang = stored.toLowerCase().startsWith('zh') ? 'zh-CN' : 'en-US';
@@ -757,8 +808,7 @@ document.addEventListener('alpine:init', () => {
                                         const translationResponse = await fetch(`api/load_config?path=${file}&translation=true`);
                                         const translationData = await translationResponse.json();
                                         if (translationData && typeof translationData === 'object') {
-                                            // console.log('收到翻译数据:', translationData);
-                                            this.configTranslations = translationData;
+                                            this.configTranslations = this.normalizeYamlTranslations(translationData);
                                             
                                             // 检查配置数据中的嵌套结构，记录所有键
                                             const nestedKeys = [];

@@ -960,6 +960,8 @@ async def list_config_files(request: Request, plugin_id:str):
             {"status": "error", "message": "User not logged in"}, status_code=401
         )
     config_path_list:list[str] = find_plugin_config_paths(plugin_id)
+    # 过滤掉 main.json
+    config_path_list = [p for p in config_path_list if not Path(p).name.lower() == "main.json"]
     return JSONResponse({"files": config_path_list})
 
 
@@ -1146,7 +1148,10 @@ async def load_config(request: Request, path:str, translation:bool = False, type
         return JSONResponse({}, status_code=200)  
 
     try:
+        raw_text = None
         with open(path, "r", encoding="UTF-8") as f:
+            raw_text = f.read()
+            f.seek(0)
             if path.suffix == ".json":
                 config = json.load(f)
             elif path.suffix in [".yml", ".yaml"]:
@@ -1169,10 +1174,24 @@ async def load_config(request: Request, path:str, translation:bool = False, type
     if translation:
         # Get corresponding language
         if path.suffix in [".json", ".properties"]:
+            if path.suffix == ".json":
+                try:
+                    # 支持JSON多语言结构：统一输出 default+translations
+                    i18n = build_json_i18n_translations(config)
+                    return JSONResponse(i18n)
+                except Exception:
+                    pass
+            # 原有行为回退
             config = config.get(MCDR_language) or config.get("en_us") or {}
-        # Translation for yaml -> comment in yaml file
-        elif translation and path.suffix in [".yml", ".yaml"]:
-            config = get_comment(config)
+            return JSONResponse(config)
+        # YAML: 返回多语言结构
+        elif path.suffix in [".yml", ".yaml"]:
+            try:
+                i18n = build_yaml_i18n_translations(config, raw_text or "")
+                return JSONResponse(i18n)
+            except Exception:
+                # 回退到原有的注释抽取
+                return JSONResponse(get_comment(config))
 
     return JSONResponse(config)
 
