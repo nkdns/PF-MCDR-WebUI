@@ -24,7 +24,7 @@ WebUI 文档：[WebUI 文档](https://pf-doc.pfingan.com/main/#PF-webui/)
 > **重要说明：** 该演示站仅为UI界面和功能演示，**没有实际功能**。所有操作均为模拟演示，不会对真实的MCDR服务器产生任何影响。如需体验完整功能，请按照下方说明安装到您的MCDR服务器中。
 
 ### 主要功能
-> 为MCDR提供一个 `在线WebUI管理界面` 和 `MCDR插件管理` 和 `表单配置功能`（可选使用在线编辑器）。
+> 为MCDR提供一个 `在线WebUI管理界面` 和 `MCDR插件管理` 及 `表单配置功能`（可选使用在线编辑器）。
 
 #### pip包管理
 
@@ -66,7 +66,7 @@ WebUI 文档：[WebUI 文档](https://pf-doc.pfingan.com/main/#PF-webui/)
 - [x] 多仓库支持，您可以添加多个仓库，并选择不同的仓库进行插件安装，不过请您注意风险。（v1.3.4）
 
 > [!IMPORTANT]
-> **关于数据:** 重载插件 *本插件* **会** 自动更新 `guguwebui_static` 文件夹中的内容，如果您修改过内部的文件请自行保存，以防您的数据丢失。
+> **关于数据:** 重载 *本插件* **会** 自动更新 `guguwebui_static` 文件夹中的内容，如果您修改过内部的文件请自行保存，以防您的数据丢失。
 
 > [!IMPORTANT]
 > **关于V1.3.0版本:** 本项目于v1.3.0版本重构前端，如您是从v1.3.0版本之前升级的，请删除 `guguwebui_static` 文件夹中的内容，保留 `db.json` 即可。
@@ -80,11 +80,11 @@ WebUI 文档：[WebUI 文档](https://pf-doc.pfingan.com/main/#PF-webui/)
 
 ### 前置插件
 
-PIM插件，已内置WebUI，如有需要可以在设置页面将其安装到外部以为其它可能需要的插件提供帮助。
+PIM 插件，已内置 WebUI，如有需要可以在设置页面将其安装到外部，以为其他可能需要的插件提供帮助。
 
 ## 使用方式
 
-> 目前未对接GUGUbot账号系统；当账号为QQ号时会显示QQ头像和昵称作为管理员名称和头像。
+> 目前未对接 GUGUbot 账号系统；当账号为 QQ 号时会显示 QQ 头像和昵称作为管理员名称和头像。
 
 **创建账户**
 
@@ -106,33 +106,33 @@ PIM插件，已内置WebUI，如有需要可以在设置页面将其安装到外
 
 ## Q&A 问答
 
-Q:为什么要开发这个插件。<br>
-A:因为我乐意。
+Q: 为什么要开发这个插件？<br>
+A: 因为我乐意。
 
-Q:会支持MC服务器管理的功能吗？如模组管理，玩家管理，白名单等等..<br>
-A:并不会深入涉及管理MC服务器，如有这方面的需求请查询MC服务器面板，仅可能会支持很小一部分，例如终端、重启服务器，更多的不在我们的范畴中。
+Q: 会支持MC服务器管理的功能吗？如模组管理、玩家管理、白名单等等……<br>
+A: 并不会深入涉及管理MC服务器，如有这方面的需求请查询MC服务器面板，仅可能会支持很小一部分，例如终端、重启服务器，更多的不在我们的范畴中。
 
-Q:可以加入开发吗？<br>
-A:当然可以，您可以提交 [pr](https://github.com/LoosePrince/PF-MCDR-WebUI/pulls) 或者 参与交流 来参与开发。
+Q: 可以加入开发吗？<br>
+A: 当然可以，您可以提交 [pr](https://github.com/LoosePrince/PF-MCDR-WebUI/pulls) 或者参与交流来参与开发。
 
-Q:会支持我的语言吗。<br>
-A:我只会中文，你要是愿意可以参与，目前已有中午（zh-CN）和英文（en-US），在 [lang文件夹](https://github.com/LoosePrince/PF-MCDR-WebUI/tree/v1.5.0/src/guguwebui/lang)。
+Q: 会支持我的语言吗？<br>
+A: 我只会中文，你要是愿意可以参与，目前已有中文（zh-CN）和英文（en-US），在 [lang文件夹](https://github.com/LoosePrince/PF-MCDR-WebUI/tree/v1.5.0/src/guguwebui/lang)。
 
-Q:为什么有私货（有未使用的插件，如gugubot等）。<br>
-A:因为这就是为它所开发（虽然GUGUbot的配置一直不完善[doge]）。
+Q: 为什么有私货（有未使用的插件，如gugubot等）？<br>
+A: 因为这就是为它所开发（虽然GUGUbot的配置一直不完善[doge]）。
 
-Q:如何获取实时最新版<br>
-A:自己打包`src`中的文件到`zip`，修改后缀为`.mcdr`，或者前往 [actions](https://github.com/LoosePrince/PF-MCDR-WebUI/actions/workflows/package-src.yml) 下载，解压提取其中的mcdr文件即可。
+Q: 如何获取实时最新版？<br>
+A: 自己打包`src`中的文件到`zip`，修改后缀为`.mcdr`，或者前往 [actions](https://github.com/LoosePrince/PF-MCDR-WebUI/actions/workflows/package-src.yml) 下载，解压提取其中的mcdr文件即可。
 
-Q:我有个插件，我觉得很适合WebUI，可以作为WebUI的前置吗？<br>
-A:WebUI不打算使用任何插件前置，如果有好的方案我们会考虑直接加入WebUI并在关于页感谢贡献。
+Q: 我有个插件，我觉得很适合WebUI，可以作为WebUI的前置吗？<br>
+A: WebUI不打算使用任何插件前置，如果有好的方案我们会考虑直接加入WebUI并在关于页感谢贡献。
 
-Q:[PIM插件](https://github.com/LoosePrince/PF-MCDR-WebUI/blob/main/src/guguwebui/utils/PIM.py)是什么？<br>
-A:[PIM插件](https://github.com/LoosePrince/PF-MCDR-WebUI/blob/main/src/guguwebui/utils/PIM.py)是WebUI的插件安装管理器，它可以帮助您安装、卸载、更新插件，并且可以查看插件信息。
+Q: [PIM插件](https://github.com/LoosePrince/PF-MCDR-WebUI/blob/main/src/guguwebui/utils/PIM.py) 是什么？<br>
+A: [PIM插件](https://github.com/LoosePrince/PF-MCDR-WebUI/blob/main/src/guguwebui/utils/PIM.py) 是WebUI的插件安装管理器，它可以帮助您安装、卸载、更新插件，并且可以查看插件信息。
 
-Q:对于开发者如何提供配置文件以支持多语言（中文、英文等）描述?
+Q: 对于开发者如何提供配置文件以支持多语言（中文、英文等）描述？
 
-A:查看 [插件兼容](https://pf-doc.pfingan.com/main/#/PF-webui/开发/插件兼容) 文档。
+A: 查看 [插件兼容](https://pf-doc.pfingan.com/main/#/PF-webui/开发/插件兼容) 文档。
 
 ## 示例图
 
