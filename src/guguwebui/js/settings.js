@@ -6,6 +6,29 @@ function settingsApp() {
         notificationType: 'success',
         notificationTimeout: null,
         
+        // i18n
+        settingsLang: 'zh-CN',
+        settingsDict: {},
+        t(key, fallback = '') {
+            const val = key.split('.').reduce((o, k) => (o && o[k] != null ? o[k] : undefined), this.settingsDict);
+            if (val != null) return String(val);
+            if (window.I18n && typeof window.I18n.t === 'function') {
+                const v = window.I18n.t(key);
+                if (v && v !== key) return v;
+            }
+            return fallback || key;
+        },
+        async loadLangDict() {
+            const stored = localStorage.getItem('lang') || (navigator.language || 'zh-CN');
+            this.settingsLang = stored.toLowerCase().startsWith('zh') ? 'zh-CN' : 'en-US';
+            try {
+                const resp = await fetch(`lang/${this.settingsLang}.json`, { cache: 'no-cache' });
+                if (resp.ok) this.settingsDict = await resp.json();
+            } catch (e) {
+                console.warn('settings loadLangDict failed:', e);
+            }
+        },
+
         // 表单数据
         serverStatus: 'loading',
         userName: '',
@@ -39,6 +62,13 @@ function settingsApp() {
         
         // 初始化
         init() {
+            // 先加载语言
+            this.loadLangDict();
+            document.addEventListener('i18n:changed', (e) => {
+                const nextLang = (e && e.detail && e.detail.lang) ? e.detail.lang : this.settingsLang;
+                this.settingsLang = nextLang.toLowerCase().startsWith('zh') ? 'zh-CN' : 'en-US';
+                this.loadLangDict();
+            });
             this.checkLoginStatus();
             this.checkServerStatus();
             this.getConfig();
@@ -46,9 +76,7 @@ function settingsApp() {
             
             // 每60秒自动刷新服务器状态
             setInterval(() => this.checkServerStatus(), 10001);
-            
-            // 设置当前年份
-            document.getElementById('year').textContent = new Date().getFullYear();
+
         },
         
         // 检查登录状态
@@ -121,7 +149,7 @@ function settingsApp() {
                     // 并且URL不是官方仓库URL，则添加为自定义仓库
                     if (config.mcdr_plugins_url !== this.officialRepoUrl) {
                         this.repositories = [{
-                            name: '自定义仓库',
+                            name: this.settingsLang === 'en-US' ? 'Custom Repo' : '自定义仓库',
                             url: config.mcdr_plugins_url
                         }];
                     } else {
@@ -145,7 +173,7 @@ function settingsApp() {
                 });
             } catch (error) {
                 console.error('Error fetching config:', error);
-                this.showNotification('获取配置失败', 'error');
+                this.showNotification(this.t('page.settings.msg.get_config_failed', '获取配置失败'), 'error');
             }
         },
         
@@ -154,12 +182,12 @@ function settingsApp() {
             try {
                 // 验证输入
                 if (!this.webConfig.host) {
-                    this.showNotification('主机地址不能为空', 'error');
+                    this.showNotification(this.t('page.settings.msg.host_required', '主机地址不能为空'), 'error');
                     return;
                 }
                 
                 if (!this.webConfig.port || this.webConfig.port < 1 || this.webConfig.port > 65535) {
-                    this.showNotification('端口必须是1-65535之间的有效数字', 'error');
+                    this.showNotification(this.t('page.settings.msg.port_invalid', '端口必须是1-65535之间的有效数字'), 'error');
                     return;
                 }
                 
@@ -167,7 +195,7 @@ function settingsApp() {
                 const requestData = {
                     action: 'config',
                     host: this.webConfig.host.toString().trim(),
-                    port: parseInt(this.webConfig.port, 10)
+                    port: String(this.webConfig.port)
                 };
                 
                 const response = await fetch('api/save_web_config', {
@@ -180,13 +208,13 @@ function settingsApp() {
                 
                 const result = await response.json();
                 if (result.status === 'success') {
-                    this.showNotification('网络设置保存成功', 'success');
+                    this.showNotification(this.t('page.settings.msg.network_save_success', '网络设置保存成功'), 'success');
                 } else {
-                    this.showNotification('保存失败: ' + result.message, 'error');
+                    this.showNotification(this.t('page.settings.msg.save_failed_prefix', '保存失败: ') + (result.message || ''), 'error');
                 }
             } catch (error) {
                 console.error('Error saving network config:', error);
-                this.showNotification('保存出错: ' + error.message, 'error');
+                this.showNotification(this.t('page.settings.msg.save_error_prefix', '保存出错: ') + error.message, 'error');
             }
         },
         
@@ -195,7 +223,7 @@ function settingsApp() {
             try {
                 // 验证输入
                 if (!this.webConfig.super_admin_account) {
-                    this.showNotification('超级管理员账号不能为空', 'error');
+                    this.showNotification(this.t('page.settings.msg.account_required', '超级管理员账号不能为空'), 'error');
                     return;
                 }
                 
@@ -215,13 +243,13 @@ function settingsApp() {
                 
                 const result = await response.json();
                 if (result.status === 'success') {
-                    this.showNotification('账户设置保存成功', 'success');
+                    this.showNotification(this.t('page.settings.msg.account_save_success', '账户设置保存成功'), 'success');
                 } else {
-                    this.showNotification('保存失败: ' + result.message, 'error');
+                    this.showNotification(this.t('page.settings.msg.save_failed_prefix', '保存失败: ') + (result.message || ''), 'error');
                 }
             } catch (error) {
                 console.error('Error saving account config:', error);
-                this.showNotification('保存出错: ' + error.message, 'error');
+                this.showNotification(this.t('page.settings.msg.save_error_prefix', '保存出错: ') + error.message, 'error');
             }
         },
         
@@ -244,13 +272,13 @@ function settingsApp() {
                 if (result.status === 'success') {
                     // 切换本地状态
                     this.webConfig[setting] = result.message;
-                    this.showNotification(`设置已${this.webConfig[setting] ? '启用' : '禁用'}`, 'success');
+                    this.showNotification(this.webConfig[setting] ? this.t('page.settings.msg.toggle_enabled', '设置已启用') : this.t('page.settings.msg.toggle_disabled', '设置已禁用'), 'success');
                 } else {
-                    this.showNotification('设置切换失败: ' + result.message, 'error');
+                    this.showNotification(this.t('page.settings.msg.toggle_failed_prefix', '设置切换失败: ') + (result.message || ''), 'error');
                 }
             } catch (error) {
                 console.error('Error toggling setting:', error);
-                this.showNotification('设置出错: ' + error.message, 'error');
+                this.showNotification(this.t('page.settings.msg.toggle_error_prefix', '设置出错: ') + error.message, 'error');
             }
         },
         
@@ -336,17 +364,17 @@ function settingsApp() {
                 
                 const result = await response.json();
                 if (result.status === 'success') {
-                    this.showNotification('AI配置保存成功', 'success');
+                    this.showNotification(this.t('page.settings.msg.ai_save_success', 'AI配置保存成功'), 'success');
                     // 保存成功后重置状态
                     if (this.aiApiKey) {
                         this.aiApiKey = '';
                     }
                 } else {
-                    this.showNotification('保存失败: ' + result.message, 'error');
+                    this.showNotification(this.t('page.settings.msg.save_failed_prefix', '保存失败: ') + (result.message || ''), 'error');
                 }
             } catch (error) {
                 console.error('Error saving AI config:', error);
-                this.showNotification('保存出错: ' + error.message, 'error');
+                this.showNotification(this.t('page.settings.msg.save_error_prefix', '保存出错: ') + error.message, 'error');
             }
         },
         
@@ -369,12 +397,12 @@ function settingsApp() {
         // 添加API密钥验证方法
         async validateApiKey() {
             if (!this.aiApiKey) {
-                this.showNotification('请输入API密钥', 'error');
+                this.showNotification(this.t('page.settings.msg.api_key_required', '请输入API密钥'), 'error');
                 return;
             }
             
             try {
-                this.showNotification('正在验证API密钥...', 'info');
+                this.showNotification(this.t('page.settings.msg.api_key_validating', '正在验证API密钥...'), 'info');
                 
                 // 直接使用输入框中的API密钥发送测试请求
                 const response = await fetch('api/deepseek', {
@@ -397,24 +425,24 @@ function settingsApp() {
                 if (result.status === 'success') {
                     this.isKeyValid = true;
                     this.keyValidated = true;
-                    this.showNotification('API密钥验证成功', 'success');
+                    this.showNotification(this.t('page.settings.msg.api_key_validate_success', 'API密钥验证成功'), 'success');
                 } else {
                     this.isKeyValid = false;
                     this.keyValidated = true;
-                    this.showNotification(`API密钥验证失败: ${result.message}`, 'error');
+                    this.showNotification(this.t('page.settings.msg.api_key_validate_failed_prefix', 'API密钥验证失败: ') + (result.message || ''), 'error');
                 }
             } catch (error) {
                 console.error('API密钥验证错误:', error);
                 this.isKeyValid = false;
                 this.keyValidated = true;
-                this.showNotification(`验证出错: ${error.message}`, 'error');
+                this.showNotification(this.t('page.settings.msg.api_key_validate_error_prefix', '验证出错: ') + error.message, 'error');
             }
         },
         
         // 添加新仓库
         addRepository() {
             if (!this.newRepo.name || !this.newRepo.url) {
-                this.showNotification('仓库名称和URL不能为空', 'error');
+                this.showNotification(this.t('page.settings.msg.repo_name_url_required', '仓库名称和URL不能为空'), 'error');
                 return;
             }
             
@@ -422,13 +450,13 @@ function settingsApp() {
             try {
                 new URL(this.newRepo.url);
             } catch (e) {
-                this.showNotification('请输入有效的URL', 'error');
+                this.showNotification(this.t('page.settings.msg.url_invalid', '请输入有效的URL'), 'error');
                 return;
             }
             
             // 检查是否与官方仓库URL重复
             if (this.newRepo.url === this.officialRepoUrl) {
-                this.showNotification('不能添加与官方仓库相同的URL', 'error');
+                this.showNotification(this.t('page.settings.msg.repo_url_official_forbidden', '不能添加与官方仓库相同的URL'), 'error');
                 return;
             }
             
@@ -438,7 +466,7 @@ function settingsApp() {
             );
             
             if (isDuplicate) {
-                this.showNotification('仓库名称或URL已存在', 'error');
+                this.showNotification(this.t('page.settings.msg.repo_duplicate', '仓库名称或URL已存在'), 'error');
                 return;
             }
             
@@ -452,14 +480,14 @@ function settingsApp() {
             this.newRepo.name = '';
             this.newRepo.url = '';
             
-            this.showNotification('仓库已添加，请点击保存按钮保存配置', 'success');
+            this.showNotification(this.t('page.settings.msg.repo_added_tip', '仓库已添加，请点击保存按钮保存配置'), 'success');
         },
         
         // 删除仓库
         deleteRepository(index) {
             if (index >= 0 && index < this.repositories.length) {
                 this.repositories.splice(index, 1);
-                this.showNotification('仓库已删除，请点击保存按钮保存配置', 'success');
+                this.showNotification(this.t('page.settings.msg.repo_deleted_tip', '仓库已删除，请点击保存按钮保存配置'), 'success');
             }
         },
         
@@ -491,13 +519,13 @@ function settingsApp() {
                 
                 const result = await response.json();
                 if (result.status === 'success') {
-                    this.showNotification('仓库配置保存成功', 'success');
+                    this.showNotification(this.t('page.settings.msg.repos_save_success', '仓库配置保存成功'), 'success');
                 } else {
-                    this.showNotification('保存失败: ' + result.message, 'error');
+                    this.showNotification(this.t('page.settings.msg.save_failed_prefix', '保存失败: ') + (result.message || ''), 'error');
                 }
             } catch (error) {
                 console.error('Error saving repositories:', error);
-                this.showNotification('保存出错: ' + error.message, 'error');
+                this.showNotification(this.t('page.settings.msg.save_error_prefix', '保存出错: ') + error.message, 'error');
             }
         },
         
@@ -526,13 +554,13 @@ function settingsApp() {
                 
                 const result = await response.json();
                 if (result.status === 'success') {
-                    this.showNotification('MCDR插件目录URL保存成功', 'success');
+                    this.showNotification(this.t('page.settings.msg.mcdr_url_save_success', 'MCDR插件目录URL保存成功'), 'success');
                 } else {
-                    this.showNotification('保存失败: ' + result.message, 'error');
+                    this.showNotification(this.t('page.settings.msg.save_failed_prefix', '保存失败: ') + (result.message || ''), 'error');
                 }
             } catch (error) {
                 console.error('Error saving MCDR plugins URL:', error);
-                this.showNotification('保存出错: ' + error.message, 'error');
+                this.showNotification(this.t('page.settings.msg.save_error_prefix', '保存出错: ') + error.message, 'error');
             }
         },
         
@@ -562,15 +590,15 @@ function settingsApp() {
                 const result = await response.json();
                 
                 if (result.status === 'success') {
-                    this.showNotification('PIM插件安装成功', 'success');
+                    this.showNotification(this.t('page.settings.msg.pim_install_success', 'PIM插件安装成功'), 'success');
                     this.pimStatus = 'installed';
                 } else {
-                    this.showNotification('安装失败: ' + result.message, 'error');
+                    this.showNotification(this.t('page.settings.msg.pim_install_failed_prefix', '安装失败: ') + (result.message || ''), 'error');
                     await this.checkPimStatus(); // 重新检查状态
                 }
             } catch (error) {
                 console.error('Error installing PIM plugin:', error);
-                this.showNotification('安装出错: ' + error.message, 'error');
+                this.showNotification(this.t('page.settings.msg.pim_install_error_prefix', '安装出错: ') + error.message, 'error');
                 await this.checkPimStatus(); // 重新检查状态
             }
         },
@@ -604,13 +632,13 @@ function settingsApp() {
                 const result = await response.json();
                 
                 if (result.status === 'success') {
-                    this.showNotification('插件目录配置保存成功', 'success');
+                    this.showNotification(this.t('page.settings.msg.plugin_repo_save_success', '插件目录配置保存成功'), 'success');
                 } else {
-                    this.showNotification('保存失败: ' + result.message, 'error');
+                    this.showNotification(this.t('page.settings.msg.save_failed_prefix', '保存失败: ') + (result.message || ''), 'error');
                 }
             } catch (error) {
                 console.error('Error saving plugin repository config:', error);
-                this.showNotification('保存出错: ' + error.message, 'error');
+                this.showNotification(this.t('page.settings.msg.save_error_prefix', '保存出错: ') + error.message, 'error');
             }
         },
         
@@ -619,14 +647,14 @@ function settingsApp() {
             try {
                 // 如果启用了HTTPS但未提供证书或密钥文件
                 if (this.webConfig.ssl_enabled && (!this.webConfig.ssl_certfile || !this.webConfig.ssl_keyfile)) {
-                    this.showNotification('启用HTTPS需要同时提供证书文件和密钥文件路径', 'error');
+                    this.showNotification(this.t('page.settings.msg.https_need_both_files', '启用HTTPS需要同时提供证书文件和密钥文件路径'), 'error');
                     return;
                 }
                 
                 // 检查文件路径格式
                 if (this.webConfig.ssl_enabled) {
                     // 提示用户确认文件存在
-                    if (!confirm('请确认您已经准备好了SSL证书和密钥文件，并且指定的路径是正确的。\n\n如果文件不存在，WebUI将回退到HTTP模式。\n\n是否继续?')) {
+                    if (!confirm(this.t('page.settings.msg.https_confirm_text', '请确认您已经准备好了SSL证书和密钥文件，并且指定的路径是正确的。\n\n如果文件不存在，WebUI将回退到HTTP模式。\n\n是否继续?'))) {
                         return;
                     }
                 }
@@ -650,13 +678,13 @@ function settingsApp() {
                 
                 const result = await response.json();
                 if (result.status === 'success') {
-                    this.showNotification('HTTPS设置保存成功，重启插件后生效。如果SSL文件不存在，系统将自动回退到HTTP模式。', 'success');
+                    this.showNotification(this.t('page.settings.msg.https_save_success', 'HTTPS设置保存成功，重启插件后生效。如果SSL文件不存在，系统将自动回退到HTTP模式。'), 'success');
                 } else {
-                    this.showNotification('保存失败: ' + result.message, 'error');
+                    this.showNotification(this.t('page.settings.msg.save_failed_prefix', '保存失败: ') + (result.message || ''), 'error');
                 }
             } catch (error) {
                 console.error('Error saving HTTPS config:', error);
-                this.showNotification('保存出错: ' + error.message, 'error');
+                this.showNotification(this.t('page.settings.msg.save_error_prefix', '保存出错: ') + error.message, 'error');
             }
         }
     };

@@ -235,11 +235,21 @@ def get_plugins_info(server_interface, detail=False):
                     "path": plugin_name if plugin_name in unloaded_plugins + disabled_plugins else ""
                 })
             elif detail:  # 插件列表详细信息
+                # 构造完整的描述：当为 dict 时返回包含多语言的完整对象；否则返回字符串
                 try:
-                    description = plugin_metadata.description
-                    description = (description.get(server_interface.get_mcdr_language()) or description.get("en_us")) \
-                        if isinstance(description, dict) else description
-                except:
+                    raw_desc = plugin_metadata.description
+                    if isinstance(raw_desc, dict):
+                        # 规范化 key：全部转为小写并用下划线
+                        full_desc = {}
+                        for k, v in raw_desc.items():
+                            if not isinstance(v, str):
+                                continue
+                            key_norm = str(k).lower().replace('-', '_')
+                            full_desc[key_norm] = v
+                        description = full_desc
+                    else:
+                        description = str(raw_desc) if raw_desc is not None else ""
+                except Exception:
                     description = "该插件数据异常"
 
                 # 处理作者信息
@@ -259,7 +269,7 @@ def get_plugins_info(server_interface, detail=False):
                 respond.append({
                     "id": str(plugin_metadata.id),
                     "name": str(plugin_metadata.name) if hasattr(plugin_metadata, 'name') else plugin_name,
-                    "description": str(description),
+                    "description": description,
                     "author": author,
                     "github": str(plugin_metadata.link) if hasattr(plugin_metadata, 'link') else "",
                     "version": str(plugin_metadata.version) if hasattr(plugin_metadata, 'version') else "未知",
@@ -474,8 +484,8 @@ def amount_static_files(server):
     
     # 使用新的文件夹复制函数来复制各个目录
     success = True
-    # 复制各个子目录
-    for folder in ['src', 'css', 'js', 'templates', 'custom']:
+    # 复制各个子目录（新增 lang 用于前端多语言）
+    for folder in ['src', 'css', 'js', 'templates', 'custom', 'lang']:
         if not __copyFolder(server, f'guguwebui/{folder}', f'./guguwebui_static/{folder}'):
             success = False
             server.logger.warning(f"复制 'guguwebui/{folder}' 目录失败")

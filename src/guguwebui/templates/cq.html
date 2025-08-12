@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     
-    <title>MCDR WebUI - CQ-QQ-API配置</title>
+    <title data-i18n="page.cq.title"></title>
     <!-- 主题预加载脚本 - 防止闪烁 -->
     <script src="js/theme-preload.js"></script>
     <!-- Tailwind CSS -->
@@ -14,6 +14,8 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <!-- 自定义CSS -->
     <link rel="stylesheet" href="css/main.css">
+    <!-- i18n -->
+    <script defer src="js/i18n.js"></script>
     <!-- 自定义配置 -->
     <script>
         tailwind.config = {
@@ -345,14 +347,14 @@
                         </button>
                         
                         <!-- 页面标题 -->
-                        <h1 class="ml-4 text-xl font-semibold text-gray-800 dark:text-white">CQ-QQ-API 配置</h1>
+                        <h1 class="ml-4 text-xl font-semibold text-gray-800 dark:text-white" data-i18n="page.cq.title"></h1>
                     </div>
                     
                     <!-- 右侧部分 -->
                     <div class="flex items-center space-x-4">
                         <!-- 公告 -->
                         <div class="nav-notice hidden md:flex items-center bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-300 px-3 py-1 rounded-full text-xs font-medium mr-2">
-                            <span class="nav-notice-text"><i class="fas fa-circle-notch fa-spin mr-1.5"></i> 加载公告中...</span>
+                            <span class="nav-notice-text"><i class="fas fa-circle-notch fa-spin mr-1.5"></i> <span data-i18n="common.notice_loading"></span></span>
                         </div>
                     
                         <!-- 服务器状态 -->
@@ -365,19 +367,19 @@
                             }">
                                 <span x-show="serverStatus === 'online'" class="flex items-center">
                                     <i class="fas fa-circle mr-1 text-xs"></i>
-                                    <span>在线</span>
+                                    <span data-i18n="nav.status_online"></span>
                                 </span>
                                 <span x-show="serverStatus === 'offline'" class="flex items-center">
                                     <i class="fas fa-circle mr-1 text-xs"></i>
-                                    <span>离线</span>
+                                    <span data-i18n="nav.status_offline"></span>
                                 </span>
                                 <span x-show="serverStatus === 'error'" class="flex items-center">
                                     <i class="fas fa-exclamation-triangle mr-1"></i>
-                                    <span>错误</span>
+                                    <span data-i18n="nav.status_error"></span>
                                 </span>
                                 <span x-show="serverStatus === 'loading'" class="flex items-center">
                                     <i class="fas fa-circle-notch fa-spin mr-1 text-xs"></i>
-                                    <span>加载中</span>
+                                    <span data-i18n="nav.status_loading"></span>
                                 </span>
                             </div>
                         </div>
@@ -401,24 +403,24 @@
             <!-- 主内容 -->
             <main class="pt-24 px-4 sm:px-6 md:px-8 pb-8">
                 <div class="bg-white dark:bg-gray-800 shadow-sm rounded-lg p-6 border border-gray-200 dark:border-gray-700">
-                    <h2 class="text-xl font-bold text-gray-800 dark:text-white mb-4 pb-2 border-b border-gray-200 dark:border-gray-700">CQ-QQ-API 插件配置</h2>
+                    <h2 class="text-xl font-bold text-gray-800 dark:text-white mb-4 pb-2 border-b border-gray-200 dark:border-gray-700" data-i18n="page.cq.plugin_config"></h2>
 
                     <!-- 配置说明 -->
                     <div class="mb-6 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-100 dark:border-blue-800">
                         <div class="flex items-start">
                             <i class="fas fa-info-circle text-blue-500 dark:text-blue-400 mt-0.5 mr-3 text-lg"></i>
                             <div>
-                                <h3 class="font-medium text-blue-700 dark:text-blue-300 mb-1">配置说明</h3>
-                                <p class="text-sm text-blue-600 dark:text-blue-200">CQ-QQ-API 是一个用于连接 QQ 的插件，通过 Websocket 协议与 QQ 机器人框架通信。您需要设置正确的连接参数。</p>
+                                <h3 class="font-medium text-blue-700 dark:text-blue-300 mb-1" data-i18n="page.cq.guide.title"></h3>
+                                <p class="text-sm text-blue-600 dark:text-blue-200" data-i18n="page.cq.guide.desc"></p>
                             </div>
                         </div>
                     </div>
 
                     <!-- 加载动画 -->
-                    <div x-show="loading" class="flex justify-center items-center py-12">
-                        <div class="loading-spinner"></div>
-                        <span class="ml-3 text-gray-600 dark:text-gray-400">加载配置中...</span>
-                    </div>
+                        <div x-show="loading" class="flex justify-center items-center py-12">
+                            <div class="loading-spinner"></div>
+                            <span class="ml-3 text-gray-600 dark:text-gray-400" data-i18n="page.cq.loading"></span>
+                        </div>
 
                     <!-- 配置列表 -->
                     <div x-show="!loading" class="config-container">
@@ -452,13 +454,13 @@
                             <template x-if="!saving">
                                 <span>
                                     <i class="fas fa-save mr-2"></i>
-                                    保存配置
+                                    <span data-i18n="page.cq.save"></span>
                                 </span>
                             </template>
                             <template x-if="saving">
                                 <span>
                                     <i class="fas fa-circle-notch fa-spin mr-2"></i>
-                                    保存中...
+                                    <span data-i18n="page.cq.saving"></span>
                                 </span>
                             </template>
                         </button>
@@ -488,7 +490,7 @@
                 
                 <!-- 页脚 -->
                 <footer class="mt-8 text-center text-gray-600 dark:text-gray-400 text-sm">
-                    <p>MCDR WebUI &copy; <span id="year"></span></p>
+                    <p data-i18n="common.copyright"></p>
                 </footer>
             </main>
         </div>

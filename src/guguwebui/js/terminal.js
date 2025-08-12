@@ -1,6 +1,33 @@
 // 终端页面的JavaScript功能
 document.addEventListener('alpine:init', () => {
     Alpine.data('terminalData', () => ({
+        // i18n（仅本页用）
+        termLang: 'zh-CN',
+        termDict: {},
+        t(key, fallback = '') {
+            const val = key.split('.').reduce((o, k) => (o && o[k] != null ? o[k] : undefined), this.termDict);
+            if (val != null) return String(val);
+            if (window.I18n && typeof window.I18n.t === 'function') {
+                const v = window.I18n.t(key);
+                if (v && v !== key) return v;
+            }
+            return fallback || key;
+        },
+        async loadLangDict() {
+            const stored = localStorage.getItem('lang') || (navigator.language || 'zh-CN');
+            this.termLang = stored.toLowerCase().startsWith('zh') ? 'zh-CN' : 'en-US';
+            try {
+                const resp = await fetch(`lang/${this.termLang}.json`, { cache: 'no-cache' });
+                if (resp.ok) {
+                    this.termDict = await resp.json();
+                } else {
+                    this.termDict = {};
+                }
+            } catch (e) {
+                console.warn('terminal loadLangDict failed:', e);
+                this.termDict = {};
+            }
+        },
         serverStatus: 'loading',
         userName: '',
         serverVersion: '',
@@ -109,11 +136,14 @@ document.addEventListener('alpine:init', () => {
                         });
                     }
                 } else {
-                    this.showNotificationMsg(`加载日志失败: ${data.message || '未知错误'}`, 'error');
+                    this.showNotificationMsg(
+                        this.t('page.terminal.msg.load_logs_failed_prefix', '加载日志失败: ') + (data.message || this.t('common.unknown', '未知')),
+                        'error'
+                    );
                 }
             } catch (error) {
                 console.error('Error loading logs:', error);
-                this.showNotificationMsg('加载日志失败', 'error');
+                this.showNotificationMsg(this.t('page.terminal.msg.load_logs_failed', '加载日志失败'), 'error');
             } finally {
                 this.isLoading = false;
             }
@@ -367,16 +397,16 @@ document.addEventListener('alpine:init', () => {
         // 复制日志到剪贴板
         copyLogs() {
             if (!this.logs || this.logs.length === 0) {
-                this.showNotificationMsg('没有日志可复制', 'error');
+                this.showNotificationMsg(this.t('page.terminal.msg.copy_no_logs', '没有日志可复制'), 'error');
                 return;
             }
             
             const logText = this.logs.map(log => `${log.line_number}: ${log.content}`).join('\n');
             navigator.clipboard.writeText(logText)
-                .then(() => this.showNotificationMsg('日志已复制到剪贴板', 'success'))
+                .then(() => this.showNotificationMsg(this.t('page.terminal.msg.copy_success', '日志已复制到剪贴板'), 'success'))
                 .catch(err => {
                     console.error('复制失败:', err);
-                    this.showNotificationMsg('复制失败', 'error');
+                    this.showNotificationMsg(this.t('page.terminal.msg.copy_failed', '复制失败'), 'error');
                 });
         },
         
@@ -406,7 +436,7 @@ document.addEventListener('alpine:init', () => {
             ];
             
             if (forbiddenCommands.includes(command)) {
-                this.showNotificationMsg(`不允许执行该命令，这可能导致运行崩溃或卡死！`, 'error');
+                this.showNotificationMsg(this.t('page.terminal.msg.forbidden_command', '不允许执行该命令，这可能导致运行崩溃或卡死！'), 'error');
                 return;
             }
             
@@ -438,13 +468,16 @@ document.addEventListener('alpine:init', () => {
                     // 命令发送成功后清空输入框
                     this.commandInput = '';
                     // 可以选择显示提示信息
-                    this.showNotificationMsg(`命令已发送：${data.feedback}`, 'success');
+                    this.showNotificationMsg(this.t('page.terminal.msg.command_sent_prefix', '命令已发送：') + `${data.feedback}`, 'success');
                 } else {
-                    this.showNotificationMsg(`发送失败: ${data.message || '未知错误'}`, 'error');
+                    this.showNotificationMsg(
+                        this.t('page.terminal.msg.send_failed_prefix', '发送失败: ') + (data.message || this.t('common.unknown', '未知错误')),
+                        'error'
+                    );
                 }
             } catch (error) {
                 console.error('Error sending command:', error);
-                this.showNotificationMsg('发送命令失败', 'error');
+                this.showNotificationMsg(this.t('page.terminal.msg.send_failed', '发送命令失败'), 'error');
             }
         },
         
@@ -495,7 +528,7 @@ document.addEventListener('alpine:init', () => {
             // 如果有选中的文本，则使用选中的文本作为询问内容
             if (selectedText) {
                 this.aiLogPreview = selectedText;
-                this.aiQueryTitle = '询问选中内容';
+                this.aiQueryTitle = this.t('page.terminal.msg.ask_selected', '询问选中内容');
             } else {
                 // 否则，获取最近的200行日志
                 const recentLogs = this.logs.slice(Math.max(0, this.logs.length - 200));
@@ -503,7 +536,7 @@ document.addEventListener('alpine:init', () => {
                     let prefix = '';
                     return `${prefix}${log.content}`;
                 }).join('\n');
-                this.aiQueryTitle = 'AI日志分析询问';
+                this.aiQueryTitle = this.t('page.terminal.ai_modal.title', 'AI日志分析询问');
             }
             
             // 显示弹窗
@@ -554,7 +587,7 @@ document.addEventListener('alpine:init', () => {
         // 保存API Key
         async saveApiKey() {
             if (!this.apiKey.trim()) {
-                this.showNotificationMsg('请输入API密钥', 'error');
+                this.showNotificationMsg(this.t('page.terminal.msg.api_key_required', '请输入API密钥'), 'error');
                 return;
             }
             
@@ -576,7 +609,7 @@ document.addEventListener('alpine:init', () => {
                 const result = await response.json();
                 
                 if (result.status === 'success') {
-                    this.showNotificationMsg('API密钥已保存', 'success');
+                    this.showNotificationMsg(this.t('page.terminal.msg.api_key_saved', 'API密钥已保存'), 'success');
                     this.closeApiKeyModal();
                     // 如果有选中的文本，则重新打开AI询问弹窗
                     if (this.aiSelectedText) {
@@ -585,11 +618,14 @@ document.addEventListener('alpine:init', () => {
                         this.openAIQueryModal();
                     }
                 } else {
-                    this.showNotificationMsg(`保存失败: ${result.message || '未知错误'}`, 'error');
+                    this.showNotificationMsg(
+                        this.t('page.terminal.msg.save_failed_prefix', '保存失败: ') + (result.message || this.t('common.unknown', '未知错误')),
+                        'error'
+                    );
                 }
             } catch (error) {
                 console.error('保存API密钥失败:', error);
-                this.showNotificationMsg('保存API密钥失败', 'error');
+                this.showNotificationMsg(this.t('page.terminal.msg.save_api_key_error', '保存API密钥失败'), 'error');
             } finally {
                 this.aiLoading = false;
             }
@@ -614,12 +650,12 @@ document.addEventListener('alpine:init', () => {
             this.aiResponse = '';
             
             // 如果用户没有输入问题，使用默认问题
-            const query = this.aiQuery.trim() || '分析这些日志中的错误并提供解决方案';
+            const query = this.aiQuery.trim() || this.t('page.terminal.msg.default_ai_query', '分析这些日志中的错误并提供解决方案');
             
             // 准备发送到API的数据
             let requestData = {
                 query: query,
-                system_prompt: '你是一个Minecraft服务器日志分析专家，请分析以下日志并提供详细的解释和解决方案。请只关注与问题相关的内容，不要重复日志内容。'
+                system_prompt: this.t('page.terminal.msg.system_prompt', '你是一个Minecraft服务器日志分析专家，请分析以下日志并提供详细的解释和解决方案。请只关注与问题相关的内容，不要重复日志内容。')
             };
             
             // 如果启用了连续对话，添加聊天历史
@@ -666,13 +702,13 @@ document.addEventListener('alpine:init', () => {
                         }
                     }
                 } else {
-                    this.aiResponse = `错误: ${data.message || '请求失败'}`;
+                    this.aiResponse = `${this.t('page.terminal.msg.error_prefix', '错误: ')}${data.message || this.t('page.terminal.msg.request_failed', '请求失败')}`;
                 }
             })
             .catch(error => {
                 console.error('AI询问出错:', error);
                 this.aiLoading = false;
-                this.aiResponse = `请求出错: ${error.message}`;
+                this.aiResponse = `${this.t('page.terminal.msg.request_error_prefix', '请求出错: ')}${error.message}`;
             });
         },
         
@@ -718,6 +754,14 @@ document.addEventListener('alpine:init', () => {
         },
         
         init() {
+            // 语言
+            this.loadLangDict();
+            document.addEventListener('i18n:changed', (e) => {
+                const nextLang = (e && e.detail && e.detail.lang) ? e.detail.lang : this.termLang;
+                this.termLang = nextLang.toLowerCase().startsWith('zh') ? 'zh-CN' : 'en-US';
+                this.loadLangDict();
+            });
+
             this.checkLoginStatus();
             this.checkServerStatus();
             this.loadLogs();

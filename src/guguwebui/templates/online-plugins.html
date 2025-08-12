@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     
-    <title>MCDR WebUI - 在线插件</title>
+    <title data-i18n="page.online_plugins.title_full">MCDR WebUI - 在线插件</title>
     <!-- 主题预加载脚本 - 防止闪烁 -->
     <script src="js/theme-preload.js"></script>
     <!-- Tailwind CSS -->
@@ -17,6 +17,8 @@
     <script src="https://cdn.jsdelivr.net/npm/vditor@3.9.6/dist/index.min.js"></script>
     <!-- 自定义CSS -->
     <link rel="stylesheet" href="css/main.css">
+    <!-- i18n -->
+    <script defer src="js/i18n.js"></script>
     <!-- 自定义配置 -->
     <script>
         tailwind.config = {
@@ -433,7 +435,7 @@
                         </button>
                         
                         <!-- 页面标题 -->
-                        <h1 class="ml-4 text-xl font-semibold text-gray-800 dark:text-white">在线插件</h1>
+                        <h1 class="ml-4 text-xl font-semibold text-gray-800 dark:text-white" data-i18n="nav.online_plugins"></h1>
                     </div>
                     
                     <!-- 右侧部分 -->
@@ -453,19 +455,19 @@
                             }">
                                 <span x-show="serverStatus === 'online'" class="flex items-center">
                                     <i class="fas fa-circle mr-1 text-xs"></i>
-                                    <span>在线</span>
+                                    <span data-i18n="nav.status_online"></span>
                                 </span>
                                 <span x-show="serverStatus === 'offline'" class="flex items-center">
                                     <i class="fas fa-circle mr-1 text-xs"></i>
-                                    <span>离线</span>
+                                    <span data-i18n="nav.status_offline"></span>
                                 </span>
                                 <span x-show="serverStatus === 'error'" class="flex items-center">
                                     <i class="fas fa-exclamation-triangle mr-1"></i>
-                                    <span>错误</span>
+                                    <span data-i18n="nav.status_error"></span>
                                 </span>
                                 <span x-show="serverStatus === 'loading'" class="flex items-center">
                                     <i class="fas fa-circle-notch fa-spin mr-1 text-xs"></i>
-                                    <span>加载中</span>
+                                    <span data-i18n="nav.status_loading"></span>
                                 </span>
                             </div>
                         </div>
@@ -480,7 +482,10 @@
                             <div class="w-8 h-8 rounded-full bg-blue-500 flex items-center justify-center text-white user-avatar overflow-hidden">
                                 <i class="fas fa-user"></i>
                             </div>
-                            <span class="ml-2 text-sm font-medium text-gray-700 dark:text-gray-300 js-username" x-text="userName || '用户'"></span>
+                            <span class="ml-2 text-sm font-medium text-gray-700 dark:text-gray-300 js-username">
+                                <span x-show="userName" x-text="userName"></span>
+                                <span x-show="!userName" data-i18n="common.user"></span>
+                            </span>
                         </div>
                     </div>
                 </div>
@@ -490,18 +495,18 @@
             <main class="pt-24 px-4 sm:px-6 md:px-8 pb-8">
                 <div class="bg-white dark:bg-gray-800 shadow-sm rounded-lg p-6 border border-gray-200 dark:border-gray-700">
                     <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
-                        <h2 class="text-xl font-bold text-gray-800 dark:text-white">在线插件仓库</h2>
+                        <h2 class="text-xl font-bold text-gray-800 dark:text-white" data-i18n="page.online_plugins.title"></h2>
                         
                         <div class="flex flex-col sm:flex-row gap-4 w-full md:w-auto">
                             <!-- 排序控件 -->
                             <div class="flex items-center space-x-2">
-                                <span class="text-sm text-gray-600 dark:text-gray-300">排序:</span>
+                                <span class="text-sm text-gray-600 dark:text-gray-300" data-i18n="page.online_plugins.sort"></span>
                                 <button 
                                     @click="toggleSortMethod('name')" 
                                     class="inline-flex items-center px-2 py-1 text-xs rounded border"
                                     :class="sortMethod === 'name' ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 border-blue-200 dark:border-blue-800' : 'border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300'"
                                 >
-                                    <span>按名称</span>
+                                    <span data-i18n="page.online_plugins.sort_name"></span>
                                     <template x-if="sortMethod === 'name'">
                                         <i class="ml-1 fas" :class="sortDirection === 'asc' ? 'fa-sort-alpha-down' : 'fa-sort-alpha-up'"></i>
                                     </template>
@@ -511,7 +516,7 @@
                                     class="inline-flex items-center px-2 py-1 text-xs rounded border"
                                     :class="sortMethod === 'time' ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 border-blue-200 dark:border-blue-800' : 'border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300'"
                                 >
-                                    <span>按时间</span>
+                                    <span data-i18n="page.online_plugins.sort_time"></span>
                                     <template x-if="sortMethod === 'time'">
                                         <i class="ml-1 fas" :class="sortDirection === 'asc' ? 'fa-sort-numeric-down' : 'fa-sort-numeric-up'"></i>
                                     </template>
@@ -521,7 +526,7 @@
                                     class="inline-flex items-center px-2 py-1 text-xs rounded border"
                                     :class="sortMethod === 'downloads' ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 border-blue-200 dark:border-blue-800' : 'border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300'"
                                 >
-                                    <span>按下载量</span>
+                                    <span data-i18n="page.online_plugins.sort_downloads"></span>
                                     <template x-if="sortMethod === 'downloads'">
                                         <i class="ml-1 fas" :class="sortDirection === 'asc' ? 'fa-sort-numeric-down' : 'fa-sort-numeric-up'"></i>
                                     </template>
@@ -533,7 +538,7 @@
                                 <input 
                                     type="text" 
                                     class="w-full pl-10 pr-4 py-2 rounded-lg border dark:border-gray-700 bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white"
-                                    placeholder="搜索插件..."
+                                    data-i18n-placeholder="page.online_plugins.search"
                                     x-model="searchQuery"
                                 >
                                 <i class="fas fa-search absolute left-3 top-3 text-gray-400"></i>
@@ -554,7 +559,8 @@
                                     class="inline-flex items-center justify-center px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm text-sm font-medium text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none transition-colors"
                                 >
                                     <i class="fas fa-server mr-2"></i>
-                                    <span x-text="selectedRepository ? selectedRepository.name : '选择仓库'"></span>
+                                    <span x-show="selectedRepository && selectedRepository.name" x-text="selectedRepository.name"></span>
+                                    <span x-show="!selectedRepository" data-i18n="page.online_plugins.select_repo"></span>
                                     <i class="fas fa-chevron-down ml-2"></i>
                                 </button>
                                 
@@ -572,27 +578,28 @@
                                 >
                                     <!-- 临时访问指定仓库 -->
                                     <div class="p-3 border-b border-gray-200 dark:border-gray-700">
-                                        <div class="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2">临时访问仓库</div>
+                                        <div class="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2" data-i18n="page.online_plugins.temp_repo_access"></div>
                                         <div class="flex items-center">
                                             <input 
                                                 type="text" 
                                                 x-model="tempRepoUrl"
-                                                placeholder="输入仓库URL..."
+                                                data-i18n-placeholder="page.online_plugins.placeholder_repo_url"
                                                 class="w-full text-sm px-2 py-1.5 rounded border dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white"
                                             >
-                                            <button 
-                                                @click="switchRepository({name: '临时仓库', url: tempRepoUrl}); repoMenuOpen = false;"
+                                             <button 
+                                                @click="switchRepository({name: $refs.tempRepoName.textContent, url: tempRepoUrl}); repoMenuOpen = false;"
                                                 class="ml-2 p-1.5 bg-blue-600 text-white rounded hover:bg-blue-700"
                                                 :disabled="!tempRepoUrl"
                                             >
                                                 <i class="fas fa-arrow-right text-xs"></i>
                                             </button>
+                                             <span x-ref="tempRepoName" class="hidden" data-i18n="page.online_plugins.temp_repo_name">临时仓库</span>
                                         </div>
                                     </div>
                                     
                                     <!-- 可用仓库列表 -->
                                     <div class="max-h-60 overflow-y-auto py-1">
-                                        <div class="text-xs font-medium text-gray-500 dark:text-gray-400 px-4 py-1">选择仓库</div>
+                                        <div class="text-xs font-medium text-gray-500 dark:text-gray-400 px-4 py-1" data-i18n="page.online_plugins.select_repo_list"></div>
                                         <template x-for="repo in repositories" :key="repo.url">
                                             <a 
                                                 href="javascript:void(0)" 
@@ -621,7 +628,8 @@
                                 <template x-if="loading">
                                     <i class="fas fa-circle-notch fa-spin mr-2"></i>
                                 </template>
-                                <span x-text="loading ? '加载中...' : '刷新插件列表'"></span>
+                                <span x-show="loading" data-i18n="page.online_plugins.loading_short"></span>
+                                <span x-show="!loading" data-i18n="page.online_plugins.refresh_list"></span>
                             </button>
                         </div>
                     </div>
@@ -629,13 +637,13 @@
                     <!-- 加载状态 -->
                     <div x-show="loading" class="flex justify-center items-center py-12">
                         <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
-                        <span class="ml-3 text-gray-600 dark:text-gray-400">加载插件中...</span>
+                        <span class="ml-3 text-gray-600 dark:text-gray-400" data-i18n="page.online_plugins.loading"></span>
                     </div>
 
                     <!-- 插件列表 -->
                     <div x-show="!loading && getPaginatedPlugins().length === 0" class="text-center py-12">
                         <i class="fas fa-puzzle-piece text-4xl text-gray-400 mb-4"></i>
-                        <p class="text-gray-500 dark:text-gray-400">未找到符合条件的插件</p>
+                        <p class="text-gray-500 dark:text-gray-400" data-i18n="page.online_plugins.empty"></p>
                     </div>
 
                     <div x-show="!loading && getPaginatedPlugins().length > 0" class="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -646,9 +654,10 @@
                                         <div class="flex-1">
                                             <div class="flex items-start">
                                                 <h3 class="text-lg font-semibold text-gray-900 dark:text-white" x-text="plugin.name || plugin.id"></h3>
-                                                <span class="ml-2 text-sm text-gray-500 dark:text-gray-400" x-text="'v' + (plugin.latest_version || '未知')"></span>
+                                                <span class="ml-2 text-sm text-gray-500 dark:text-gray-400" x-show="plugin.latest_version" x-text="'v' + (plugin.latest_version)"></span>
+                                                <span class="ml-2 text-sm text-gray-500 dark:text-gray-400" x-show="!plugin.latest_version" data-i18n="plugins.unknown_version"></span>
                                             </div>
-                                            <p class="text-sm text-gray-500 dark:text-gray-400" x-text="'ID: ' + plugin.id"></p>
+                                            <p class="text-sm text-gray-500 dark:text-gray-400"><span data-i18n="plugins.plugin_id"></span><span x-text="plugin.id"></span></p>
                                         </div>
                                         
                                         <div class="flex flex-wrap mt-2 md:mt-0 gap-2">
@@ -709,7 +718,7 @@
                                             class="inline-flex items-center px-3 py-1.5 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm text-xs font-medium text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none transition-colors"
                                         >
                                             <i class="fas fa-info-circle mr-1.5"></i>
-                                            <span>详情</span>
+                                            <span data-i18n="page.online_plugins.details"></span>
                                         </button>
                                         
                                         <!-- 查看说明文档按钮 -->
@@ -719,7 +728,7 @@
                                             class="inline-flex items-center px-3 py-1.5 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm text-xs font-medium text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none transition-colors"
                                         >
                                             <i class="fas fa-book mr-1.5"></i>
-                                            <span>说明文档</span>
+                                            <span data-i18n="page.online_plugins.readme_doc"></span>
                                         </button>
                                         
                                         <!-- 查看仓库页按钮 - 仅在官方仓库(repoId为0)显示 -->
@@ -729,7 +738,7 @@
                                             class="inline-flex items-center px-3 py-1.5 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm text-xs font-medium text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none transition-colors"
                                         >
                                             <i class="fas fa-external-link-alt mr-1.5"></i>
-                                            <span>查看仓库页</span>
+                                            <span data-i18n="page.online_plugins.view_repo_page"></span>
                                         </button>
                                         
                                         <a 
@@ -739,7 +748,7 @@
                                             class="inline-flex items-center px-3 py-1.5 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm text-xs font-medium text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none transition-colors"
                                         >
                                             <i class="fab fa-github mr-1.5"></i>
-                                            <span>GitHub</span>
+                                            <span data-i18n="plugins.github"></span>
                                         </a>
                                         
                                         <!-- 显示已安装标签 -->
@@ -748,7 +757,8 @@
                                             class="inline-flex items-center px-3 py-1.5 border border-transparent rounded-md shadow-sm text-xs font-medium text-white bg-green-600"
                                         >
                                             <i class="fas fa-check-circle mr-1.5"></i>
-                                            <span x-text="'已安装 v' + getInstalledPluginVersion(plugin.id)"></span>
+                                            <span data-i18n="plugins.installed"></span>
+                                            <span x-text="' v' + getInstalledPluginVersion(plugin.id)"></span>
                                         </div>
                                         
                                         <!-- 安装/更新按钮 -->
@@ -764,7 +774,8 @@
                                             <template x-if="processingPlugins[plugin.id]">
                                                 <i class="fas fa-circle-notch fa-spin mr-1.5"></i>
                                             </template>
-                                            <span x-text="isPluginInstalled(plugin.id) ? '更新' : '安装'"></span>
+                                            <span x-show="isPluginInstalled(plugin.id)" data-i18n="plugins.update"></span>
+                                            <span x-show="!isPluginInstalled(plugin.id)" data-i18n="common.install"></span>
                                         </button>
                                     </div>
                                 </div>
@@ -844,7 +855,7 @@
                 <div x-show="showInstallModal" x-transition.opacity class="modal-backdrop">
                     <div class="modal-content" @click.away="closeInstallModal()">
                         <div class="modal-header">
-                            <h3 class="text-lg font-semibold text-gray-900 dark:text-white" x-text="'安装进度 - ' + installPluginId"></h3>
+                            <h3 class="text-lg font-semibold text-gray-900 dark:text-white"><span data-i18n="plugins.install_modal.install_progress"></span><span x-text="installPluginId"></span></h3>
                             <button @click="closeInstallModal()" class="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200">
                                 <i class="fas fa-times"></i>
                             </button>
@@ -872,42 +883,41 @@
                                 }">
                                     <span x-show="installStatus === 'running'" class="flex items-center">
                                         <i class="fas fa-circle-notch fa-spin mr-1.5"></i>
-                                        <span>正在处理</span>
+                                        <span data-i18n="plugins.install_modal.processing"></span>
                                     </span>
                                     <span x-show="installStatus === 'completed'" class="flex items-center">
                                         <i class="fas fa-check-circle mr-1.5"></i>
-                                        <span>已完成</span>
+                                        <span data-i18n="plugins.install_modal.completed"></span>
                                     </span>
                                     <span x-show="installStatus === 'failed'" class="flex items-center">
                                         <i class="fas fa-exclamation-circle mr-1.5"></i>
-                                        <span>失败</span>
+                                        <span data-i18n="plugins.install_modal.failed"></span>
                                     </span>
                                     <span x-show="installStatus === 'pending'" class="flex items-center">
                                         <i class="fas fa-hourglass-start mr-1.5"></i>
-                                        <span>等待中</span>
+                                        <span data-i18n="plugins.install_modal.pending"></span>
                                     </span>
                                 </div>
                             </div>
                             
                             <!-- 安装日志 -->
                             <div class="mt-4">
-                                <h4 class="text-sm font-medium text-gray-800 dark:text-gray-200 mb-2">安装日志</h4>
+                                <h4 class="text-sm font-medium text-gray-800 dark:text-gray-200 mb-2" data-i18n="plugins.install_modal.processing_logs"></h4>
                                 <div class="bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-md p-3 h-56 overflow-y-auto font-mono text-xs">
                                     <template x-for="(message, index) in installLogMessages" :key="index">
                                         <div class="py-0.5" :class="{'text-red-500': message.includes('错误') || message.includes('失败') || message.includes('⚠'), 'text-green-500': message.includes('成功') || message.includes('✓')}">
                                             <span x-text="message"></span>
                                         </div>
                                     </template>
-                                    <div x-show="installLogMessages.length === 0" class="text-gray-500 dark:text-gray-400">
-                                        等待日志...
-                                    </div>
+                                    <div x-show="installLogMessages.length === 0" class="text-gray-500 dark:text-gray-400" data-i18n="plugins.install_modal.waiting_logs"></div>
                                 </div>
                             </div>
                         </div>
                         
                         <div class="modal-footer">
                             <button @click="closeInstallModal()" class="inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm text-sm font-medium text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none">
-                                <span x-text="installStatus === 'running' ? '隐藏' : '关闭'"></span>
+                                <span x-show="installStatus === 'running'" data-i18n="plugins.hide"></span>
+                                <span x-show="installStatus !== 'running'" data-i18n="plugins.close"></span>
                             </button>
                         </div>
                     </div>
@@ -919,20 +929,27 @@
                         <div class="modal-header">
                             <div class="flex items-center">
                                 <!-- 返回按钮 -->
-                                <button 
+                                    <button 
                                     x-show="pluginHistory.length > 0" 
                                     @click="goBackToPlugin()" 
                                     class="mr-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
-                                    title="返回上一个插件"
+                                        data-i18n-attr="title" data-i18n="page.online_plugins.back_prev_plugin"
                                 >
                                     <i class="fas fa-arrow-left"></i>
                                 </button>
                                 
-                                <h3 class="text-lg font-semibold text-gray-900 dark:text-white" x-text="currentPlugin ? currentPlugin.name || currentPlugin.id : '插件详情'"></h3>
+                                <h3 class="text-lg font-semibold text-gray-900 dark:text-white">
+                                    <template x-if="currentPlugin">
+                                        <span x-text="currentPlugin ? currentPlugin.name || currentPlugin.id : ''"></span>
+                                    </template>
+                                    <template x-if="!currentPlugin">
+                                        <span data-i18n="page.online_plugins.detail_title"></span>
+                                    </template>
+                                </h3>
                                 
                                 <!-- 导航路径显示 -->
                                 <div x-show="pluginHistory.length > 0" class="ml-3 text-sm text-gray-500">
-                                    <span>访问历史: </span>
+                                    <span data-i18n="page.online_plugins.history"></span>
                                     <template x-for="(historyPlugin, index) in pluginHistory.slice().reverse().slice(0, 2)" :key="index">
                                         <span>
                                             <span x-text="historyPlugin.name || historyPlugin.id"></span>
@@ -951,22 +968,22 @@
                             <div class="space-y-4">
                                 <!-- 基本信息 -->
                                 <div>
-                                    <h4 class="text-md font-medium text-gray-800 dark:text-gray-200 mb-2">基本信息</h4>
+                                    <h4 class="text-md font-medium text-gray-800 dark:text-gray-200 mb-2" data-i18n="page.online_plugins.basic_info"></h4>
                                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                                         <div>
-                                            <p class="text-sm text-gray-500 dark:text-gray-400">ID:</p>
+                                            <p class="text-sm text-gray-500 dark:text-gray-400" data-i18n="plugins.plugin_id"></p>
                                             <p class="text-sm text-gray-800 dark:text-gray-200" x-text="currentPlugin?.id"></p>
                                         </div>
                                         <div>
-                                            <p class="text-sm text-gray-500 dark:text-gray-400">最新版本:</p>
+                                            <p class="text-sm text-gray-500 dark:text-gray-400" data-i18n="page.online_plugins.latest_version"></p>
                                             <p class="text-sm text-gray-800 dark:text-gray-200" x-text="currentPlugin?.latest_version || '未知'"></p>
                                         </div>
                                         <div>
-                                            <p class="text-sm text-gray-500 dark:text-gray-400">最后更新:</p>
+                                            <p class="text-sm text-gray-500 dark:text-gray-400" data-i18n="page.online_plugins.last_update"></p>
                                             <p class="text-sm text-gray-800 dark:text-gray-200" x-text="formatDate(currentPlugin?.last_update_time) || '未知'"></p>
                                         </div>
                                         <div>
-                                            <p class="text-sm text-gray-500 dark:text-gray-400">作者:</p>
+                                            <p class="text-sm text-gray-500 dark:text-gray-400" data-i18n="plugins.author"></p>
                                             <p class="text-sm text-gray-800 dark:text-gray-200">
                                                 <template x-for="(author, index) in currentPlugin?.authors || []" :key="index">
                                                     <span>
@@ -985,7 +1002,7 @@
                                         </div>
                                         <!-- 协议信息 -->
                                         <div x-show="currentPlugin && currentPlugin.license">
-                                            <p class="text-sm text-gray-500 dark:text-gray-400">协议:</p>
+                                            <p class="text-sm text-gray-500 dark:text-gray-400" data-i18n="page.online_plugins.license"></p>
                                             <p class="text-sm text-gray-800 dark:text-gray-200">
                                                 <template x-if="currentPlugin && currentPlugin.license_url">
                                                     <a href="javascript:void(0)" @click="showLicenseDetails(null, currentPlugin.license_url)" class="text-blue-500 hover:underline" x-text="currentPlugin && currentPlugin.license ? currentPlugin.license : '未知'"></a>
@@ -997,7 +1014,7 @@
                                         </div>
                                         <!-- 下载量信息 -->
                                         <div x-show="currentPlugin?.downloads">
-                                            <p class="text-sm text-gray-500 dark:text-gray-400">下载量:</p>
+                                            <p class="text-sm text-gray-500 dark:text-gray-400" data-i18n="page.online_plugins.downloads_label"></p>
                                             <p class="text-sm text-gray-800 dark:text-gray-200" x-text="formatNumber(currentPlugin?.downloads || 0)"></p>
                                         </div>
                                     </div>
@@ -1005,14 +1022,14 @@
                                 
                                 <!-- 描述 -->
                                 <div x-show="currentPlugin?.description">
-                                    <h4 class="text-md font-medium text-gray-800 dark:text-gray-200 mb-2">描述</h4>
+                                    <h4 class="text-md font-medium text-gray-800 dark:text-gray-200 mb-2" data-i18n="page.online_plugins.description"></h4>
                                     <div class="space-y-2">
                                         <div x-show="currentPlugin?.description?.zh_cn">
-                                            <p class="text-sm text-gray-500 dark:text-gray-400">中文:</p>
+                                            <p class="text-sm text-gray-500 dark:text-gray-400" data-i18n="page.online_plugins.description_cn"></p>
                                             <p class="text-sm text-gray-800 dark:text-gray-200" x-text="currentPlugin?.description?.zh_cn"></p>
                                         </div>
                                         <div x-show="currentPlugin?.description?.en_us">
-                                            <p class="text-sm text-gray-500 dark:text-gray-400">英文:</p>
+                                            <p class="text-sm text-gray-500 dark:text-gray-400" data-i18n="page.online_plugins.description_en"></p>
                                             <p class="text-sm text-gray-800 dark:text-gray-200" x-text="currentPlugin?.description?.en_us"></p>
                                         </div>
                                     </div>
@@ -1020,7 +1037,7 @@
                                 
                                 <!-- 标签 -->
                                 <div x-show="currentPlugin?.labels && currentPlugin.labels.length">
-                                    <h4 class="text-md font-medium text-gray-800 dark:text-gray-200 mb-2">标签</h4>
+                                    <h4 class="text-md font-medium text-gray-800 dark:text-gray-200 mb-2" data-i18n="page.online_plugins.labels"></h4>
                                     <div class="flex flex-wrap gap-2">
                                         <template x-for="label in currentPlugin?.labels || []" :key="label">
                                             <span class="plugin-tag" :class="label.toLowerCase()" x-text="label"></span>
@@ -1030,7 +1047,7 @@
                                 
                                 <!-- 依赖项 -->
                                 <div x-show="currentPlugin?.dependencies && Object.keys(currentPlugin.dependencies).length">
-                                    <h4 class="text-md font-medium text-gray-800 dark:text-gray-200 mb-2">依赖项</h4>
+                                    <h4 class="text-md font-medium text-gray-800 dark:text-gray-200 mb-2" data-i18n="page.online_plugins.dependencies"></h4>
                                     <div class="dependencies-list">
                                         <template x-for="(version, name) in currentPlugin?.dependencies || {}" :key="name">
                                             <div class="dependency-item flex items-center flex-nowrap">
@@ -1042,7 +1059,7 @@
                                                     <span 
                                                         @click="showDependencyDetails(name)" 
                                                         class="cursor-pointer hover:text-blue-500 hover:underline inline-flex items-center" 
-                                                        :title="'点击查看 ' + name + ' 的详细信息'"
+                                                        data-i18n-attr="title" data-i18n="page.online_plugins.dep_view_detail"
                                                     >
                                                         <span x-text="name"></span>
                                                         <i class="fas fa-external-link-alt ml-1 text-xs text-blue-500"></i>
@@ -1056,7 +1073,7 @@
                                 
                                 <!-- 链接 -->
                                 <div>
-                                    <h4 class="text-md font-medium text-gray-800 dark:text-gray-200 mb-2">链接</h4>
+                                    <h4 class="text-md font-medium text-gray-800 dark:text-gray-200 mb-2" data-i18n="page.online_plugins.links"></h4>
                                     <div class="space-y-2">
                                         <div x-show="currentPlugin?.id">
                                             <a 
@@ -1065,7 +1082,7 @@
                                                 class="inline-flex items-center text-blue-600 dark:text-blue-400 hover:underline"
                                             >
                                                 <i class="fas fa-external-link-alt mr-1.5"></i>
-                                                <span>MCDR 插件索引</span>
+                                                <span data-i18n="page.online_plugins.mcdr_index"></span>
                                             </a>
                                         </div>
                                         <div x-show="currentPlugin?.repository_url">
@@ -1075,7 +1092,7 @@
                                                 class="inline-flex items-center text-blue-600 dark:text-blue-400 hover:underline"
                                             >
                                                 <i class="fab fa-github mr-1.5"></i>
-                                                <span>GitHub 仓库</span>
+                                                <span data-i18n="page.online_plugins.github_repo"></span>
                                             </a>
                                         </div>
                                     </div>
@@ -1084,8 +1101,8 @@
                         </div>
                         
                         <div class="modal-footer">
-                            <button @click="closePluginModal()" class="inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm text-sm font-medium text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none">
-                                <span>关闭</span>
+                             <button @click="closePluginModal()" class="inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm text-sm font-medium text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none">
+                                <span data-i18n="plugins.close"></span>
                             </button>
                             
                             <!-- 已安装标签 -->
@@ -1120,13 +1137,13 @@
                 <div x-show="showRepoModal" x-transition.opacity class="modal-backdrop">
                     <div class="modal-content" style="width: 90%; height: 90%; max-height: 90vh; max-width: 1200px;">
                         <div class="modal-header">
-                            <h3 class="text-lg font-semibold text-gray-900 dark:text-white">插件仓库页面</h3>
+                            <h3 class="text-lg font-semibold text-gray-900 dark:text-white" data-i18n="page.online_plugins.repo_page_title"></h3>
                             <div class="flex items-center space-x-2">
                                 <a 
                                     :href="currentRepoUrl" 
                                     target="_blank"
                                     class="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300"
-                                    title="在新标签页中打开"
+                                    data-i18n-attr="title" data-i18n="page.online_plugins.open_in_new_tab"
                                 >
                                     <i class="fas fa-external-link-alt"></i>
                                 </a>
@@ -1149,11 +1166,11 @@
                         </div>
                         
                         <div class="modal-footer">
-                            <button 
+                             <button 
                                 @click="closeRepoModal()" 
                                 class="inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm text-sm font-medium text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none"
                             >
-                                <span>关闭</span>
+                                <span data-i18n="plugins.close"></span>
                             </button>
                         </div>
                     </div>
@@ -1163,7 +1180,11 @@
                 <div x-show="showReadmeModal" x-transition.opacity class="modal-backdrop">
                     <div class="modal-content" style="width: 90%; height: 90%; max-height: 90vh; max-width: 1200px;">
                         <div class="modal-header">
-                            <h3 class="text-lg font-semibold text-gray-900 dark:text-white" x-text="'说明文档 - ' + (currentReadmePlugin ? currentReadmePlugin.name : '')"></h3>
+                            <h3 class="text-lg font-semibold text-gray-900 dark:text-white">
+                                <span data-i18n="page.online_plugins.readme"></span>
+                                <span> - </span>
+                                <span x-text="currentReadmePlugin ? currentReadmePlugin.name : ''"></span>
+                            </h3>
                             <div class="flex items-center space-x-2">
                                 <a 
                                     x-show="currentReadmePlugin && currentReadmePlugin.readme_url"
@@ -1209,7 +1230,7 @@
                                     >
                                         <div class="flex items-center space-x-1">
                                             <i class="fas fa-book-open text-xs"></i>
-                                            <span>仓库介绍</span>
+                                            <span data-i18n="page.online_plugins.catalogue"></span>
                                             <!-- 加载指示器 -->
                                             <i 
                                                 x-show="readmeLoading && readmeType === 'catalogue'"
@@ -1229,7 +1250,7 @@
                                     >
                                         <div class="flex items-center space-x-1">
                                             <i class="fas fa-file-alt text-xs"></i>
-                                            <span>自述文件</span>
+                                            <span data-i18n="page.online_plugins.readme"></span>
                                             <!-- 加载指示器 -->
                                             <i 
                                                 x-show="readmeLoading && readmeType === 'readme'"
@@ -1252,7 +1273,8 @@
                                 class="flex flex-col justify-center items-center h-full"
                             >
                                 <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
-                                <span class="mt-4 text-gray-600 dark:text-gray-400" x-text="readmeType === 'catalogue' ? '加载介绍文档中...' : '加载自述文件中...'"></span>
+                                <span class="mt-4 text-gray-600 dark:text-gray-400" x-show="readmeType === 'catalogue'" data-i18n="page.online_plugins.loading_catalogue"></span>
+                                <span class="mt-4 text-gray-600 dark:text-gray-400" x-show="readmeType === 'readme'" data-i18n="page.online_plugins.loading_readme"></span>
                             </div>
                             
                             <!-- 错误提示 -->
@@ -1268,12 +1290,12 @@
                             >
                                 <i class="fas fa-exclamation-circle text-4xl text-red-500 mb-4"></i>
                                 <p class="text-gray-700 dark:text-gray-300 mb-2" x-text="readmeErrorMessage"></p>
-                                <button 
+                                    <button 
                                     @click="retryLoadReadme()" 
                                     class="mt-4 inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none transition-colors duration-200"
                                 >
                                     <i class="fas fa-redo mr-2"></i>
-                                    <span>重试</span>
+                                        <span data-i18n="page.online_plugins.retry"></span>
                                 </button>
                             </div>
                             
@@ -1292,11 +1314,11 @@
                         </div>
                         
                         <div class="modal-footer">
-                            <button 
+                             <button 
                                 @click="closeReadmeModal()" 
                                 class="inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm text-sm font-medium text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none"
                             >
-                                <span>关闭</span>
+                                <span data-i18n="plugins.close"></span>
                             </button>
                         </div>
                     </div>
@@ -1307,7 +1329,8 @@
                     <div class="modal-content" style="max-width: 800px;" @click.away="closeLicenseModal()">
                         <div class="modal-header">
                             <h3 class="text-lg font-semibold text-gray-900 dark:text-white">
-                                <span x-text="currentLicense ? (currentLicense.name || '协议详情') : '协议详情'"></span>
+                                <span x-show="currentLicense" x-text="currentLicense ? (currentLicense.name || '') : ''"></span>
+                                <span x-show="!currentLicense" data-i18n="page.online_plugins.license_detail"></span>
                                 <template x-if="currentLicense && currentLicense.spdx_id">
                                     <span class="ml-2 text-sm text-gray-600 dark:text-gray-400" x-text="currentLicense.spdx_id"></span>
                                 </template>
@@ -1321,13 +1344,13 @@
                             <!-- 加载状态 -->
                             <div x-show="licenseFetching" class="py-10 flex justify-center items-center">
                                 <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
-                                <span class="ml-3 text-gray-600 dark:text-gray-400">加载协议信息中...</span>
+                                <span class="ml-3 text-gray-600 dark:text-gray-400" data-i18n="page.online_plugins.loading_license"></span>
                             </div>
                             
                             <!-- 错误状态 -->
                             <div x-show="licenseError" class="py-8 text-center">
                                 <i class="fas fa-exclamation-circle text-4xl text-red-500 mb-4"></i>
-                                <p class="text-gray-700 dark:text-gray-300">获取协议信息失败，请稍后再试</p>
+                                <p class="text-gray-700 dark:text-gray-300" data-i18n="page.online_plugins.license_error"></p>
                             </div>
                             
                             <!-- 协议信息 -->
@@ -1339,7 +1362,7 @@
                                 
                                 <!-- 使用方法 -->
                                 <div x-show="currentLicense && currentLicense.implementation" class="space-y-2">
-                                    <h4 class="font-medium text-gray-900 dark:text-white">实施方法</h4>
+                                    <h4 class="font-medium text-gray-900 dark:text-white" data-i18n="page.online_plugins.license_implementation"></h4>
                                     <p class="text-gray-700 dark:text-gray-300" x-text="currentLicense && currentLicense.implementation ? currentLicense.implementation : ''"></p>
                                 </div>
                                 
@@ -1349,7 +1372,7 @@
                                     <div x-show="currentLicense && currentLicense.permissions && currentLicense.permissions.length" class="space-y-2">
                                         <h4 class="font-medium text-gray-900 dark:text-white flex items-center">
                                             <i class="fas fa-check-circle text-green-500 mr-2"></i>
-                                            <span>权限</span>
+                                            <span data-i18n="page.online_plugins.license_permissions"></span>
                                         </h4>
                                         <ul class="space-y-1 pl-5 list-disc">
                                             <template x-for="permission in currentLicense && currentLicense.permissions ? currentLicense.permissions : []" :key="permission">
@@ -1362,7 +1385,7 @@
                                     <div x-show="currentLicense && currentLicense.conditions && currentLicense.conditions.length" class="space-y-2">
                                         <h4 class="font-medium text-gray-900 dark:text-white flex items-center">
                                             <i class="fas fa-exclamation-circle text-blue-500 mr-2"></i>
-                                            <span>条件</span>
+                                            <span data-i18n="page.online_plugins.license_conditions"></span>
                                         </h4>
                                         <ul class="space-y-1 pl-5 list-disc">
                                             <template x-for="condition in currentLicense && currentLicense.conditions ? currentLicense.conditions : []" :key="condition">
@@ -1375,7 +1398,7 @@
                                     <div x-show="currentLicense && currentLicense.limitations && currentLicense.limitations.length" class="space-y-2">
                                         <h4 class="font-medium text-gray-900 dark:text-white flex items-center">
                                             <i class="fas fa-ban text-red-500 mr-2"></i>
-                                            <span>限制</span>
+                                            <span data-i18n="page.online_plugins.license_limitations"></span>
                                         </h4>
                                         <ul class="space-y-1 pl-5 list-disc">
                                             <template x-for="limitation in currentLicense && currentLicense.limitations ? currentLicense.limitations : []" :key="limitation">
@@ -1387,7 +1410,7 @@
                                 
                                 <!-- 协议正文 -->
                                 <div x-show="currentLicense && currentLicense.body">
-                                    <h4 class="font-medium text-gray-900 dark:text-white">协议正文</h4>
+                                    <h4 class="font-medium text-gray-900 dark:text-white" data-i18n="page.online_plugins.license_body"></h4>
                                     <div class="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg border border-gray-200 dark:border-gray-700 overflow-auto max-h-96">
                                         <pre class="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap font-mono" x-text="currentLicense && currentLicense.body ? currentLicense.body : ''"></pre>
                                     </div>
@@ -1397,18 +1420,18 @@
                                 <div x-show="currentLicense && currentLicense.html_url">
                                     <a :href="currentLicense && currentLicense.html_url ? currentLicense.html_url : '#'" target="_blank" class="inline-flex items-center text-blue-600 dark:text-blue-400 hover:underline">
                                         <i class="fas fa-external-link-alt mr-1.5"></i>
-                                        <span>查看完整协议页面</span>
+                                        <span data-i18n="page.online_plugins.license_view_full"></span>
                                     </a>
                                 </div>
                             </div>
                         </div>
                         
                         <div class="modal-footer">
-                            <button 
+                             <button 
                                 @click="closeLicenseModal()" 
                                 class="inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm text-sm font-medium text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none"
                             >
-                                <span>关闭</span>
+                                <span data-i18n="plugins.close"></span>
                             </button>
                         </div>
                     </div>
@@ -1418,7 +1441,7 @@
                 <div x-show="showInstallConfirmModal" x-transition.opacity class="modal-backdrop">
                     <div class="modal-content max-w-md" @click.away="closeInstallConfirm()">
                         <div class="modal-header">
-                            <h3 class="text-lg font-semibold text-gray-900 dark:text-white">安装插件确认</h3>
+                            <h3 class="text-lg font-semibold text-gray-900 dark:text-white" data-i18n="page.online_plugins.install_confirm_title"></h3>
                             <button @click="closeInstallConfirm()" class="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200">
                                 <i class="fas fa-times"></i>
                             </button>
@@ -1434,7 +1457,7 @@
                                 <div class="mt-3 text-center sm:mt-0 sm:text-left">
                                     <div class="mt-2">
                                         <p class="text-sm text-gray-500 dark:text-gray-400">
-                                            您即将安装插件 
+                                            <span data-i18n="page.online_plugins.installing_plugin"></span>
                                             <span class="font-medium text-gray-900 dark:text-white" x-text="confirmInstallPlugin ? confirmInstallPlugin.name || confirmInstallPluginId : confirmInstallPluginId"></span>
                                         </p>
                                     </div>
@@ -1443,32 +1466,30 @@
                             
                             <div class="bg-yellow-50 dark:bg-yellow-900/30 rounded-lg border border-yellow-200 dark:border-yellow-800 p-4 mb-4">
                                 <div class="text-yellow-700 dark:text-yellow-200 text-sm">
-                                    <p class="font-medium mb-2">安装风险提示：</p>
+                                    <p class="font-medium mb-2" data-i18n="page.online_plugins.install_risk_title"></p>
                                     <ul class="list-disc pl-4 space-y-1">
-                                        <li>插件可能修改服务器行为或访问服务器资源</li>
-                                        <li>确保插件来源可信，避免安全风险</li>
-                                        <li>建议在测试环境中先行验证</li>
+                                        <li data-i18n="page.online_plugins.install_risk_1"></li>
+                                        <li data-i18n="page.online_plugins.install_risk_2"></li>
+                                        <li data-i18n="page.online_plugins.install_risk_3"></li>
                                     </ul>
                                 </div>
                             </div>
                             
-                            <p class="text-sm text-gray-500 dark:text-gray-400">
-                                请选择安装方式：
-                            </p>
+                            <p class="text-sm text-gray-500 dark:text-gray-400" data-i18n="page.online_plugins.select_install_method"></p>
                         </div>
                         
                         <div class="modal-footer">
                             <button @click="closeInstallConfirm()" class="inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm text-sm font-medium text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none">
                                 <i class="fas fa-times mr-1.5"></i>
-                                <span>取消</span>
+                                <span data-i18n="common.cancel"></span>
                             </button>
                             <button @click="showPluginVersions(confirmInstallPluginId)" class="inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm text-sm font-medium text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none">
                                 <i class="fas fa-tags mr-1.5"></i>
-                                <span>选择版本</span>
+                                <span data-i18n="page.online_plugins.choose_version"></span>
                             </button>
                             <button @click="installPluginDirectly(confirmInstallPluginId)" class="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none">
                                 <i class="fas fa-download mr-1.5"></i>
-                                <span>安装（最新）</span>
+                                <span data-i18n="page.online_plugins.install_latest"></span>
                             </button>
                         </div>
                     </div>
@@ -1478,7 +1499,7 @@
                 <div x-show="showVersionModal" x-transition.opacity class="modal-backdrop">
                     <div class="modal-content" @click.away="closeVersionModal()">
                         <div class="modal-header">
-                            <h3 class="text-lg font-semibold text-gray-900 dark:text-white" x-text="'插件版本选择 - ' + (currentVersionPlugin ? currentVersionPlugin.id : '')"></h3>
+                            <h3 class="text-lg font-semibold text-gray-900 dark:text-white"><span data-i18n="plugins.version_modal.title"></span><span x-text="currentVersionPlugin ? currentVersionPlugin.id : ''"></span></h3>
                             <button @click="closeVersionModal()" class="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200">
                                 <i class="fas fa-times"></i>
                             </button>
@@ -1486,10 +1507,10 @@
                         
                         <div class="modal-body">
                             <!-- 加载状态 -->
-                            <div x-show="versionsLoading" class="flex justify-center items-center py-12">
-                                <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
-                                <span class="ml-3 text-gray-600 dark:text-gray-400">加载插件版本中...</span>
-                            </div>
+                                <div x-show="versionsLoading" class="flex justify-center items-center py-12">
+                                    <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
+                                    <span class="ml-3 text-gray-600 dark:text-gray-400" data-i18n="plugins.version_modal.loading_versions"></span>
+                                </div>
                             
                             <!-- 错误信息 -->
                             <div x-show="versionError" class="bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-lg p-4 mb-4">
@@ -1500,13 +1521,13 @@
                             </div>
 
                             <!-- 版本列表 -->
-                            <div x-show="!versionsLoading && versions.length === 0 && !versionError" class="text-center py-12">
-                                <i class="fas fa-tag text-4xl text-gray-400 mb-4"></i>
-                                <p class="text-gray-500 dark:text-gray-400">未找到可用版本</p>
-                            </div>
+                                <div x-show="!versionsLoading && versions.length === 0 && !versionError" class="text-center py-12">
+                                    <i class="fas fa-tag text-4xl text-gray-400 mb-4"></i>
+                                    <p class="text-gray-500 dark:text-gray-400" data-i18n="plugins.version_modal.no_versions"></p>
+                                </div>
 
                             <div x-show="!versionsLoading && versions.length > 0" class="space-y-4">
-                                <p class="text-sm text-gray-600 dark:text-gray-300">当前安装版本: <span x-text="installedVersion || '未安装'" class="font-medium"></span></p>
+                                <p class="text-sm text-gray-600 dark:text-gray-300"><span data-i18n="plugins.version_modal.current_version"></span><span x-text="installedVersion || (window.I18n && window.I18n.t ? window.I18n.t('plugins.version_modal.not_installed','未安装') : '未安装')" class="font-medium"></span></p>
                                 
                                 <div class="grid gap-3">
                                     <template x-for="version in versions" :key="version.version">
@@ -1528,15 +1549,13 @@
                                                     <span 
                                                         x-show="version.installed" 
                                                         class="ml-2 px-2 py-0.5 bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 text-xs rounded-full"
-                                                    >
-                                                        已安装
-                                                    </span>
+                                                        data-i18n="plugins.version_modal.installed"
+                                                    ></span>
                                                     <span 
                                                         x-show="version.prerelease" 
                                                         class="ml-2 px-2 py-0.5 bg-yellow-100 dark:bg-yellow-900 text-yellow-800 dark:text-yellow-200 text-xs rounded-full"
-                                                    >
-                                                        预发布
-                                                    </span>
+                                                        data-i18n="plugins.version_modal.prerelease"
+                                                    ></span>
                                                 </div>
                                                 <span class="text-sm text-gray-500 dark:text-gray-400" x-text="formatDate(version.release_date)"></span>
                                             </div>
@@ -1550,10 +1569,10 @@
                                                 <p x-text="version.description"></p>
                                             </div>
                                             
-                                            <div x-show="version.processing" class="mt-3 flex items-center text-blue-600 dark:text-blue-400">
-                                                <i class="fas fa-circle-notch fa-spin mr-2"></i>
-                                                <span>正在处理...</span>
-                                            </div>
+                                                <div x-show="version.processing" class="mt-3 flex items-center text-blue-600 dark:text-blue-400">
+                                                    <i class="fas fa-circle-notch fa-spin mr-2"></i>
+                                                    <span data-i18n="plugins.version_modal.processing"></span>
+                                                </div>
                                         </div>
                                     </template>
                                 </div>
@@ -1562,7 +1581,7 @@
                         
                         <div class="modal-footer">
                             <button @click="closeVersionModal()" class="inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm text-sm font-medium text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none transition-colors">
-                                <span>关闭</span>
+                                <span data-i18n="plugins.close"></span>
                             </button>
                         </div>
                     </div>
@@ -1574,7 +1593,7 @@
                         <div class="modal-header bg-yellow-100 dark:bg-yellow-900 border-b border-yellow-200 dark:border-yellow-700">
                             <h3 class="text-lg font-semibold text-yellow-800 dark:text-yellow-200 flex items-center">
                                 <i class="fas fa-exclamation-triangle mr-2"></i>
-                                <span>第三方仓库安全警告</span>
+                                <span data-i18n="page.online_plugins.third_repo_warning_title"></span>
                             </h3>
                             <button @click="cancelRepoWarning()" class="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200">
                                 <i class="fas fa-times"></i>
@@ -1582,19 +1601,19 @@
                         </div>
                         
                         <div class="modal-body">
-                            <div class="p-2 bg-yellow-50 dark:bg-yellow-900/30 rounded-lg border border-yellow-200 dark:border-yellow-800 mb-4">
-                                <p class="text-yellow-700 dark:text-yellow-200 font-medium">您正在访问第三方插件仓库</p>
-                            </div>
+                                <div class="p-2 bg-yellow-50 dark:bg-yellow-900/30 rounded-lg border border-yellow-200 dark:border-yellow-800 mb-4">
+                                    <p class="text-yellow-700 dark:text-yellow-200 font-medium" data-i18n="page.online_plugins.third_repo_warning_lead"></p>
+                                </div>
                             
                             <div class="space-y-4 text-gray-700 dark:text-gray-300">
-                                <p>请注意：</p>
+                                <p data-i18n="page.online_plugins.note"></p>
                                 <ul class="list-disc pl-5 space-y-2">
-                                    <li>这些插件可能没有经过审查，可能存在潜在安全风险。</li>
-                                    <li>安装这些插件可能会影响您的服务器的稳定性和安全性。</li>
-                                    <li>在安装前，请仔细审查插件代码或确认您信任该仓库的维护者。</li>
-                                    <li>第三方插件版本切换功能于1.4.3起支持，本弹窗在你确认后当天将不再显示。</li>
+                                    <li data-i18n="page.online_plugins.third_repo_warning_p1"></li>
+                                    <li data-i18n="page.online_plugins.third_repo_warning_p2"></li>
+                                    <li data-i18n="page.online_plugins.third_repo_warning_p3"></li>
+                                    <li data-i18n="page.online_plugins.third_repo_warning_p4"></li>
                                 </ul>
-                                <p>继续访问即表示您了解并接受这些风险。</p>
+                                <p data-i18n="page.online_plugins.third_repo_warning_conclusion"></p>
                             </div>
                         </div>
                         
@@ -1603,14 +1622,14 @@
                                 @click="cancelRepoWarning()" 
                                 class="inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm text-sm font-medium text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none transition-colors"
                             >
-                                <span>取消</span>
+                                <span data-i18n="common.cancel"></span>
                             </button>
                             
                             <button 
                                 @click="confirmRepoWarning()" 
                                 class="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-yellow-600 hover:bg-yellow-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-yellow-500 transition-colors"
                             >
-                                <span>我了解风险并继续</span>
+                                <span data-i18n="page.online_plugins.repo_continue"></span>
                             </button>
                         </div>
                     </div>
@@ -1618,7 +1637,7 @@
                 
                 <!-- 页脚 -->
                 <footer class="mt-8 text-center text-gray-600 dark:text-gray-400 text-sm">
-                    <p>MCDR WebUI &copy; <span id="year"></span></p>
+                    <p data-i18n="common.copyright"></p>
                 </footer>
             </main>
         </div>

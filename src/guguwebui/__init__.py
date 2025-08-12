@@ -73,6 +73,8 @@ def on_load(server: PluginServerInterface, old):
     app.mount("/js", StaticFiles(directory=f"{STATIC_PATH}/js"), name="js")
     app.mount("/css", StaticFiles(directory=f"{STATIC_PATH}/css"), name="css")
     app.mount("/custom", StaticFiles(directory=f"{STATIC_PATH}/custom"), name="custom")
+    # 多语言静态文件
+    app.mount("/lang", StaticFiles(directory=f"{STATIC_PATH}/lang"), name="lang")
     
     # 初始化应用程序和日志捕获器
     init_app(server)

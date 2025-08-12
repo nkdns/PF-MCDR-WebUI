@@ -6,6 +6,34 @@ document.addEventListener('alpine:init', () => {
         userName: '',
         activeTab: null, // 初始化为 null，等待加载后设置
         
+        // i18n（仅本页用）
+        guguLang: 'zh-CN',
+        guguDict: {},
+        t(key, fallback = '') {
+            const val = key.split('.').reduce((o, k) => (o && o[k] != null ? o[k] : undefined), this.guguDict);
+            if (val != null) return String(val);
+            if (window.I18n && typeof window.I18n.t === 'function') {
+                const v = window.I18n.t(key);
+                if (v && v !== key) return v;
+            }
+            return fallback || key;
+        },
+        async loadLangDict() {
+            const stored = localStorage.getItem('lang') || (navigator.language || 'zh-CN');
+            this.guguLang = stored.toLowerCase().startsWith('zh') ? 'zh-CN' : 'en-US';
+            try {
+                const resp = await fetch(`lang/${this.guguLang}.json`, { cache: 'no-cache' });
+                if (resp.ok) {
+                    this.guguDict = await resp.json();
+                } else {
+                    this.guguDict = {};
+                }
+            } catch (e) {
+                console.warn('loadLangDict failed:', e);
+                this.guguDict = {};
+            }
+        },
+        
         // 配置数据 (动态加载)
         configData: {}, // 使用一个对象存储所有配置数据，以 tabId 为键
         
@@ -44,6 +72,17 @@ document.addEventListener('alpine:init', () => {
         // 初始化
         async init() {
             try {
+                // 语言包
+                await this.loadLangDict();
+                // 监听语言切换
+                document.addEventListener('i18n:changed', (e) => {
+                    const nextLang = (e && e.detail && e.detail.lang) ? e.detail.lang : this.guguLang;
+                    this.guguLang = nextLang.toLowerCase().startsWith('zh') ? 'zh-CN' : 'en-US';
+                    this.loadLangDict().then(() => {
+                        this.rebuildTabLabels();
+                    });
+                });
+
                 // 加载用户信息
                 await this.loadUserInfo();
                 
@@ -58,15 +97,29 @@ document.addEventListener('alpine:init', () => {
                     await this.loadConfigForTab(this.activeTab);
                 }
                 
-                // 设置当前年份
-                document.getElementById('year').textContent = new Date().getFullYear();
-                
             } catch (error) {
                 console.error('初始化失败:', error);
-                this.showNotificationMessage('页面初始化失败: ' + error.message, 'error');
+                this.showNotificationMessage(this.t('page.gugubot.msg.init_failed_prefix', '页面初始化失败: ') + error.message, 'error');
             } finally {
                 this.loading = false;
             }
+        },
+        
+        // 根据id获取i18n的选项卡名称
+        getI18nTabLabel(id, fallback = null) {
+            // 优先 page.gugubot.tabs.{id}
+            const key = `page.gugubot.tabs.${id}`;
+            const usedFallback = fallback != null ? fallback : id;
+            return this.t(key, usedFallback);
+        },
+        
+        // 重建选项卡的 label（用于语言切换）
+        rebuildTabLabels() {
+            if (!Array.isArray(this.configTabs) || this.configTabs.length === 0) return;
+            this.configTabs = this.configTabs.map(tab => ({
+                id: tab.id,
+                label: this.getI18nTabLabel(tab.id, tab.label || tab.id)
+            }));
         },
         
         // 加载用户信息
@@ -146,7 +199,7 @@ document.addEventListener('alpine:init', () => {
                     path: mainConfigPath,
                     type: 'yml',
                     id: 'main',
-                    label: '主配置'
+                    label: this.getI18nTabLabel('main', '主配置')
                 });
                 
                 // 从dict_address获取其他配置文件路径
@@ -154,13 +207,13 @@ document.addEventListener('alpine:init', () => {
                 
                 // 将dict_address中的路径映射为configFiles
                 const pathMapping = {
-                    'ban_word_dict': { id: 'ban_word', label: '违禁词' },
-                    'key_word_dict': { id: 'key_word', label: 'QQ关键词' },
-                    'key_word_ingame_dict': { id: 'key_word_ingame', label: '游戏内关键词' },
-                    'customized_help_path': { id: 'help_msg', label: '帮助信息' },
-                    'shenheman': { id: 'shenheman', label: '审核员' },
-                    'start_command_dict': { id: 'start_commands', label: '开服指令' },
-                    'uuid_qqid': { id: 'uuid_qqid', label: 'UUID-QQID' }
+                    'ban_word_dict': { id: 'ban_word', labelKey: 'page.gugubot.tabs.ban_word' },
+                    'key_word_dict': { id: 'key_word', labelKey: 'page.gugubot.tabs.key_word' },
+                    'key_word_ingame_dict': { id: 'key_word_ingame', labelKey: 'page.gugubot.tabs.key_word_ingame' },
+                    'customized_help_path': { id: 'help_msg', labelKey: 'page.gugubot.tabs.help_msg' },
+                    'shenheman': { id: 'shenheman', labelKey: 'page.gugubot.tabs.shenheman' },
+                    'start_command_dict': { id: 'start_commands', labelKey: 'page.gugubot.tabs.start_commands' },
+                    'uuid_qqid': { id: 'uuid_qqid', labelKey: 'page.gugubot.tabs.uuid_qqid' }
                 };
                 
                 // 遍历dict_address，添加到configFiles
@@ -171,7 +224,7 @@ document.addEventListener('alpine:init', () => {
                             path: path,
                             type: fileType,
                             id: pathMapping[key].id,
-                            label: pathMapping[key].label
+                            label: this.t(pathMapping[key].labelKey, pathMapping[key].id)
                         });
                     }
                 }
@@ -190,14 +243,14 @@ document.addEventListener('alpine:init', () => {
                         path: bindFilePath,
                         type: 'json',
                         id: 'bind',
-                        label: 'QQ-ID绑定'
+                        label: this.getI18nTabLabel('bind', 'QQ-ID绑定')
                     });
                 }
 
                 // 生成 configPaths 和 configTabs
                 this.configPaths = {};
                 this.configTabs = [];
-                let mainTab = { id: 'main', label: '主配置' };
+                let mainTab = { id: 'main', label: this.getI18nTabLabel('main', '主配置') };
                 
                 // 先将其添加到tabs中
                 this.configTabs.push(mainTab);
@@ -207,7 +260,7 @@ document.addEventListener('alpine:init', () => {
                     this.configPaths[file.id] = file.path;
                     // 主配置已经添加过，跳过
                     if (file.id !== 'main') {
-                        this.configTabs.push({ id: file.id, label: file.label });
+                        this.configTabs.push({ id: file.id, label: this.getI18nTabLabel(file.id, file.label || file.id) });
                     }
                 });
 
@@ -220,17 +273,17 @@ document.addEventListener('alpine:init', () => {
                     if (transResponse.ok) {
                         this.translations = await transResponse.json();
                     } else {
-                        console.warn(`加载翻译文件失败: ${transResponse.status}`);
+                        console.warn(this.t('page.gugubot.msg.load_translations_failed', '加载翻译数据失败') + `: ${transResponse.status}`);
                         this.translations = {}; // 即使失败也继续
                     }
                 } catch (transError) {
-                    console.error('加载翻译数据失败:', transError);
+                    console.error(this.t('page.gugubot.msg.load_translations_failed', '加载翻译数据失败') + ':', transError);
                     this.translations = {}; // 保证 translations 是一个对象
                 }
 
             } catch (error) {
                 console.error('加载配置文件列表或翻译失败:', error);
-                this.showNotificationMessage('无法加载配置信息: ' + error.message, 'error');
+                this.showNotificationMessage(this.t('page.gugubot.msg.load_config_files_failed_prefix', '无法加载配置信息: ') + error.message, 'error');
                 // 保留空状态，让用户知道出错了
                 this.configFiles = [];
                 this.configPaths = {};
@@ -243,7 +296,7 @@ document.addEventListener('alpine:init', () => {
         async loadConfigForTab(tabId) {
             if (!this.configPaths[tabId]) {
                 console.error(`未找到选项卡 ${tabId} 的路径`);
-                this.showNotificationMessage(`无法加载 ${tabId} 的配置`, 'error');
+                this.showNotificationMessage(this.t('page.gugubot.msg.cannot_load_tab_prefix', '无法加载 ') + this.getTabLabel(tabId) + this.t('page.gugubot.msg.config_suffix', ' 的配置'), 'error');
                 return;
             }
             // 如果数据已加载，则不重复加载 (除非强制刷新)
@@ -271,7 +324,7 @@ document.addEventListener('alpine:init', () => {
 
             } catch (error) {
                 console.error(`加载配置 ${tabId} 失败:`, error);
-                this.showNotificationMessage(`加载 ${this.getTabLabel(tabId)} 配置失败: ${error.message}`, 'error');
+                this.showNotificationMessage(this.t('page.gugubot.msg.load_tab_failed_prefix', '加载配置失败: ') + this.getTabLabel(tabId) + `: ${error.message}`, 'error');
                 this.configData[tabId] = null; // 标记为加载失败
             } finally {
                  this.loading = false;
@@ -463,8 +516,8 @@ document.addEventListener('alpine:init', () => {
                   // 检查key是否已存在
                  if (this.configData[this.activeTab].hasOwnProperty(this.newMapKey)) {
                      this.showConfirmDialog(
-                         "键已存在",
-                         `键 "${this.newMapKey}" 已存在，要覆盖它吗？`,
+                         this.t('page.gugubot.msg.key_exists_title', '键已存在'),
+                         this.t('page.gugubot.msg.key_exists_prefix', '键 "') + this.newMapKey + this.t('page.gugubot.msg.key_exists_suffix', '" 已存在，要覆盖它吗？'),
                          () => {
                              this.configData[this.activeTab][this.newMapKey] = this.newMapValue;
                              this.newMapKey = '';
@@ -486,8 +539,8 @@ document.addEventListener('alpine:init', () => {
          removeMapItem(key) {
              if (typeof this.configData[this.activeTab] === 'object' && this.configData[this.activeTab] !== null) {
                  this.showConfirmDialog(
-                     "确认删除",
-                     `确定要删除键 "${key}" 吗？`,
+                     this.t('page.gugubot.msg.confirm_delete_title', '确认删除'),
+                     this.t('page.gugubot.msg.confirm_delete_key_prefix', '确定要删除键 "') + key + this.t('page.gugubot.msg.confirm_delete_key_suffix', '" 吗？'),
                      () => {
                          delete this.configData[this.activeTab][key];
                      }
@@ -525,16 +578,16 @@ document.addEventListener('alpine:init', () => {
         },
         addMainConfigObjectProperty(key) {
             if (!this.newObjectKey.trim()) { 
-                this.showNotificationMessage('键名不能为空', 'error'); 
+                this.showNotificationMessage(this.t('page.gugubot.msg.key_required', '键名不能为空'), 'error'); 
                 return; 
             }
             if (this.configData['main']) {
                  if (!this.configData['main'][key]) { this.configData['main'][key] = {}; }
                   // 检查 key 是否已存在
                   if (this.configData['main'][key].hasOwnProperty(this.newObjectKey)) {
-                      this.showConfirmDialog(
-                          "属性已存在",
-                          `属性 "${this.newObjectKey}" 已存在于 "${key}" 中，要覆盖它吗？`,
+                       this.showConfirmDialog(
+                           this.t('page.gugubot.msg.prop_exists_title', '属性已存在'),
+                           this.t('page.gugubot.msg.prop_exists_prefix', '属性 "') + this.newObjectKey + this.t('page.gugubot.msg.prop_exists_middle', '" 已存在于 "') + key + this.t('page.gugubot.msg.prop_exists_suffix', '" 中，要覆盖它吗？'),
                           () => {
                               this.configData['main'][key][this.newObjectKey] = this.newObjectValue;
                               this.newObjectKey = ''; 
@@ -551,8 +604,8 @@ document.addEventListener('alpine:init', () => {
          removeMainConfigObjectProperty(key, subKey) {
              if (this.configData['main'] && typeof this.configData['main'][key] === 'object' && this.configData['main'][key] !== null) {
                  this.showConfirmDialog(
-                     "确认删除",
-                     `确定要删除 "${key}" 中的属性 "${subKey}" 吗？`,
+                     this.t('page.gugubot.msg.confirm_delete_title', '确认删除'),
+                     this.t('page.gugubot.msg.confirm_delete_prop_prefix', '确定要删除 "') + key + this.t('page.gugubot.msg.confirm_delete_prop_middle', '" 中的属性 "') + subKey + this.t('page.gugubot.msg.confirm_delete_prop_suffix', '" 吗？'),
                      () => {
                          delete this.configData['main'][key][subKey];
                      }
@@ -574,10 +627,10 @@ document.addEventListener('alpine:init', () => {
          },
          addBindQQ() {
              this.showPromptDialog(
-                 "添加QQ绑定",
-                 "请输入要绑定的QQ号",
-                 "QQ号",
-                 "请输入QQ号码",
+                 this.t('page.gugubot.bind.prompt_add_title', '添加QQ绑定'),
+                 this.t('page.gugubot.bind.prompt_add_message', '请输入要绑定的QQ号'),
+                 this.t('page.gugubot.uuid_qqid.label_qq', 'QQ号'),
+                 this.t('page.gugubot.bind.placeholder_qq', '请输入QQ号码'),
                  "^[0-9]+$",
                  (newKey) => {
                      if (newKey && newKey.trim() && /^[0-9]+$/.test(newKey)) { // 验证是否为纯数字
@@ -585,8 +638,8 @@ document.addEventListener('alpine:init', () => {
                           // 检查 key 是否已存在
                          if (currentData.hasOwnProperty(newKey)) {
                              this.showConfirmDialog(
-                                 "QQ号已存在",
-                                 `QQ号 "${newKey}" 已存在绑定信息，要继续添加吗 (这可能会覆盖原有数据)？`,
+                                 this.t('page.gugubot.bind.qq_exists_title', 'QQ号已存在'),
+                                 this.t('page.gugubot.bind.qq_exists_prefix', 'QQ号 "') + newKey + this.t('page.gugubot.bind.qq_exists_suffix', '" 已存在绑定信息，要继续添加吗 (这可能会覆盖原有数据)？'),
                                  () => {
                                      // 初始化为空数组，允许用户添加第一个游戏ID
                                      currentData[newKey] = ['']; // 添加一个空字符串，让用户可以编辑第一个游戏ID
@@ -599,7 +652,7 @@ document.addEventListener('alpine:init', () => {
                              this.configData['bind'] = currentData;
                          }
                      } else {
-                          this.showNotificationMessage('请输入有效的QQ号。', 'error');
+                           this.showNotificationMessage(this.t('page.gugubot.bind.qq_invalid', '请输入有效的QQ号。'), 'error');
                      }
                  }
              );
@@ -615,9 +668,9 @@ document.addEventListener('alpine:init', () => {
                  this.configData['bind'][qqId].splice(index, 1);
                  // 如果移除后数组为空，则询问是否删除整个QQ绑定
                  if (this.configData['bind'][qqId].length === 0) {
-                     this.showConfirmDialog(
-                         "确认删除",
-                         `QQ号 "${qqId}" 下已没有绑定的游戏ID，要删除这个QQ号的绑定记录吗？`,
+                      this.showConfirmDialog(
+                          this.t('page.gugubot.msg.confirm_delete_title', '确认删除'),
+                          this.t('page.gugubot.bind.confirm_delete_qq_when_empty_prefix', 'QQ号 "') + qqId + this.t('page.gugubot.bind.confirm_delete_qq_when_empty_suffix', '" 下已没有绑定的游戏ID，要删除这个QQ号的绑定记录吗？'),
                          () => {
                              delete this.configData['bind'][qqId];
                          },
@@ -631,9 +684,9 @@ document.addEventListener('alpine:init', () => {
          },
          removeBindQQ(qqId) {
              if (this.configData['bind']) {
-                 this.showConfirmDialog(
-                     "确认删除",
-                     `确定要删除QQ号 "${qqId}" 的所有绑定信息吗？`,
+                  this.showConfirmDialog(
+                      this.t('page.gugubot.msg.confirm_delete_title', '确认删除'),
+                      this.t('page.gugubot.bind.confirm_delete_all_prefix', '确定要删除QQ号 "') + qqId + this.t('page.gugubot.bind.confirm_delete_all_suffix', '" 的所有绑定信息吗？'),
                      () => {
                          delete this.configData['bind'][qqId];
                      }
@@ -682,9 +735,9 @@ document.addEventListener('alpine:init', () => {
                 this.configData['shenheman'][qqId].splice(index, 1);
                 // 如果移除后数组为空，询问是否删除整个审核员
                 if (this.configData['shenheman'][qqId].length === 0) {
-                    this.showConfirmDialog(
-                        "确认删除",
-                        `QQ号 "${qqId}" 下已没有别名，要删除这个审核员QQ号记录吗？`,
+                      this.showConfirmDialog(
+                          this.t('page.gugubot.msg.confirm_delete_title', '确认删除'),
+                          this.t('page.gugubot.shenhe.confirm_delete_qq_when_empty_prefix', 'QQ号 "') + qqId + this.t('page.gugubot.shenhe.confirm_delete_qq_when_empty_suffix', '" 下已没有别名，要删除这个审核员QQ号记录吗？'),
                         () => {
                             delete this.configData['shenheman'][qqId];
                         },
@@ -700,10 +753,10 @@ document.addEventListener('alpine:init', () => {
         // 添加审核员QQ
         addShenhemanQQ() {
             this.showPromptDialog(
-                "添加审核员",
-                "请输入新的审核员QQ号",
-                "QQ号",
-                "请输入审核员QQ号码",
+                this.t('page.gugubot.shenhe.prompt_add_title', '添加审核员'),
+                this.t('page.gugubot.shenhe.prompt_add_message', '请输入新的审核员QQ号'),
+                this.t('page.gugubot.shenhe.qq', '审核员QQ'),
+                this.t('page.gugubot.shenhe.placeholder_qq', '请输入审核员QQ号码'),
                 "^[0-9]+$",
                 (newKey) => {
                     if (newKey && newKey.trim() && /^[0-9]+$/.test(newKey)) { // 验证是否为纯数字
@@ -711,8 +764,8 @@ document.addEventListener('alpine:init', () => {
                         // 检查 key 是否已存在
                         if (currentData.hasOwnProperty(newKey)) {
                             this.showConfirmDialog(
-                                "QQ号已存在",
-                                `QQ号 "${newKey}" 已存在审核信息，要继续添加吗?`,
+                                this.t('page.gugubot.shenhe.qq_exists_title', 'QQ号已存在'),
+                                this.t('page.gugubot.shenhe.qq_exists_prefix', 'QQ号 "') + newKey + this.t('page.gugubot.shenhe.qq_exists_suffix', '" 已存在审核信息，要继续添加吗？'),
                                 () => {
                                     // 初始化为空数组
                                     currentData[newKey] = [''];
@@ -725,7 +778,7 @@ document.addEventListener('alpine:init', () => {
                             this.configData['shenheman'] = currentData;
                         }
                     } else {
-                        this.showNotificationMessage('请输入有效的QQ号。', 'error');
+                        this.showNotificationMessage(this.t('page.gugubot.shenhe.qq_invalid', '请输入有效的QQ号。'), 'error');
                     }
                 }
             );
@@ -735,8 +788,8 @@ document.addEventListener('alpine:init', () => {
         removeShenhemanQQ(qqId) {
             if (this.configData['shenheman']) {
                 this.showConfirmDialog(
-                    "确认删除",
-                    `确定要删除审核员QQ号 "${qqId}" 的所有信息吗？`,
+                    this.t('page.gugubot.msg.confirm_delete_title', '确认删除'),
+                    this.t('page.gugubot.shenhe.confirm_delete_all_prefix', '确定要删除审核员QQ号 "') + qqId + this.t('page.gugubot.shenhe.confirm_delete_all_suffix', '" 的所有信息吗？'),
                     () => {
                         delete this.configData['shenheman'][qqId];
                     }
@@ -747,7 +800,7 @@ document.addEventListener('alpine:init', () => {
         // 保存配置
         async saveConfig() {
             if (!this.activeTab || !this.configPaths[this.activeTab]) {
-                 this.showNotificationMessage('没有活动的配置或路径无效', 'error');
+                 this.showNotificationMessage(this.t('page.gugubot.msg.no_active_or_invalid_path', '没有活动的配置或路径无效'), 'error');
                  return;
             }
             this.saving = true;
@@ -773,10 +826,10 @@ document.addEventListener('alpine:init', () => {
                     throw new Error(result.message || '保存失败');
                 }
                 
-                this.showNotificationMessage(`${tabLabel} 配置保存成功！`, 'success');
+                this.showNotificationMessage(`${tabLabel}` + this.t('page.gugubot.msg.save_success_suffix', ' 配置保存成功！'), 'success');
             } catch (error) {
                 console.error(`保存配置 ${tabLabel} 失败:`, error);
-                this.showNotificationMessage(`保存 ${tabLabel} 配置失败: ${error.message}`, 'error');
+                this.showNotificationMessage(this.t('page.gugubot.msg.save_failed_prefix', '保存 ') + `${tabLabel}` + this.t('page.gugubot.msg.config_failed_suffix', ' 配置失败: ') + error.message, 'error');
             } finally {
                 this.saving = false;
             }

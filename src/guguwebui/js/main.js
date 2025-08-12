@@ -3,6 +3,39 @@
  * 实现前端交互和页面动态效果
  */
 
+// i18n 支持
+let mainLang = 'zh-CN';
+let mainDict = {};
+
+// 翻译函数
+function t(key, fallback = '') {
+    // 在已加载的语言包中查找 key（支持 a.b.c 链式）
+    const val = key.split('.').reduce((o, k) => (o && o[k] != null ? o[k] : undefined), mainDict);
+    if (val != null) return String(val);
+    // 回退到全局 I18n.t（若可用）
+    if (window.I18n && typeof window.I18n.t === 'function') {
+        const v = window.I18n.t(key);
+        if (v && v !== key) return v;
+    }
+    return fallback || key;
+}
+
+// 加载语言字典
+async function loadMainLangDict() {
+    // 读取本地存储语言（由 i18n.js 维护）
+    const stored = localStorage.getItem('lang') || (navigator.language || 'zh-CN');
+    mainLang = stored.toLowerCase().startsWith('zh') ? 'zh-CN' : 'en-US';
+    try {
+        const resp = await fetch(`lang/${mainLang}.json`, { cache: 'no-cache' });
+        if (resp.ok) {
+            mainDict = await resp.json();
+        }
+    } catch (e) {
+        // 忽略，保持空字典，使用 fallback
+        console.warn('loadMainLangDict failed:', e);
+    }
+}
+
 // 初始化主题
 function initTheme() {
     // 检查localStorage中是否有主题设置
@@ -154,14 +187,14 @@ function showResourceErrorModal(failedResources) {
     
     // 添加标题
     const title = document.createElement('h3');
-    title.textContent = '资源加载错误';
+    title.textContent = t('main.resource_error.title', '资源加载错误');
     title.style.fontSize = '1.25rem';
     title.style.fontWeight = 'bold';
     title.style.marginBottom = '10px';
     
     // 添加描述
     const description = document.createElement('p');
-    description.textContent = '以下资源加载失败，这可能会导致页面功能异常。请检查您的网络连接或联系管理员。';
+    description.textContent = t('main.resource_error.description', '以下资源加载失败，这可能会导致页面功能异常。请检查您的网络连接或联系管理员。');
     description.style.marginBottom = '15px';
     
     // 添加资源列表
@@ -183,7 +216,7 @@ function showResourceErrorModal(failedResources) {
     
     // 添加关闭按钮
     const closeButton = document.createElement('button');
-    closeButton.textContent = '关闭';
+    closeButton.textContent = t('main.resource_error.close', '关闭');
     closeButton.style.backgroundColor = '#3b82f6';
     closeButton.style.color = 'white';
     closeButton.style.border = 'none';
@@ -443,7 +476,7 @@ async function checkServerStatus() {
         // 设置加载状态
         statusIndicator.className = 'animate-pulse text-gray-500';
         statusIndicator.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i>';
-        statusText.textContent = '正在检查...';
+        statusText.textContent = t('main.server_status.checking', '正在检查...');
         
         const response = await fetch('api/get_server_status');
         const data = await response.json();
@@ -452,19 +485,19 @@ async function checkServerStatus() {
         if (data.status === 'online') {
             statusIndicator.className = 'text-green-500';
             statusIndicator.innerHTML = '<i class="fas fa-circle"></i>';
-            statusText.textContent = '在线';
+            statusText.textContent = t('main.server_status.online', '在线');
         } else if (data.status === 'offline') {
             statusIndicator.className = 'text-red-500';
             statusIndicator.innerHTML = '<i class="fas fa-circle"></i>';
-            statusText.textContent = '离线';
+            statusText.textContent = t('main.server_status.offline', '离线');
         } else {
             statusIndicator.className = 'text-yellow-500';
             statusIndicator.innerHTML = '<i class="fas fa-exclamation-triangle"></i>';
-            statusText.textContent = '未知';
+            statusText.textContent = t('main.server_status.unknown', '未知');
         }
         
         // 更新版本和玩家信息
-        if (versionText) versionText.textContent = data.version || '未知版本';
+        if (versionText) versionText.textContent = data.version || t('main.server_status.unknown_version', '未知版本');
         if (playersText) playersText.textContent = data.players || '0/0';
         
     } catch (error) {
@@ -474,7 +507,7 @@ async function checkServerStatus() {
         if (statusIndicator && statusText) {
             statusIndicator.className = 'text-yellow-500';
             statusIndicator.innerHTML = '<i class="fas fa-exclamation-triangle"></i>';
-            statusText.textContent = '连接错误';
+            statusText.textContent = t('main.server_status.connection_error', '连接错误');
         }
     }
 }
@@ -538,7 +571,7 @@ function validateLoginForm() {
             
             if (!account.value || !password.value) {
                 e.preventDefault();
-                errorText.textContent = '请填写完整的登录信息';
+                errorText.textContent = t('main.login.form_incomplete', '请填写完整的登录信息');
                 errorText.classList.remove('hidden');
                 return false;
             }
@@ -554,7 +587,7 @@ function validateLoginForm() {
             
             if (!tempCode.value) {
                 e.preventDefault();
-                errorText.textContent = '请输入临时登录码';
+                errorText.textContent = t('main.login.temp_code_required', '请输入临时登录码');
                 errorText.classList.remove('hidden');
                 return false;
             }
@@ -567,21 +600,18 @@ function validateLoginForm() {
 // 更新时间显示
 function updateTime() {
     const timeElement = document.getElementById('current-time');
-    const yearElement = document.getElementById('year');
     
     if (timeElement) {
         const now = new Date();
         timeElement.textContent = now.toLocaleString('zh-CN');
     }
-    
-    if (yearElement) {
-        const year = new Date().getFullYear();
-        yearElement.textContent = year;
-    }
 }
 
 // 页面加载完成后执行
 document.addEventListener('DOMContentLoaded', function() {
+    // 初始化语言
+    loadMainLangDict();
+    
     // 初始化主题
     initTheme();
     
@@ -616,6 +646,13 @@ document.addEventListener('DOMContentLoaded', function() {
     const sidebarToggleButtons = document.querySelectorAll('.sidebar-toggle');
     sidebarToggleButtons.forEach(btn => {
         btn.addEventListener('click', () => toggleSidebar());
+    });
+    
+    // 监听语言切换
+    document.addEventListener('i18n:changed', (e) => {
+        const nextLang = (e && e.detail && e.detail.lang) ? e.detail.lang : mainLang;
+        mainLang = nextLang.toLowerCase().startsWith('zh') ? 'zh-CN' : 'en-US';
+        loadMainLangDict();
     });
 });
 

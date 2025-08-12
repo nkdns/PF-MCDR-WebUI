@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     
-    <title>MCDR WebUI - 控制面板</title>
+    <title data-i18n="page.index.title"></title>
     <!-- 主题预加载脚本 - 防止闪烁 -->
     <script src="js/theme-preload.js"></script>
     <!-- Tailwind CSS -->
@@ -14,6 +14,8 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <!-- 自定义CSS -->
     <link rel="stylesheet" href="css/main.css">
+    <!-- i18n -->
+    <script defer src="js/i18n.js"></script>
     <!-- 自定义配置 -->
     <script>
         tailwind.config = {
@@ -119,14 +121,14 @@
                         </button>
                         
                         <!-- 页面标题 -->
-                        <h1 class="ml-4 text-xl font-semibold text-gray-800 dark:text-white">控制面板</h1>
+                        <h1 class="ml-4 text-xl font-semibold text-gray-800 dark:text-white" data-i18n="page.index.title"></h1>
                     </div>
                     
                     <!-- 右侧部分 -->
                     <div class="flex items-center space-x-4">
                         <!-- 公告 -->
                         <div class="nav-notice hidden md:flex items-center bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-300 px-3 py-1 rounded-full text-xs font-medium mr-2">
-                            <span class="nav-notice-text"><i class="fas fa-circle-notch fa-spin mr-1.5"></i> 加载公告中...</span>
+                            <span class="nav-notice-text"><i class="fas fa-circle-notch fa-spin mr-1.5"></i> <span data-i18n="common.notice_loading"></span></span>
                         </div>
                     
                         <!-- 服务器状态 -->
@@ -139,19 +141,19 @@
                             }">
                                 <span x-show="serverStatus === 'online'" class="flex items-center">
                                     <i class="fas fa-circle mr-1 text-xs"></i>
-                                    <span>在线</span>
+                                    <span data-i18n="nav.status_online"></span>
                                 </span>
                                 <span x-show="serverStatus === 'offline'" class="flex items-center">
                                     <i class="fas fa-circle mr-1 text-xs"></i>
-                                    <span>离线</span>
+                                    <span data-i18n="nav.status_offline"></span>
                                 </span>
                                 <span x-show="serverStatus === 'error'" class="flex items-center">
                                     <i class="fas fa-exclamation-triangle mr-1"></i>
-                                    <span>错误</span>
+                                    <span data-i18n="nav.status_error"></span>
                                 </span>
                                 <span x-show="serverStatus === 'loading'" class="flex items-center">
                                     <i class="fas fa-circle-notch fa-spin mr-1 text-xs"></i>
-                                    <span>加载中</span>
+                                    <span data-i18n="nav.status_loading"></span>
                                 </span>
                             </div>
                         </div>
@@ -203,11 +205,13 @@
                                                 'fa-circle-notch fa-spin': serverStatus === 'loading'
                                             }"
                                         ></i>
-                                        <span x-text="serverStatus === 'online' ? '运行中' : (serverStatus === 'loading' ? '加载中' : '已停止')"></span>
+                                        <span x-show="serverStatus === 'online'" data-i18n="page.index.running"></span>
+                                        <span x-show="serverStatus === 'loading'" data-i18n="page.index.loading"></span>
+                                        <span x-show="serverStatus !== 'online' && serverStatus !== 'loading'" data-i18n="page.index.stopped"></span>
                                     </span>
                                 </div>
                                 <div class="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                                    <span id="server-version" x-text="serverVersion || '未知版本'"></span>
+                                    <span id="server-version" x-text="serverVersion || t('page.index.unknown', '未知版本')"></span>
                                 </div>
                             </div>
                         </div>
@@ -219,27 +223,27 @@
                                 :disabled="serverStatus === 'online' || processingServer" 
                                 :class="{'opacity-50 cursor-not-allowed': serverStatus === 'online' || processingServer}"
                                 class="text-xs px-3 py-1.5 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 rounded hover:bg-green-200 dark:hover:bg-green-800/30 transition flex items-center"
-                                title="启动服务器"
+                                data-i18n="page.index.start" data-i18n-attr="title"
                             >
-                                <i class="fas fa-play mr-1"></i> 启动
+                                <i class="fas fa-play mr-1"></i> <span data-i18n="page.index.start"></span>
                             </button>
                             <button 
                                 @click="controlServer('stop')"
                                 :disabled="serverStatus === 'offline' || processingServer" 
                                 :class="{'opacity-50 cursor-not-allowed': serverStatus === 'offline' || processingServer}"
                                 class="text-xs px-3 py-1.5 bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 rounded hover:bg-red-200 dark:hover:bg-red-800/30 transition flex items-center"
-                                title="停止服务器"
+                                data-i18n="page.index.stop" data-i18n-attr="title"
                             >
-                                <i class="fas fa-stop mr-1"></i> 停止
+                                <i class="fas fa-stop mr-1"></i> <span data-i18n="page.index.stop"></span>
                             </button>
                             <button 
                                 @click="controlServer('restart')"
                                 :disabled="serverStatus === 'offline' || processingServer" 
                                 :class="{'opacity-50 cursor-not-allowed': serverStatus === 'offline' || processingServer}"
                                 class="text-xs px-3 py-1.5 bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 rounded hover:bg-amber-200 dark:hover:bg-amber-800/30 transition flex items-center"
-                                title="重启服务器"
+                                data-i18n="page.index.restart" data-i18n-attr="title"
                             >
-                                <i class="fas fa-sync-alt mr-1"></i> 重启
+                                <i class="fas fa-sync-alt mr-1"></i> <span data-i18n="page.index.restart"></span>
                             </button>
                         </div>
                     </div>
@@ -251,13 +255,13 @@
                                 <i class="fas fa-users"></i>
                             </div>
                             <div class="ml-4">
-                                <h3 class="text-sm font-medium text-gray-500 dark:text-gray-400">在线玩家</h3>
+                                <h3 class="text-sm font-medium text-gray-500 dark:text-gray-400" data-i18n="page.index.online_players"></h3>
                                 <div class="mt-1 flex items-center">
                                     <span id="server-players" class="text-lg font-semibold text-gray-800 dark:text-white" x-text="serverPlayers || '0/0'"></span>
                                 </div>
                                 <div class="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                                    <span x-show="serverStatus === 'online'">当前在线</span>
-                                    <span x-show="serverStatus !== 'online'">服务器离线</span>
+                                    <span x-show="serverStatus === 'online'" data-i18n="page.index.players_online"></span>
+                                    <span x-show="serverStatus !== 'online'" data-i18n="page.index.server_offline"></span>
                                 </div>
                             </div>
                         </div>
@@ -266,9 +270,9 @@
                                 @click="checkServerStatus()"
                                 :disabled="serverStatus === 'offline' || processingServer" 
                                 class="text-xs px-3 py-1.5 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded hover:bg-blue-200 dark:hover:bg-blue-800/30 transition flex items-center"
-                                title="刷新服务器状态"
+                                data-i18n="page.index.refresh_status" data-i18n-attr="title"
                             >
-                                <i class="fas fa-sync-alt mr-1"></i> 刷新
+                                <i class="fas fa-sync-alt mr-1"></i> <span data-i18n="page.index.refresh"></span>
                             </button>
                         </div>
                     </div>
@@ -280,12 +284,12 @@
                                 <i class="fas fa-microchip"></i>
                             </div>
                             <div class="ml-4">
-                                <h3 class="text-sm font-medium text-gray-500 dark:text-gray-400">系统状态</h3>
+                                <h3 class="text-sm font-medium text-gray-500 dark:text-gray-400" data-i18n="page.index.system_status"></h3>
                                 <div class="mt-1 flex items-center">
-                                    <span class="text-lg font-semibold text-gray-800 dark:text-white">运行正常</span>
+                                    <span class="text-lg font-semibold text-gray-800 dark:text-white" data-i18n="page.index.running_well"></span>
                                 </div>
                                 <div class="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                                    <span>WebUI 正常运行中</span>
+                                    <span data-i18n="page.index.webui_running"></span>
                                 </div>
                             </div>
                         </div>
@@ -298,13 +302,15 @@
                                 <i class="fas fa-bolt"></i>
                             </div>
                             <div class="ml-4">
-                                <h3 class="text-sm font-medium text-gray-500 dark:text-gray-400">快速导航</h3>
+                                <h3 class="text-sm font-medium text-gray-500 dark:text-gray-400" data-i18n="page.index.quick_nav"></h3>
                                 <div class="mt-2 flex flex-wrap gap-2">
                                     <a href="/plugins" class="text-xs px-2 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded hover:bg-blue-200 dark:hover:bg-blue-800/30 transition">
-                                        <i class="fas fa-puzzle-piece mr-1"></i>插件
+                                        <i class="fas fa-puzzle-piece mr-1"></i>
+                                        <span data-i18n="page.index.nav_plugins"></span>
                                     </a>
                                     <a href="/mcdr" class="text-xs px-2 py-1 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 rounded hover:bg-green-200 dark:hover:bg-green-800/30 transition">
-                                        <i class="fas fa-cogs mr-1"></i>配置
+                                        <i class="fas fa-cogs mr-1"></i>
+                                        <span data-i18n="page.index.nav_config"></span>
                                     </a>
                                 </div>
                             </div>
@@ -316,7 +322,7 @@
                 <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-8">
                     <!-- 左侧面板：功能概览 -->
                     <div class="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6 border border-gray-200 dark:border-gray-700">
-                        <h2 class="text-lg font-semibold text-gray-800 dark:text-white mb-6">功能概览</h2>
+                                <h2 class="text-lg font-semibold text-gray-800 dark:text-white mb-6" data-i18n="page.index.feature_overview"></h2>
                         
                         <div class="space-y-4">
                             <div class="card-hover flex items-center p-4 rounded-lg bg-gray-50 dark:bg-gray-700/30 transition-all">
@@ -324,8 +330,8 @@
                                     <i class="fas fa-puzzle-piece"></i>
                                 </div>
                                 <div class="ml-4">
-                                    <h3 class="text-sm font-medium text-gray-800 dark:text-white">插件管理</h3>
-                                    <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">管理服务器的插件，包括安装、配置和更新</p>
+                                    <h3 class="text-sm font-medium text-gray-800 dark:text-white" data-i18n="page.index.plugins_mgmt"></h3>
+                                    <p class="text-xs text-gray-500 dark:text-gray-400 mt-1" data-i18n="page.index.plugins_mgmt_desc"></p>
                                 </div>
                                 <div class="ml-auto flex-shrink-0">
                                     <a href="plugins" class="inline-flex items-center justify-center w-8 h-8 rounded-full bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-300 hover:bg-blue-100 dark:hover:bg-blue-900/30 hover:text-blue-700 dark:hover:text-blue-400 transition-colors">
@@ -339,8 +345,8 @@
                                     <i class="fas fa-cogs"></i>
                                 </div>
                                 <div class="ml-4">
-                                    <h3 class="text-sm font-medium text-gray-800 dark:text-white">MCDR 配置</h3>
-                                    <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">配置 MCDR 的参数和设置</p>
+                                    <h3 class="text-sm font-medium text-gray-800 dark:text-white" data-i18n="page.index.mcdr_config"></h3>
+                                    <p class="text-xs text-gray-500 dark:text-gray-400 mt-1" data-i18n="page.index.mcdr_config_desc"></p>
                                 </div>
                                 <div class="ml-auto flex-shrink-0">
                                     <a href="mcdr" class="inline-flex items-center justify-center w-8 h-8 rounded-full bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-300 hover:bg-green-100 dark:hover:bg-green-900/30 hover:text-green-700 dark:hover:text-green-400 transition-colors">
@@ -354,8 +360,8 @@
                                     <i class="fas fa-gamepad"></i>
                                 </div>
                                 <div class="ml-4">
-                                    <h3 class="text-sm font-medium text-gray-800 dark:text-white">MC 服务器配置</h3>
-                                    <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">配置 Minecraft 服务器参数</p>
+                                    <h3 class="text-sm font-medium text-gray-800 dark:text-white" data-i18n="page.index.mc_config"></h3>
+                                    <p class="text-xs text-gray-500 dark:text-gray-400 mt-1" data-i18n="page.index.mc_config_desc"></p>
                                 </div>
                                 <div class="ml-auto flex-shrink-0">
                                     <a href="mc" class="inline-flex items-center justify-center w-8 h-8 rounded-full bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-300 hover:bg-purple-100 dark:hover:bg-purple-900/30 hover:text-purple-700 dark:hover:text-purple-400 transition-colors">
@@ -369,8 +375,8 @@
                                     <i class="fas fa-cloud-download-alt"></i>
                                 </div>
                                 <div class="ml-4">
-                                    <h3 class="text-sm font-medium text-gray-800 dark:text-white">在线插件</h3>
-                                    <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">浏览并安装在线插件仓库中的插件</p>
+                                    <h3 class="text-sm font-medium text-gray-800 dark:text-white" data-i18n="page.index.online_plugins"></h3>
+                                    <p class="text-xs text-gray-500 dark:text-gray-400 mt-1" data-i18n="page.index.online_plugins_desc"></p>
                                 </div>
                                 <div class="ml-auto flex-shrink-0">
                                     <a href="/online-plugins" class="inline-flex items-center justify-center w-8 h-8 rounded-full bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-300 hover:bg-amber-100 dark:hover:bg-amber-900/30 hover:text-amber-700 dark:hover:text-amber-400 transition-colors">
@@ -383,7 +389,7 @@
                     
                     <!-- 右侧面板：系统信息 -->
                     <div class="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6 border border-gray-200 dark:border-gray-700">
-                        <h2 class="text-lg font-semibold text-gray-800 dark:text-white mb-6">系统信息</h2>
+                        <h2 class="text-lg font-semibold text-gray-800 dark:text-white mb-6" data-i18n="page.index.system_info"></h2>
                         
                         <!-- 系统信息列表 -->
                         <div class="space-y-4">
@@ -392,8 +398,8 @@
                                     <i class="fas fa-info-circle"></i>
                                 </div>
                                 <div class="ml-4">
-                                    <h3 class="text-sm font-medium text-gray-800 dark:text-white">WebUI 版本</h3>
-                                    <p class="text-xs text-gray-500 dark:text-gray-400 mt-1" id="web-version">加载中...</p>
+                                    <h3 class="text-sm font-medium text-gray-800 dark:text-white" data-i18n="page.index.webui_version"></h3>
+                                    <p class="text-xs text-gray-500 dark:text-gray-400 mt-1" id="web-version" data-i18n="about.common.version_loading"></p>
                                 </div>
                             </div>
                             
@@ -402,8 +408,8 @@
                                     <i class="fas fa-clock"></i>
                                 </div>
                                 <div class="ml-4">
-                                    <h3 class="text-sm font-medium text-gray-800 dark:text-white">系统时间</h3>
-                                    <p class="text-xs text-gray-500 dark:text-gray-400 mt-1" id="current-time">加载中...</p>
+                                    <h3 class="text-sm font-medium text-gray-800 dark:text-white" data-i18n="page.index.system_time"></h3>
+                                    <p class="text-xs text-gray-500 dark:text-gray-400 mt-1" id="current-time" data-i18n="common.notice_loading"></p>
                                 </div>
                             </div>
                             
@@ -412,8 +418,8 @@
                                     <i class="fas fa-link"></i>
                                 </div>
                                 <div class="ml-4">
-                                    <h3 class="text-sm font-medium text-gray-800 dark:text-white">连接状态</h3>
-                                    <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">正常</p>
+                                    <h3 class="text-sm font-medium text-gray-800 dark:text-white" data-i18n="page.index.connection_status"></h3>
+                                    <p class="text-xs text-gray-500 dark:text-gray-400 mt-1" data-i18n="page.index.normal"></p>
                                 </div>
                             </div>
                             
@@ -422,8 +428,8 @@
                                     <i class="fas fa-shield-alt"></i>
                                 </div>
                                 <div class="ml-4">
-                                    <h3 class="text-sm font-medium text-gray-800 dark:text-white">安全状态</h3>
-                                    <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">已登录，会话有效</p>
+                                    <h3 class="text-sm font-medium text-gray-800 dark:text-white" data-i18n="page.index.security_status"></h3>
+                                    <p class="text-xs text-gray-500 dark:text-gray-400 mt-1" data-i18n="page.index.logged_in"></p>
                                 </div>
                             </div>
                         </div>
@@ -433,13 +439,13 @@
                 <!-- pip管理卡片 -->
                 <div class="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6 border border-gray-200 dark:border-gray-700 mt-8">
                     <div class="flex items-center justify-between mb-6">
-                        <h2 class="text-lg font-semibold text-gray-800 dark:text-white">pip包管理</h2>
+                        <h2 class="text-lg font-semibold text-gray-800 dark:text-white" data-i18n="page.index.pip_mgmt"></h2>
                         <div class="flex space-x-2">
-                            <button @click="refreshPipPackages()" class="text-xs px-3 py-1.5 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded hover:bg-blue-200 dark:hover:bg-blue-800/30 transition flex items-center">
-                                <i class="fas fa-sync-alt mr-1"></i> 刷新
+                            <button @click="refreshPipPackages()" class="text-xs px-3 py-1.5 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded hover:bg-blue-200 dark:hover:bg-blue-800/30 transition flex items-center" data-i18n="page.index.refresh" data-i18n-attr="title">
+                                <i class="fas fa-sync-alt mr-1"></i> <span data-i18n="page.index.refresh"></span>
                             </button>
-                            <button @click="showInstallPipModal = true" class="text-xs px-3 py-1.5 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 rounded hover:bg-green-200 dark:hover:bg-green-800/30 transition flex items-center">
-                                <i class="fas fa-plus mr-1"></i> 安装
+                            <button @click="showInstallPipModal = true" class="text-xs px-3 py-1.5 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 rounded hover:bg-green-200 dark:hover:bg-green-800/30 transition flex items-center" data-i18n="page.index.install" data-i18n-attr="title">
+                                <i class="fas fa-plus mr-1"></i> <span data-i18n="page.index.install"></span>
                             </button>
                         </div>
                     </div>
@@ -450,14 +456,14 @@
                             <i class="fas fa-circle-notch fa-spin text-blue-500 dark:text-blue-400 text-xl"></i>
                         </div>
                         <div x-show="!loadingPipPackages && pipPackages.length === 0" class="text-center py-4 text-gray-500 dark:text-gray-400">
-                            <p>暂无已安装的包信息</p>
+                            <p data-i18n="page.index.no_packages"></p>
                         </div>
                         <table x-show="!loadingPipPackages && pipPackages.length > 0" class="min-w-full">
                             <thead>
                                 <tr class="text-xs font-medium text-gray-500 dark:text-gray-400 border-b border-gray-200 dark:border-gray-700">
-                                    <th class="text-left pb-2">包名</th>
-                                    <th class="text-left pb-2">版本</th>
-                                    <th class="text-right pb-2">操作</th>
+                                    <th class="text-left pb-2" data-i18n="page.index.pkg_name"></th>
+                                    <th class="text-left pb-2" data-i18n="page.index.version"></th>
+                                    <th class="text-right pb-2" data-i18n="page.index.actions"></th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -466,8 +472,8 @@
                                         <td class="py-2 text-gray-800 dark:text-gray-200" x-text="pkg.name"></td>
                                         <td class="py-2 text-gray-600 dark:text-gray-400" x-text="pkg.version"></td>
                                         <td class="py-2 text-right">
-                                            <button @click="uninstallPipPackage(pkg.name)" class="text-xs px-2 py-1 bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 rounded hover:bg-red-200 dark:hover:bg-red-800/30 transition">
-                                                卸载
+                                            <button @click="uninstallPipPackage(pkg.name)" class="text-xs px-2 py-1 bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 rounded hover:bg-red-200 dark:hover:bg-red-800/30 transition" data-i18n="page.index.uninstall" data-i18n-attr="title">
+                                                <span data-i18n="page.index.uninstall"></span>
                                             </button>
                                         </td>
                                     </tr>
@@ -485,25 +491,21 @@
                 <!-- 安装pip包弹窗 -->
                 <div x-show="showInstallPipModal" class="fixed inset-0 z-50 overflow-auto bg-black bg-opacity-50 flex items-center justify-center" @click.self="showInstallPipModal = false">
                     <div class="bg-white dark:bg-gray-800 rounded-xl shadow-xl p-6 max-w-md w-full mx-4" @click.stop>
-                        <h3 class="text-lg font-semibold text-gray-800 dark:text-white mb-4">安装pip包</h3>
+                        <h3 class="text-lg font-semibold text-gray-800 dark:text-white mb-4" data-i18n="page.index.install_pip_title"></h3>
                         <div class="mb-4">
-                            <label for="pipPackageName" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">包名</label>
-                            <input type="text" id="pipPackageName" x-model="newPipPackage" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-600 focus:border-blue-500 dark:focus:border-blue-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white" placeholder="例如: requests==2.28.1 或 requests">
+                            <label for="pipPackageName" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1" data-i18n="page.index.pkg_name"></label>
+                            <input type="text" id="pipPackageName" x-model="newPipPackage" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-600 focus:border-blue-500 dark:focus:border-blue-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white" data-i18n-placeholder="page.index.install_placeholder">
                         </div>
                         <div class="flex justify-end gap-2">
-                            <button @click="showInstallPipModal = false" class="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded hover:bg-gray-300 dark:hover:bg-gray-600 transition">
-                                取消
-                            </button>
-                            <button @click="installPipPackage()" class="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition">
-                                安装
-                            </button>
+                            <button @click="showInstallPipModal = false" class="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded hover:bg-gray-300 dark:hover:bg-gray-600 transition" data-i18n="common.cancel"></button>
+                            <button @click="installPipPackage()" class="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition" data-i18n="page.index.install"></button>
                         </div>
                     </div>
                 </div>
 
                 <!-- 页脚 -->
                 <footer class="mt-12 text-center text-sm text-gray-500 dark:text-gray-400">
-                    <p>MCDR WebUI &copy; <span id="year"></span></p>
+                    <p data-i18n="common.copyright"></p>
                 </footer>
             </main>
         </div>

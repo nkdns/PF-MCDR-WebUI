@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MCDR WebUI - 终端日志</title>
+    <title data-i18n="page.terminal.title"></title>
     <!-- 主题预加载脚本 - 防止闪烁 -->
     <script src="js/theme-preload.js"></script>
     <!-- Tailwind CSS -->
@@ -14,6 +14,8 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <!-- 自定义CSS -->
     <link rel="stylesheet" href="css/main.css">
+    <!-- i18n -->
+    <script defer src="js/i18n.js"></script>
     <!-- 自定义配置 -->
     <script>
         tailwind.config = {
@@ -429,14 +431,14 @@
                         </button>
                         
                         <!-- 标题 -->
-                        <h1 class="ml-4 text-lg font-semibold text-gray-800 dark:text-white">终端日志</h1>
+                        <h1 class="ml-4 text-lg font-semibold text-gray-800 dark:text-white" data-i18n="page.terminal.title"></h1>
                     </div>
                     
                     <!-- 右侧部分 -->
                     <div class="flex items-center space-x-4">
                         <!-- 公告 -->
                         <div class="nav-notice hidden md:flex items-center bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-300 px-3 py-1 rounded-full text-xs font-medium mr-2">
-                            <span class="nav-notice-text"><i class="fas fa-circle-notch fa-spin mr-1.5"></i> 加载公告中...</span>
+                            <span class="nav-notice-text"><i class="fas fa-circle-notch fa-spin mr-1.5"></i> <span data-i18n="common.notice_loading"></span></span>
                         </div>
 
                         <!-- 服务器状态 -->
@@ -449,19 +451,19 @@
                             }">
                                 <span x-show="serverStatus === 'online'" class="flex items-center">
                                     <i class="fas fa-circle mr-1 text-xs"></i>
-                                    <span>在线</span>
+                                    <span data-i18n="nav.status_online"></span>
                                 </span>
                                 <span x-show="serverStatus === 'offline'" class="flex items-center">
                                     <i class="fas fa-circle mr-1 text-xs"></i>
-                                    <span>离线</span>
+                                    <span data-i18n="nav.status_offline"></span>
                                 </span>
                                 <span x-show="serverStatus === 'error'" class="flex items-center">
                                     <i class="fas fa-exclamation-triangle mr-1"></i>
-                                    <span>错误</span>
+                                    <span data-i18n="nav.status_error"></span>
                                 </span>
                                 <span x-show="serverStatus === 'loading'" class="flex items-center">
                                     <i class="fas fa-circle-notch fa-spin mr-1 text-xs"></i>
-                                    <span>加载中</span>
+                                    <span data-i18n="nav.status_loading"></span>
                                 </span>
                             </div>
                         </div>
@@ -476,7 +478,10 @@
                             <div class="w-8 h-8 rounded-full bg-blue-500 flex items-center justify-center text-white user-avatar overflow-hidden">
                                 <i class="fas fa-user"></i>
                             </div>
-                            <span class="ml-2 text-sm font-medium text-gray-700 dark:text-gray-300 js-username" x-text="userName || '用户'"></span>
+                            <span class="ml-2 text-sm font-medium text-gray-700 dark:text-gray-300 js-username">
+                                <span x-show="userName" x-text="userName"></span>
+                                <span x-show="!userName" data-i18n="common.user"></span>
+                            </span>
                         </div>
                     </div>
                 </div>
@@ -493,7 +498,7 @@
                                 <input 
                                     type="text" 
                                     x-model="filterText" 
-                                    placeholder="过滤日志..." 
+                                    data-i18n-placeholder="page.terminal.filter" 
                                     class="w-full pl-10 pr-4 py-2 text-sm rounded-md bg-gray-100 dark:bg-gray-700 border-none focus:ring-2 focus:ring-blue-500 text-gray-800 dark:text-gray-200"
                                 >
                                 <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -504,34 +509,35 @@
                         
                         <!-- 控制按钮 -->
                         <div class="flex items-center space-x-2">
-                            <button @click="loadLogs()" class="px-3 py-1.5 text-xs bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded-md hover:bg-blue-200 dark:hover:bg-blue-800/30 flex items-center" title="刷新日志">
+                            <button @click="loadLogs()" class="px-3 py-1.5 text-xs bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded-md hover:bg-blue-200 dark:hover:bg-blue-800/30 flex items-center" data-i18n="page.terminal.refresh" data-i18n-attr="title">
                                 <i class="fas fa-sync-alt mr-1.5"></i>
-                                <span>刷新</span>
+                                <span data-i18n="page.terminal.refresh"></span>
                             </button>
                             
-                            <button @click="toggleAutoRefresh()" class="px-3 py-1.5 text-xs rounded-md flex items-center" :class="autoRefresh ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300' : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300'" title="自动刷新">
+                            <button @click="toggleAutoRefresh()" class="px-3 py-1.5 text-xs rounded-md flex items-center" :class="autoRefresh ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300' : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300'" data-i18n="page.terminal.auto_refresh" data-i18n-attr="title">
                                 <i class="fas fa-circle mr-1.5" :class="autoRefresh ? 'text-green-500 animate-pulse' : 'text-gray-400'"></i>
-                                <span x-text="autoRefresh ? '自动刷新开' : '自动刷新关'"></span>
+                                <span x-show="autoRefresh" data-i18n="page.terminal.auto_refresh_on"></span>
+                                <span x-show="!autoRefresh" data-i18n="page.terminal.auto_refresh_off"></span>
                             </button>
                             
-                            <button @click="autoScroll = !autoScroll" class="px-3 py-1.5 text-xs rounded-md flex items-center" :class="autoScroll ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300' : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300'" title="自动滚动">
+                            <button @click="autoScroll = !autoScroll" class="px-3 py-1.5 text-xs rounded-md flex items-center" :class="autoScroll ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300' : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300'" data-i18n="page.terminal.auto_scroll" data-i18n-attr="title">
                                 <i class="fas fa-angle-double-down mr-1.5"></i>
-                                <span>自动滚动</span>
+                                <span data-i18n="page.terminal.auto_scroll"></span>
                             </button>
                             
-                            <button @click="copyLogs()" class="px-3 py-1.5 text-xs bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 rounded-md hover:bg-purple-200 dark:hover:bg-purple-800/30 flex items-center" title="复制日志">
+                            <button @click="copyLogs()" class="px-3 py-1.5 text-xs bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 rounded-md hover:bg-purple-200 dark:hover:bg-purple-800/30 flex items-center" data-i18n="page.terminal.copy" data-i18n-attr="title">
                                 <i class="fas fa-copy mr-1.5"></i>
-                                <span>复制</span>
+                                <span data-i18n="page.terminal.copy"></span>
                             </button>
                             
-                            <button @click="clearTerminal()" class="px-3 py-1.5 text-xs bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 rounded-md hover:bg-red-200 dark:hover:bg-red-800/30 flex items-center" title="清空终端">
+                            <button @click="clearTerminal()" class="px-3 py-1.5 text-xs bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 rounded-md hover:bg-red-200 dark:hover:bg-red-800/30 flex items-center" data-i18n="page.terminal.clear" data-i18n-attr="title">
                                 <i class="fas fa-trash-alt mr-1.5"></i>
-                                <span>清空</span>
+                                <span data-i18n="page.terminal.clear"></span>
                             </button>
                             
-                            <button @click="openAIQueryModal()" class="px-3 py-1.5 text-xs bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 rounded-md hover:bg-green-200 dark:hover:bg-green-800/30 flex items-center" title="AI询问">
+                            <button @click="openAIQueryModal()" class="px-3 py-1.5 text-xs bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 rounded-md hover:bg-green-200 dark:hover:bg-green-800/30 flex items-center" data-i18n="page.terminal.ai_query" data-i18n-attr="title">
                                 <i class="fas fa-robot mr-1.5"></i>
-                                <span>AI询问</span>
+                                <span data-i18n="page.terminal.ai_query"></span>
                             </button>
                         </div>
                     </div>
@@ -539,23 +545,24 @@
                 
                 <!-- 选中文本时显示的询问按钮 -->
                 <div id="selectionActionButton" class="selection-action-button">
-                    <i class="fas fa-question-circle mr-1"></i> 询问AI
+                    <i class="fas fa-question-circle mr-1"></i> <span data-i18n="page.terminal.ask_ai"></span>
                 </div>
                     
                 <!-- 状态栏 -->
                 <div class="mt-2 flex justify-between text-xs text-gray-500 dark:text-gray-400 px-2">
                     <div>
-                        <span>共 </span>
+                        <span data-i18n="page.terminal.total"></span>
                         <span x-text="totalLines"></span>
-                        <span> 行日志</span>
-                        <span x-show="filterText"> | 过滤: "</span>
+                        <span data-i18n="page.terminal.lines"></span>
+                        <span x-show="filterText"> | <span data-i18n="page.terminal.filter_label"></span> "</span>
                         <span x-show="filterText" x-text="filterText"></span>
                         <span x-show="filterText">"</span>
                     </div>
                     <div>
-                    <span>服务器日志</span>
+                        <span data-i18n="page.terminal.server_log"></span>
                         <span> | </span>
-                        <span x-text="autoRefresh ? '自动刷新：开' : '自动刷新：关'"></span>
+                        <span x-show="autoRefresh" data-i18n="page.terminal.auto_refresh_on_full"></span>
+                        <span x-show="!autoRefresh" data-i18n="page.terminal.auto_refresh_off_full"></span>
                     </div>
                 </div>
             
@@ -563,7 +570,7 @@
                 <div id="terminal" class="h-[65vh] terminal rounded-lg p-4 overflow-auto">
                     <template x-if="logs.length === 0 && !isLoading">
                         <div class="text-center text-gray-500 h-full flex items-center justify-center">
-                            <span class="whitespace-pre-wrap">无日志记录或日志已被清空</span>
+                            <span class="whitespace-pre-wrap" data-i18n="page.terminal.no_logs"></span>
                         </div>
                     </template>
                     
@@ -586,7 +593,7 @@
                                 x-model="commandInput" 
                                 @input="handleCommandInputChange"
                                 @keydown="handleKeyDown"
-                                placeholder="输入命令发送到MCDR终端..." 
+                                data-i18n-placeholder="page.terminal.placeholder_command" 
                                 class="w-full pl-10 pr-4 py-2 rounded-md bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-800 dark:text-gray-200"
                                 autofocus
                             >
@@ -620,16 +627,16 @@
                             class="ml-2 px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-md flex items-center"
                         >
                             <i class="fas fa-paper-plane mr-2"></i>
-                            <span>发送</span>
-                        </button>
+                            <span data-i18n="page.terminal.send"></span>
+                            </button>
                     </form>
                 </div>
             </div>
             
             <!-- 命令补全提示 -->
             <div class="fixed bottom-16 right-4 text-xs text-gray-500 dark:text-gray-400 bg-white dark:bg-gray-800 px-2 py-1 rounded shadow" x-show="commandInput && commandInput.startsWith('!!')">
-                <span>使用 <kbd class="px-1 py-0.5 bg-gray-200 dark:bg-gray-700 rounded">Tab</kbd> 键显示/关闭命令补全，或补全选择的命令</span>
-            </div>
+                <span data-i18n="page.terminal.hint_tab"></span>
+                </div>
         </div>
         
         <!-- 通知组件 -->
@@ -658,33 +665,35 @@
         <div id="aiQueryModal" class="ai-query-modal" x-show="showAiQueryModal" x-cloak>
             <div class="ai-query-container">
                 <div class="ai-query-header">
-                    <h3 class="text-lg font-semibold" x-text="aiQueryTitle">AI日志分析询问</h3>
+                    <h3 class="text-lg font-semibold" x-text="aiQueryTitle">
+                        <span data-i18n="page.terminal.ai_modal.title"></span>
+                    </h3>
                     <button @click="closeAIQueryModal" class="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300">
                         <i class="fas fa-times"></i>
                     </button>
                 </div>
                 <div class="ai-query-body">
                     <div class="mb-4">
-                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">要询问的问题</label>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2" data-i18n="page.terminal.ai_modal.question"></label>
                         <textarea 
                             x-model="aiQuery" 
                             class="ai-query-textarea" 
-                            placeholder="请输入您的问题，不填则默认为'分析这些日志中的错误并提供解决方案'"
+                            data-i18n-placeholder="page.terminal.ai_modal.placeholder"
                         ></textarea>
                     </div>
                     
                     <div class="ai-query-options">
                         <label class="flex items-center text-sm text-gray-700 dark:text-gray-300">
                             <input type="checkbox" x-model="aiContinueChat" class="mr-2 h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500">
-                            启用连续对话（保留上下文）
+                            <span data-i18n="page.terminal.ai_modal.continue_chat"></span>
                         </label>
                     </div>
                     
                     <!-- 显示日志内容预览 -->
                     <div x-show="aiLogPreview" class="mt-4">
                         <div class="flex justify-between items-center mb-2">
-                            <h4 class="text-sm font-medium text-gray-700 dark:text-gray-300">日志内容预览</h4>
-                            <span class="text-xs text-gray-500 dark:text-gray-400" x-text="'约 ' + (aiLogPreview?.split('\n').length || 0) + ' 行'"></span>
+                            <h4 class="text-sm font-medium text-gray-700 dark:text-gray-300" data-i18n="page.terminal.ai_modal.preview"></h4>
+                            <span class="text-xs text-gray-500 dark:text-gray-400"><span data-i18n="page.terminal.ai_modal.about"></span> <span x-text="(aiLogPreview?.split('\n').length || 0)"></span> <span data-i18n="page.terminal.ai_modal.lines"></span></span>
                         </div>
                         <div class="bg-gray-100 dark:bg-gray-800 p-3 rounded-md text-xs text-gray-700 dark:text-gray-300 max-h-32 overflow-y-auto">
                             <pre x-text="aiLogPreview?.substring(0, 500) + (aiLogPreview?.length > 500 ? '...' : '')"></pre>
@@ -699,7 +708,7 @@
                     <!-- 加载状态 -->
                     <div x-show="aiLoading" class="ai-loading">
                         <div class="ai-loading-spinner"></div>
-                        <span>正在分析日志，请稍候...</span>
+                        <span data-i18n="page.terminal.ai_modal.loading"></span>
                     </div>
                 </div>
                 <div class="ai-query-footer">
@@ -707,7 +716,7 @@
                         @click="closeAIQueryModal"
                         class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700"
                     >
-                        取消
+                        <span data-i18n="common.cancel"></span>
                     </button>
                     <button 
                         @click="submitAIQuery"
@@ -715,7 +724,7 @@
                         :disabled="aiLoading"
                     >
                         <i class="fas fa-paper-plane mr-2"></i>
-                        发送询问
+                        <span data-i18n="page.terminal.ai_modal.send"></span>
                     </button>
                 </div>
             </div>
@@ -725,19 +734,19 @@
         <div id="apiKeyModal" class="api-key-modal" x-show="showApiKeyModal" x-cloak>
             <div class="api-key-container">
                 <div class="api-key-header">
-                    <h3 class="text-lg font-semibold">设置API密钥</h3>
+                    <h3 class="text-lg font-semibold" data-i18n="page.terminal.api_key.title"></h3>
                     <button @click="closeApiKeyModal" class="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300">
                         <i class="fas fa-times"></i>
                     </button>
                 </div>
                 <div class="api-key-body">
                     <div class="mb-4">
-                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">API密钥</label>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2" data-i18n="page.terminal.api_key.label"></label>
                         <input 
                             type="text" 
                             x-model="apiKey" 
                             class="api-key-input" 
-                            placeholder="请输入您的API密钥"
+                            data-i18n-placeholder="page.terminal.api_key.placeholder"
                         >
                     </div>
                 </div>
@@ -746,7 +755,7 @@
                         @click="closeApiKeyModal"
                         class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700"
                     >
-                        取消
+                        <span data-i18n="common.cancel"></span>
                     </button>
                     <button 
                         @click="saveApiKey"
@@ -754,7 +763,7 @@
                         :disabled="aiLoading"
                     >
                         <i class="fas fa-save mr-2"></i>
-                        保存
+                        <span data-i18n="common.save"></span>
                     </button>
                 </div>
             </div>

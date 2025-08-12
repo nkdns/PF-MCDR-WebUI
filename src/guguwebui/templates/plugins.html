@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     
-    <title>MCDR WebUI - 本地插件</title>
+    <title data-i18n="plugins.title"></title>
     <!-- 主题预加载脚本 - 防止闪烁 -->
     <script src="js/theme-preload.js"></script>
     <!-- Tailwind CSS -->
@@ -15,6 +15,8 @@
     <!-- 自定义CSS -->
     <link rel="stylesheet" href="css/main.css">
     <link rel="stylesheet" href="css/plugins.css">
+    <!-- i18n -->
+    <script defer src="js/i18n.js"></script>
     <!-- 自定义配置 -->
     <script>
         tailwind.config = {
@@ -74,14 +76,14 @@
                         </button>
                         
                         <!-- 页面标题 -->
-                        <h1 class="ml-4 text-xl font-semibold text-gray-800 dark:text-white">本地插件管理</h1>
+                        <h1 class="ml-4 text-xl font-semibold text-gray-800 dark:text-white" data-i18n="page.plugins.title"></h1>
                     </div>
                     
                     <!-- 右侧部分 -->
                     <div class="flex items-center space-x-4">
                         <!-- 公告 -->
                         <div class="nav-notice hidden md:flex items-center bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-300 px-3 py-1 rounded-full text-xs font-medium mr-2">
-                            <span class="nav-notice-text"><i class="fas fa-circle-notch fa-spin mr-1.5"></i> 加载公告中...</span>
+                            <span class="nav-notice-text"><i class="fas fa-circle-notch fa-spin mr-1.5"></i> <span data-i18n="common.notice_loading"></span></span>
                         </div>
                     
                         <!-- 服务器状态 -->
@@ -94,19 +96,19 @@
                             }">
                                 <span x-show="serverStatus === 'online'" class="flex items-center">
                                     <i class="fas fa-circle mr-1 text-xs"></i>
-                                    <span>在线</span>
+                                    <span data-i18n="nav.status_online"></span>
                                 </span>
                                 <span x-show="serverStatus === 'offline'" class="flex items-center">
                                     <i class="fas fa-circle mr-1 text-xs"></i>
-                                    <span>离线</span>
+                                    <span data-i18n="nav.status_offline"></span>
                                 </span>
                                 <span x-show="serverStatus === 'error'" class="flex items-center">
                                     <i class="fas fa-exclamation-triangle mr-1"></i>
-                                    <span>错误</span>
+                                    <span data-i18n="nav.status_error"></span>
                                 </span>
                                 <span x-show="serverStatus === 'loading'" class="flex items-center">
                                     <i class="fas fa-circle-notch fa-spin mr-1 text-xs"></i>
-                                    <span>加载中</span>
+                                    <span data-i18n="nav.status_loading"></span>
                                 </span>
                             </div>
                         </div>
@@ -121,7 +123,8 @@
                             <div class="w-8 h-8 rounded-full bg-blue-500 flex items-center justify-center text-white user-avatar overflow-hidden">
                                 <i class="fas fa-user"></i>
                             </div>
-                            <span class="ml-2 text-sm font-medium text-gray-700 dark:text-gray-300 js-username" x-text="userName || '用户'"></span>
+                            <span class="ml-2 text-sm font-medium text-gray-700 dark:text-gray-300 js-username" x-text="userName || ''"></span>
+                            <span x-show="!userName" class="ml-2 text-sm font-medium text-gray-700 dark:text-gray-300" data-i18n="common.user"></span>
                         </div>
                     </div>
                 </div>
@@ -131,14 +134,14 @@
             <main class="pt-24 px-4 sm:px-6 md:px-8 pb-8">
                 <div class="bg-white dark:bg-gray-800 shadow-sm rounded-lg p-6 border border-gray-200 dark:border-gray-700">
                     <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
-                        <h2 class="text-xl font-bold text-gray-800 dark:text-white">已安装插件</h2>
+                        <h2 class="text-xl font-bold text-gray-800 dark:text-white" data-i18n="plugins.title"></h2>
                         
                         <!-- 搜索栏 -->
                         <div class="relative w-full md:w-64">
                             <input 
                                 type="text" 
                                 class="w-full pl-10 pr-4 py-2 rounded-lg border dark:border-gray-700 bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white"
-                                placeholder="搜索插件..."
+                                data-i18n-placeholder="plugins.search_placeholder"
                                 x-model="searchQuery"
                             >
                             <i class="fas fa-search absolute left-3 top-3 text-gray-400"></i>
@@ -163,20 +166,21 @@
                             <template x-if="loading">
                                 <i class="fas fa-circle-notch fa-spin mr-2"></i>
                             </template>
-                            <span x-text="loading ? '加载中...' : '刷新插件'"></span>
+                            <span x-show="loading" data-i18n="plugins.loading"></span>
+                            <span x-show="!loading" data-i18n="plugins.refresh_plugins"></span>
                         </button>
                     </div>
 
                     <!-- 加载状态 -->
                     <div x-show="loading" class="flex justify-center items-center py-12">
                         <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
-                        <span class="ml-3 text-gray-600 dark:text-gray-400">加载插件中...</span>
+                        <span class="ml-3 text-gray-600 dark:text-gray-400" data-i18n="plugins.loading_plugins"></span>
                     </div>
 
                     <!-- 插件列表 -->
                     <div x-show="!loading && filterPlugins().length === 0" class="text-center py-12">
                         <i class="fas fa-puzzle-piece text-4xl text-gray-400 mb-4"></i>
-                        <p class="text-gray-500 dark:text-gray-400">未找到符合条件的插件</p>
+                        <p class="text-gray-500 dark:text-gray-400" data-i18n="plugins.no_plugins_found"></p>
                     </div>
 
                     <div x-show="!loading && filterPlugins().length > 0" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -187,7 +191,10 @@
                                     <div class="flex items-start justify-between">
                                         <div class="flex-1">
                                             <h3 class="text-lg font-semibold text-gray-900 dark:text-white" x-text="plugin.name || plugin.id"></h3>
-                                            <p class="text-sm text-gray-500 dark:text-gray-400" x-text="'ID: ' + plugin.id"></p>
+                                            <p class="text-sm text-gray-500 dark:text-gray-400">
+                                                <span data-i18n="plugins.plugin_id"></span>
+                                                <span x-text="plugin.id"></span>
+                                            </p>
                                         </div>
                                         <div x-show="plugin.id !== 'guguwebui'">
                                             <label class="toggle-switch">
@@ -203,24 +210,34 @@
                                     </div>
                                     
                                     <div class="mt-3">
-                                        <p class="text-sm text-gray-600 dark:text-gray-300" x-text="plugin.description || '暂无描述'"></p>
+                                        <p x-show="getPluginDescription(plugin)" class="text-sm text-gray-600 dark:text-gray-300" x-text="getPluginDescription(plugin)"></p>
+                                        <p x-show="!getPluginDescription(plugin)" class="text-sm text-gray-600 dark:text-gray-300" data-i18n="plugins.no_description"></p>
                                     </div>
                                     
                                     <div class="mt-4 flex flex-wrap gap-2">
-                                        <span class="text-xs px-2 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-200 rounded" x-text="'v' + (plugin.version || '未知')"></span>
+                                        <span class="text-xs px-2 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-200 rounded">
+                                            <span data-i18n="plugins.version"></span>
+                                            <span x-text="plugin.version || ''"></span>
+                                            <span x-show="!plugin.version" data-i18n="plugins.unknown_version"></span>
+                                        </span>
                                         <template x-if="plugin.version !== plugin.version_latest">
                                             <span class="text-xs px-2 py-1 rounded flex items-center"
                                                 :class="compareVersions(plugin.version, plugin.version_latest) > 0 ? 
                                                     'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-200' : 
                                                     'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-200'">
-                                                <span x-text="compareVersions(plugin.version, plugin.version_latest) > 0 ? '本地版本比在线版本高：' : '可更新：'"></span>
-                                                <span x-text="'v' + plugin.version_latest"></span>
+                                                <span x-show="compareVersions(plugin.version, plugin.version_latest) > 0" data-i18n="plugins.local_version_higher"></span>
+                                                <span x-show="compareVersions(plugin.version, plugin.version_latest) <= 0" data-i18n="plugins.can_update"></span>
+                                                <span data-i18n="plugins.version"></span>
+                                                <span x-text="plugin.version_latest"></span>
                                             </span>
                                         </template>
-                                        <span x-show="plugin.author" class="text-xs px-2 py-1 bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-200 rounded" x-text="'作者: ' + plugin.author"></span>
+                                        <span x-show="plugin.author" class="text-xs px-2 py-1 bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-200 rounded">
+                                            <span data-i18n="plugins.author"></span>
+                                            <span x-text="plugin.author"></span>
+                                        </span>
                                         <a x-show="plugin.github && plugin.github !== 'None'" :href="plugin.github" target="_blank" class="text-xs px-2 py-1 bg-gray-100 hover:bg-gray-200 dark:bg-gray-700/50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-200 rounded inline-flex items-center">
                                             <i class="fab fa-github mr-1"></i>
-                                            <span>GitHub</span>
+                                            <span data-i18n="plugins.github"></span>
                                         </a>
                                         <!-- 添加仓库信息标签 -->
                                         <span x-show="plugin.repository" class="text-xs px-2 py-1 bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-200 rounded inline-flex items-center">
@@ -229,32 +246,32 @@
                                         </span>
                                         <span x-show="plugin.status === true || plugin.status === 'loaded'" class="text-xs px-2 py-1 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-200 rounded">
                                             <i class="fas fa-check-circle mr-1"></i>
-                                            <span>已加载</span>
+                                            <span data-i18n="plugins.loaded"></span>
                                         </span>
                                         <span x-show="plugin.status === false || plugin.status === 'disabled'" class="text-xs px-2 py-1 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 rounded">
                                             <i class="fas fa-pause-circle mr-1"></i>
-                                            <span>已禁用</span>
+                                            <span data-i18n="plugins.disabled"></span>
                                         </span>
                                         <span x-show="plugin.status === 'unloaded'" class="text-xs px-2 py-1 bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-200 rounded">
                                             <i class="fas fa-exclamation-circle mr-1"></i>
-                                            <span>未加载</span>
+                                            <span data-i18n="plugins.unloaded"></span>
                                         </span>
                                     </div>
                                     
-                                    <div class="mt-auto pt-5 flex justify-end space-x-3">
+                                    <div class="mt-auto pt-5 flex flex-wrap justify-end space-x-3">
                                         <button 
                                             x-show="plugin.id !== 'guguwebui' && plugin.config_file === true"
                                             @click="openConfigModal(plugin)"
-                                            class="inline-flex items-center justify-center px-3 py-1.5 border border-transparent rounded-md shadow-sm text-xs font-medium text-white bg-purple-600 hover:bg-purple-700 focus:outline-none transition-colors"
+                                            class="mt-2 inline-flex items-center justify-center px-3 py-1.5 border border-transparent rounded-md shadow-sm text-xs font-medium text-white bg-purple-600 hover:bg-purple-700 focus:outline-none transition-colors"
                                         >
                                             <i class="fas fa-cog mr-1.5"></i>
-                                            <span>配置</span>
+                                            <span data-i18n="plugins.config"></span>
                                         </button>
                                         
                                         <button 
                                             x-show="plugin.id !== 'guguwebui'"
                                             @click="reloadPlugin(plugin.id)"
-                                            class="inline-flex items-center justify-center px-3 py-1.5 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm text-xs font-medium text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none transition-colors"
+                                            class="mt-2 inline-flex items-center justify-center px-3 py-1.5 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm text-xs font-medium text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none transition-colors"
                                             :disabled="processingPlugins[plugin.id]"
                                         >
                                             <template x-if="!processingPlugins[plugin.id]">
@@ -263,13 +280,13 @@
                                             <template x-if="processingPlugins[plugin.id]">
                                                 <i class="fas fa-circle-notch fa-spin mr-1.5"></i>
                                             </template>
-                                            <span>重载</span>
+                                            <span data-i18n="plugins.reload"></span>
                                         </button>
                                         
                                         <button 
                                             x-show="plugin.id !== 'guguwebui'"
                                             @click="uninstallPlugin(plugin.id)"
-                                            class="inline-flex items-center justify-center px-3 py-1.5 border border-transparent rounded-md shadow-sm text-xs font-medium text-white bg-red-600 hover:bg-red-700 focus:outline-none transition-colors"
+                                            class="mt-2 inline-flex items-center justify-center px-3 py-1.5 border border-transparent rounded-md shadow-sm text-xs font-medium text-white bg-red-600 hover:bg-red-700 focus:outline-none transition-colors"
                                             :disabled="processingPlugins[plugin.id]"
                                         >
                                             <template x-if="!processingPlugins[plugin.id]">
@@ -278,13 +295,13 @@
                                             <template x-if="processingPlugins[plugin.id]">
                                                 <i class="fas fa-circle-notch fa-spin mr-1.5"></i>
                                             </template>
-                                            <span>卸载</span>
+                                            <span data-i18n="plugins.uninstall"></span>
                                         </button>
                                         
                                         <button 
                                             x-show="plugin.id !== 'guguwebui' && plugin.version !== plugin.version_latest"
                                             @click="updatePlugin(plugin.id)"
-                                            class="inline-flex items-center justify-center px-3 py-1.5 border border-transparent rounded-md shadow-sm text-xs font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none transition-colors"
+                                            class="mt-2 inline-flex items-center justify-center px-3 py-1.5 border border-transparent rounded-md shadow-sm text-xs font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none transition-colors"
                                             :disabled="processingPlugins[plugin.id]"
                                         >
                                             <template x-if="!processingPlugins[plugin.id]">
@@ -293,14 +310,14 @@
                                             <template x-if="processingPlugins[plugin.id]">
                                                 <i class="fas fa-circle-notch fa-spin mr-1.5"></i>
                                             </template>
-                                            <span>更新</span>
+                                            <span data-i18n="plugins.update"></span>
                                         </button>
                                         
                                         <!-- 版本切换按钮 -->
                                         <button 
                                             x-show="plugin.id !== 'guguwebui'"
                                             @click="showPluginVersions(plugin)"
-                                            class="inline-flex items-center justify-center px-3 py-1.5 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm text-xs font-medium text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none transition-colors"
+                                            class="mt-2 inline-flex items-center justify-center px-3 py-1.5 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm text-xs font-medium text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none transition-colors"
                                             :disabled="processingPlugins[plugin.id]"
                                         >
                                             <template x-if="!processingPlugins[plugin.id]">
@@ -309,7 +326,7 @@
                                             <template x-if="processingPlugins[plugin.id]">
                                                 <i class="fas fa-circle-notch fa-spin mr-1.5"></i>
                                             </template>
-                                            <span>版本</span>
+                                            <span data-i18n="plugins.versions"></span>
                                         </button>
                                     </div>
                                 </div>
@@ -343,7 +360,18 @@
                 <div x-show="showConfigModal" x-transition.opacity class="modal-backdrop">
                     <div class="modal-content" @click.away="closeConfigModal()">
                         <div class="modal-header">
-                            <h3 class="text-lg font-semibold text-gray-900 dark:text-white" x-text="currentPlugin ? '配置 - ' + (currentPlugin.name || currentPlugin.id) : '插件配置'"></h3>
+                            <h3 class="text-lg font-semibold text-gray-900 dark:text-white">
+                                <template x-if="currentPlugin">
+                                    <span>
+                                        <span data-i18n="plugins.config_modal.title"></span>
+                                        <span> - </span>
+                                        <span x-text="currentPlugin && (currentPlugin.name || currentPlugin.id)"></span>
+                                    </span>
+                                </template>
+                                <template x-if="!currentPlugin">
+                                    <span data-i18n="plugins.config_modal.title"></span>
+                                </template>
+                            </h3>
                             <button @click="closeConfigModal()" class="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200">
                                 <i class="fas fa-times"></i>
                             </button>
@@ -352,11 +380,11 @@
                         <div class="modal-body">
                             <!-- 配置文件列表 -->
                             <div x-show="!showEditor">
-                                <h4 class="text-md font-medium text-gray-800 dark:text-gray-200 mb-4">可用配置文件</h4>
+                                <h4 class="text-md font-medium text-gray-800 dark:text-gray-200 mb-4" data-i18n="plugins.config_modal.available_configs"></h4>
                                 
                                 <div x-show="configFiles.length === 0" class="text-center py-10 text-gray-500 dark:text-gray-400">
                                     <i class="fas fa-file-alt text-4xl mb-3"></i>
-                                    <p>未找到配置文件</p>
+                                    <p data-i18n="plugins.config_modal.no_config_files"></p>
                                 </div>
                                 
                                 <div x-show="configFiles.length > 0" class="config-file-list">
@@ -369,11 +397,11 @@
                                             <div class="flex gap-2">
                                                 <button @click="openConfigFile(file, 'form')" class="inline-flex items-center px-3 py-1.5 bg-purple-100 hover:bg-purple-200 dark:bg-purple-900/30 dark:hover:bg-purple-800/40 text-purple-700 dark:text-purple-300 rounded-md text-sm">
                                                     <i class="fas fa-list-alt mr-1.5"></i>
-                                                    <span>表单模式</span>
+                                                    <span data-i18n="plugins.config_modal.form_mode"></span>
                                                 </button>
                                                 <button @click="openConfigFile(file, 'code')" class="inline-flex items-center px-3 py-1.5 bg-blue-100 hover:bg-blue-200 dark:bg-blue-900/30 dark:hover:bg-blue-800/40 text-blue-700 dark:text-blue-300 rounded-md text-sm">
                                                     <i class="fas fa-code mr-1.5"></i>
-                                                    <span>代码模式</span>
+                                                    <span data-i18n="plugins.config_modal.code_mode"></span>
                                                 </button>
                                             </div>
                                         </div>
@@ -385,22 +413,24 @@
                             <div x-show="showEditor">
                                 <div class="flex justify-between items-center mb-4">
                                     <h4 class="text-md font-medium text-gray-800 dark:text-gray-200">
-                                        编辑 <span class="text-blue-600 dark:text-blue-400" x-text="selectedFile.split('/').pop()"></span>
+                                        <span data-i18n="plugins.config_modal.edit_file"></span>
+                                        <span> </span>
+                                        <span class="text-blue-600 dark:text-blue-400" x-text="selectedFile.split('/').pop()"></span>
                                     </h4>
                                     <button @click="closeEditor()" class="inline-flex items-center text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200">
                                         <i class="fas fa-arrow-left mr-1.5"></i>
-                                        <span>返回列表</span>
+                                        <span data-i18n="plugins.config_modal.back_to_list"></span>
                                     </button>
                                 </div>
                                 
                                 <div class="editor-tabs">
                                     <div class="editor-tab" :class="{ 'active': editorMode === 'code' }" @click="editorMode = 'code'; reloadCurrentFile('code')">
                                         <i class="fas fa-code mr-1.5"></i>
-                                        <span>代码视图</span>
+                                        <span data-i18n="plugins.config_modal.code_view"></span>
                                     </div>
                                     <div class="editor-tab" :class="{ 'active': editorMode === 'form' }" @click="editorMode = 'form'; reloadCurrentFile('form')">
                                         <i class="fas fa-list-alt mr-1.5"></i>
-                                        <span>表单视图</span>
+                                        <span data-i18n="plugins.config_modal.form_view"></span>
                                     </div>
                                 </div>
                                 
@@ -422,8 +452,8 @@
                                     <div x-show="!configData || configData.type !== 'html'">
                                         <div x-show="!configData || Object.keys(configData).length === 0" class="text-center py-10 text-gray-500 dark:text-gray-400">
                                             <i class="fas fa-exclamation-circle text-4xl mb-3"></i>
-                                            <p>无法以表单方式编辑此文件或文件为空</p>
-                                            <p class="text-sm mt-2">请尝试使用代码视图进行编辑</p>
+                                            <p data-i18n="plugins.config_modal.cannot_edit_form"></p>
+                                            <p class="text-sm mt-2" data-i18n="plugins.config_modal.try_code_view"></p>
                                         </div>
                                         
                                         <!-- 动态表单内容 - 支持深层嵌套对象 -->
@@ -811,7 +841,7 @@
                         
                         <div class="modal-footer">
                             <button @click="closeConfigModal()" class="inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm text-sm font-medium text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none">
-                                <span>关闭</span>
+                                <span data-i18n="plugins.close"></span>
                             </button>
                             <button 
                                 x-show="showEditor"
@@ -819,7 +849,7 @@
                                 class="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none"
                             >
                                 <i class="fas fa-save mr-1.5"></i>
-                                <span>保存</span>
+                                <span data-i18n="plugins.save"></span>
                             </button>
                         </div>
                     </div>
@@ -828,7 +858,7 @@
             
             <!-- 页脚 -->
             <footer class="mt-8 text-center text-gray-600 dark:text-gray-400 text-sm">
-                <p>MCDR WebUI &copy; <span id="year"></span></p>
+                <p data-i18n="common.copyright"></p>
             </footer>
         </main>
         
@@ -836,7 +866,18 @@
         <div x-show="showInstallModal" x-transition.opacity class="modal-backdrop">
             <div class="modal-content" @click.away="closeInstallModal()">
                 <div class="modal-header">
-                    <h3 class="text-lg font-semibold text-gray-900 dark:text-white" x-text="installStatus === 'running' && installPluginId ? (installMessage.includes('卸载') ? '卸载进度 - ' : (installMessage.includes('更新') ? '更新进度 - ' : '安装进度 - ')) + installPluginId : '操作进度 - ' + installPluginId"></h3>
+                    <h3 class="text-lg font-semibold text-gray-900 dark:text-white">
+                        <span x-show="installStatus === 'running' && installPluginId">
+                            <span x-show="installMessage.includes('卸载')" data-i18n="plugins.install_modal.uninstall_progress"></span>
+                            <span x-show="installMessage.includes('更新')" data-i18n="plugins.install_modal.update_progress"></span>
+                            <span x-show="!installMessage.includes('卸载') && !installMessage.includes('更新')" data-i18n="plugins.install_modal.install_progress"></span>
+                            <span x-text="installPluginId"></span>
+                        </span>
+                        <span x-show="!(installStatus === 'running' && installPluginId)">
+                            <span data-i18n="plugins.install_modal.operation_progress"></span>
+                            <span x-text="installPluginId"></span>
+                        </span>
+                    </h3>
                     <button @click="closeInstallModal()" class="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200">
                         <i class="fas fa-times"></i>
                     </button>
@@ -864,26 +905,26 @@
                         }">
                             <span x-show="installStatus === 'running'" class="flex items-center">
                                 <i class="fas fa-circle-notch fa-spin mr-1.5"></i>
-                                <span>正在处理</span>
+                                <span data-i18n="plugins.install_modal.processing"></span>
                             </span>
                             <span x-show="installStatus === 'completed'" class="flex items-center">
                                 <i class="fas fa-check-circle mr-1.5"></i>
-                                <span>已完成</span>
+                                <span data-i18n="plugins.install_modal.completed"></span>
                             </span>
                             <span x-show="installStatus === 'failed'" class="flex items-center">
                                 <i class="fas fa-exclamation-circle mr-1.5"></i>
-                                <span>失败</span>
+                                <span data-i18n="plugins.install_modal.failed"></span>
                             </span>
                             <span x-show="installStatus === 'pending'" class="flex items-center">
                                 <i class="fas fa-hourglass-start mr-1.5"></i>
-                                <span>等待中</span>
+                                <span data-i18n="plugins.install_modal.pending"></span>
                             </span>
                         </div>
                     </div>
                     
                     <!-- 安装日志 -->
                     <div class="mt-4">
-                        <h4 class="text-sm font-medium text-gray-800 dark:text-gray-200 mb-2">处理日志</h4>
+                        <h4 class="text-sm font-medium text-gray-800 dark:text-gray-200 mb-2" data-i18n="plugins.install_modal.processing_logs"></h4>
                         <div class="bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-md p-3 h-56 overflow-y-auto font-mono text-xs">
                             <template x-for="(message, index) in installLogMessages" :key="index">
                                 <div class="py-0.5" :class="{'text-red-500': message.includes('错误') || message.includes('失败') || message.includes('⚠'), 'text-green-500': message.includes('成功') || message.includes('✓')}">
@@ -891,7 +932,7 @@
                                 </div>
                             </template>
                             <div x-show="installLogMessages.length === 0" class="text-gray-500 dark:text-gray-400">
-                                等待日志...
+                                <span data-i18n="plugins.install_modal.waiting_logs"></span>
                             </div>
                         </div>
                     </div>
@@ -899,7 +940,8 @@
                 
                 <div class="modal-footer">
                     <button @click="closeInstallModal()" class="inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm text-sm font-medium text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none">
-                        <span x-text="installStatus === 'running' ? '隐藏' : '关闭'"></span>
+                        <span x-show="installStatus === 'running'" data-i18n="plugins.hide"></span>
+                        <span x-show="installStatus !== 'running'" data-i18n="plugins.close"></span>
                     </button>
                 </div>
             </div>
@@ -934,7 +976,7 @@
                             <p class="text-gray-700 dark:text-gray-300" x-text="confirmMessage"></p>
                             <p class="mt-2 text-sm text-gray-500 dark:text-gray-400" x-show="confirmType === 'uninstall'">
                                 <i class="fas fa-exclamation-triangle mr-1 text-yellow-500"></i>
-                                此操作将永久删除插件文件，无法恢复。
+                                <span data-i18n="plugins.confirm_modal.uninstall_warning"></span>
                             </p>
                         </div>
                     </div>
@@ -942,7 +984,7 @@
                 
                 <div class="modal-footer">
                     <button @click="closeConfirmModal()" class="inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm text-sm font-medium text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none">
-                        <span>取消</span>
+                        <span data-i18n="plugins.cancel"></span>
                     </button>
                     <button 
                         @click="executeConfirmedAction()"
@@ -958,12 +1000,11 @@
                             'fa-sync': confirmType === 'update' || confirmType === 'reload',
                             'fa-trash-alt': confirmType === 'uninstall'
                         }"></i>
-                        <span x-text="{
-                            'install': '确认安装',
-                            'update': '确认更新',
-                            'reload': '确认重载',
-                            'uninstall': '确认卸载'
-                        }[confirmType] || '确认'"></span>
+                        <span x-show="confirmType === 'install'" data-i18n="plugins.confirm_modal.confirm_install"></span>
+                        <span x-show="confirmType === 'update'" data-i18n="plugins.confirm_modal.confirm_update"></span>
+                        <span x-show="confirmType === 'reload'" data-i18n="plugins.confirm_modal.confirm_reload"></span>
+                        <span x-show="confirmType === 'uninstall'" data-i18n="plugins.confirm_modal.confirm_uninstall"></span>
+                        <span x-show="!['install', 'update', 'reload', 'uninstall'].includes(confirmType)" data-i18n="plugins.confirm"></span>
                     </button>
                 </div>
             </div>
@@ -973,7 +1014,10 @@
         <div x-show="showVersionModal" x-transition.opacity class="modal-backdrop">
             <div class="modal-content" @click.away="closeVersionModal()">
                 <div class="modal-header">
-                    <h3 class="text-lg font-semibold text-gray-900 dark:text-white" x-text="'插件版本 - ' + (currentVersionPlugin ? currentVersionPlugin.id : '')"></h3>
+                    <h3 class="text-lg font-semibold text-gray-900 dark:text-white">
+                        <span data-i18n="plugins.version_modal.title"></span>
+                        <span x-text="currentVersionPlugin ? currentVersionPlugin.id : ''"></span>
+                    </h3>
                     <button @click="closeVersionModal()" class="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200">
                         <i class="fas fa-times"></i>
                     </button>
@@ -983,7 +1027,7 @@
                     <!-- 加载状态 -->
                     <div x-show="versionsLoading" class="flex justify-center items-center py-12">
                         <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
-                        <span class="ml-3 text-gray-600 dark:text-gray-400">加载插件版本中...</span>
+                        <span class="ml-3 text-gray-600 dark:text-gray-400" data-i18n="plugins.version_modal.loading_versions"></span>
                     </div>
                     
                     <!-- 错误信息 -->
@@ -995,20 +1039,24 @@
                     <!-- 版本列表 -->
                     <div x-show="!versionsLoading && versions.length === 0" class="text-center py-12">
                         <i class="fas fa-tag text-4xl text-gray-400 mb-4"></i>
-                        <p class="text-gray-500 dark:text-gray-400">未找到可用版本</p>
+                        <p class="text-gray-500 dark:text-gray-400" data-i18n="plugins.version_modal.no_versions"></p>
                     </div>
 
                     <div x-show="!versionsLoading && versions.length > 0" class="space-y-4">
-                        <p class="text-sm text-gray-600 dark:text-gray-300">当前安装版本: <span x-text="installedVersion || '未安装'" class="font-medium"></span></p>
+                        <p class="text-sm text-gray-600 dark:text-gray-300">
+                            <span data-i18n="plugins.version_modal.current_version"></span>
+                            <span x-text="installedVersion || ''"></span>
+                            <span x-show="!installedVersion" data-i18n="plugins.version_modal.not_installed"></span>
+                        </p>
                         
                         <!-- 添加仓库信息显示 -->
                         <div x-show="currentPluginRepository" class="bg-gray-50 dark:bg-gray-800 rounded-lg p-3">
                             <div class="flex items-center text-sm text-gray-600 dark:text-gray-300">
                                 <i class="fas fa-server mr-2 text-orange-500"></i>
-                                <span>来源仓库: </span>
-                                <span class="font-medium ml-1" x-text="currentPluginRepository.name"></span>
-                                <span x-show="currentPluginRepository.is_official" class="ml-2 px-2 py-0.5 bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 text-xs rounded-full">
-                                    官方
+                                <span data-i18n="plugins.version_modal.source_repository"></span>
+                                <span class="font-medium ml-1" x-text="currentPluginRepository && currentPluginRepository.name"></span>
+                                <span x-show="currentPluginRepository && currentPluginRepository.is_official" class="ml-2 px-2 py-0.5 bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 text-xs rounded-full">
+                                    <span data-i18n="plugins.version_modal.official"></span>
                                 </span>
                             </div>
                         </div>
@@ -1034,13 +1082,13 @@
                                                 x-show="version.installed" 
                                                 class="ml-2 px-2 py-0.5 bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 text-xs rounded-full"
                                             >
-                                                已安装
+                                                <span data-i18n="plugins.version_modal.installed"></span>
                                             </span>
                                             <span 
                                                 x-show="version.prerelease" 
                                                 class="ml-2 px-2 py-0.5 bg-yellow-100 dark:bg-yellow-900 text-yellow-800 dark:text-yellow-200 text-xs rounded-full"
                                             >
-                                                预发布
+                                                <span data-i18n="plugins.version_modal.prerelease"></span>
                                             </span>
                                         </div>
                                         <span class="text-sm text-gray-500 dark:text-gray-400" x-text="formatDate(version.release_date)"></span>
@@ -1057,7 +1105,7 @@
                                     
                                     <div x-show="version.processing" class="mt-3 flex items-center text-blue-600 dark:text-blue-400">
                                         <i class="fas fa-circle-notch fa-spin mr-2"></i>
-                                        <span>正在处理...</span>
+                                        <span data-i18n="plugins.version_modal.processing"></span>
                                     </div>
                                 </div>
                             </template>
@@ -1067,7 +1115,7 @@
                 
                 <div class="modal-footer">
                     <button @click="closeVersionModal()" class="inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm text-sm font-medium text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none transition-colors">
-                        <span>关闭</span>
+                        <span data-i18n="plugins.close"></span>
                     </button>
                 </div>
             </div>

@@ -1,6 +1,37 @@
 // 本地插件页面的JavaScript功能
 document.addEventListener('alpine:init', () => {
     Alpine.data('pluginsData', () => ({
+        // i18n 辅助函数：支持 I18n.t 和本地语言包，支持变量替换
+        t(key, fallback = '', vars = {}) {
+            // 优先使用本地语言包（this.pluginsDict），否则回退到全局I18n.t
+            let text;
+            if (this.pluginsDict && typeof this.pluginsDict === 'object') {
+                // 嵌套key支持
+                text = key.split('.').reduce((o, k) => (o && o[k] != null ? o[k] : undefined), this.pluginsDict);
+                if (text != null) text = String(text);
+            }
+            if (text == null && window.I18n && typeof window.I18n.t === 'function') {
+                text = window.I18n.t(key);
+                if (text === key) text = undefined;
+            }
+            if (text == null) text = fallback || key;
+            if (text && typeof text === 'string' && vars && typeof vars === 'object') {
+                text = text.replace(/\{(\w+)\}/g, (m, k) => (k in vars ? String(vars[k]) : m));
+            }
+            return text;
+        },
+        async loadLangDict() {
+            const stored = localStorage.getItem('lang') || (navigator.language || 'zh-CN');
+            this.pluginsLang = stored.toLowerCase().startsWith('zh') ? 'zh-CN' : 'en-US';
+            try {
+                const resp = await fetch(`lang/${this.pluginsLang}.json`, { cache: 'no-cache' });
+                if (resp.ok) {
+                    this.pluginsDict = await resp.json();
+                }
+            } catch (e) {
+                console.warn('plugins loadLangDict failed:', e);
+            }
+        },
         serverStatus: 'loading',
         userName: '',
         serverVersion: '',
@@ -124,7 +155,7 @@ document.addEventListener('alpine:init', () => {
             } catch (error) {
                 console.error('Error loading plugins:', error);
                 this.loading = false;
-                this.showNotificationMsg('加载插件列表失败', 'error');
+                this.showNotificationMsg('page.plugins.msg.load_plugins_failed', 'error');
             }
         },
         
@@ -156,7 +187,7 @@ document.addEventListener('alpine:init', () => {
 
         async togglePlugin(pluginId, targetStatus) {
             if (pluginId === 'guguwebui') {
-                this.showNotificationMsg('不能切换 WebUI 插件的状态', 'error');
+                this.showNotificationMsg('page.plugins.msg.cannot_toggle_webui', 'error');
                 return;
             }
 
@@ -179,13 +210,13 @@ document.addEventListener('alpine:init', () => {
                 if (result.status === 'success') {
                     // 更新插件状态
                     await this.loadPlugins();
-                    this.showNotificationMsg(`${targetStatus ? '启用' : '禁用'}插件成功`, 'success');
+                    this.showNotificationMsg(targetStatus ? 'page.plugins.msg.enable_success' : 'page.plugins.msg.disable_success', 'success');
                 } else {
-                    this.showNotificationMsg(`${targetStatus ? '启用' : '禁用'}插件失败: ${result.message || ''}`, 'error');
+                    this.showNotificationMsg(targetStatus ? 'page.plugins.msg.enable_failed_prefix' : 'page.plugins.msg.disable_failed_prefix', 'error', { message: result.message || '' });
                 }
             } catch (error) {
                 console.error(`Error toggling plugin ${pluginId}:`, error);
-                this.showNotificationMsg(`${targetStatus ? '启用' : '禁用'}插件失败`, 'error');
+                this.showNotificationMsg(targetStatus ? 'page.plugins.msg.enable_failed' : 'page.plugins.msg.disable_failed', 'error');
             } finally {
                 this.processingPlugins[pluginId] = false;
             }
@@ -193,7 +224,7 @@ document.addEventListener('alpine:init', () => {
 
         async reloadPlugin(pluginId) {
             if (pluginId === 'guguwebui') {
-                this.showNotificationMsg('不能重载 WebUI 插件', 'error');
+                this.showNotificationMsg('page.plugins.msg.cannot_reload_webui', 'error');
                 return;
             }
 
@@ -201,8 +232,8 @@ document.addEventListener('alpine:init', () => {
             this.openConfirmModal(
                 'reload', 
                 pluginId,
-                '重载插件',
-                `确定要重载插件 ${pluginId} 吗？`,
+                'plugins.confirm_modal.title_reload',
+                'plugins.confirm_modal.message_reload',
                 async (id) => {
                     this.processingPlugins[id] = true;
                     
@@ -221,23 +252,23 @@ document.addEventListener('alpine:init', () => {
                         
                         if (result.status === 'success') {
                             await this.loadPlugins();
-                            this.showNotificationMsg('重载插件成功', 'success');
+                            this.showNotificationMsg('page.plugins.msg.reload_success', 'success');
                         } else {
-                            this.showNotificationMsg(`重载插件失败: ${result.message || ''}`, 'error');
+                            this.showNotificationMsg('page.plugins.msg.reload_failed_prefix', 'error', { message: result.message || '' });
                         }
                     } catch (error) {
                         console.error(`Error reloading plugin ${id}:`, error);
-                        this.showNotificationMsg('重载插件失败', 'error');
+                        this.showNotificationMsg('page.plugins.msg.reload_failed', 'error');
                     } finally {
                         this.processingPlugins[id] = false;
                     }
                 }
-            );
+            , { pluginId });
         },
 
         async updatePlugin(pluginId) {
             if (pluginId === 'guguwebui') {
-                this.showNotificationMsg('不能更新 WebUI 插件', 'error');
+                this.showNotificationMsg('page.plugins.msg.cannot_update_webui', 'error');
                 return;
             }
 
@@ -245,8 +276,8 @@ document.addEventListener('alpine:init', () => {
             this.openConfirmModal(
                 'update', 
                 pluginId,
-                '更新插件',
-                `确定要更新插件 ${pluginId} 吗？`,
+                'plugins.confirm_modal.title_update',
+                'plugins.confirm_modal.message_update',
                 async (id) => {
                     this.processingPlugins[id] = true;
                     
@@ -254,7 +285,7 @@ document.addEventListener('alpine:init', () => {
                         // 准备安装模态框
                         this.installPluginId = id;
                         this.installProgress = 0;
-                        this.installMessage = '正在准备更新...';
+                        this.installMessage = this.t('page.plugins.install_msg.preparing_update', '正在准备更新...');
                         this.installStatus = 'running';
                         this.installLogMessages = [];
                         this.showInstallModal = true;
@@ -288,19 +319,19 @@ document.addEventListener('alpine:init', () => {
                         } else if (response.status !== 404 && !result.error?.includes('未知API')) {
                             // PIM API请求失败，但服务端存在此API（非404错误）
                             this.installStatus = 'failed';
-                            this.installMessage = `更新失败: ${result.error || ''}`;
-                            this.showNotificationMsg(`更新插件失败: ${result.error || ''}`, 'error');
+                            this.installMessage = this.t('page.plugins.msg.update_failed_prefix', '更新失败: {message}', { message: result.error || '' });
+                            this.showNotificationMsg('page.plugins.msg.update_failed_prefix', 'error', { message: result.error || '' });
                             this.processingPlugins[id] = false;
                         }
                     } catch (error) {
                         console.error(`Error updating plugin ${id}:`, error);
                         this.installStatus = 'failed';
-                        this.installMessage = '更新插件失败';
-                        this.showNotificationMsg('更新插件失败', 'error');
+                        this.installMessage = this.t('page.plugins.msg.update_failed', '更新插件失败');
+                        this.showNotificationMsg('page.plugins.msg.update_failed', 'error');
                         this.processingPlugins[id] = false;
                     }
                 }
-            );
+            , { pluginId });
         },
 
         // 安装插件函数
@@ -309,7 +340,7 @@ document.addEventListener('alpine:init', () => {
             
             // 前端拦截guguwebui安装请求
             if (pluginId === "guguwebui") {
-                this.showNotificationMsg('不允许安装WebUI自身，这可能会导致WebUI无法正常工作', 'error');
+                this.showNotificationMsg('page.plugins.msg.cannot_install_webui', 'error');
                 return;
             }
             
@@ -317,8 +348,8 @@ document.addEventListener('alpine:init', () => {
             this.openConfirmModal(
                 'install', 
                 pluginId,
-                '安装插件',
-                `确定要安装插件 ${pluginId} 吗？`,
+                'plugins.confirm_modal.title_install',
+                'plugins.confirm_modal.message_install',
                 async (id) => {
                     this.processingPlugins[id] = true;
                     
@@ -326,7 +357,7 @@ document.addEventListener('alpine:init', () => {
                         // 准备安装模态框
                         this.installPluginId = id;
                         this.installProgress = 0;
-                        this.installMessage = '正在准备安装...';
+                        this.installMessage = this.t('page.plugins.install_msg.preparing_install', '正在准备安装...');
                         this.installStatus = 'running';
                         this.installLogMessages = [];
                         this.showInstallModal = true;
@@ -360,19 +391,19 @@ document.addEventListener('alpine:init', () => {
                         } else if (response.status !== 404 && !result.error?.includes('未知API')) {
                             // PIM API请求失败，但服务端存在此API（非404错误）
                             this.installStatus = 'failed';
-                            this.installMessage = `安装失败: ${result.error || ''}`;
-                            this.showNotificationMsg(`安装插件失败: ${result.error || ''}`, 'error');
+                            this.installMessage = this.t('page.plugins.msg.install_failed_prefix', '安装失败: {message}', { message: result.error || '' });
+                            this.showNotificationMsg('page.plugins.msg.install_failed_prefix', 'error', { message: result.error || '' });
                             this.processingPlugins[id] = false;
                         }
                     } catch (error) {
                         console.error(`Error installing plugin ${id}:`, error);
                         this.installStatus = 'failed';
-                        this.installMessage = '安装插件失败';
-                        this.showNotificationMsg('安装插件失败', 'error');
+                        this.installMessage = this.t('page.plugins.msg.install_failed', '安装插件失败');
+                        this.showNotificationMsg('page.plugins.msg.install_failed', 'error');
                         this.processingPlugins[id] = false;
                     }
                 }
-            );
+            , { pluginId });
         },
         
         // 检查安装进度
@@ -390,7 +421,7 @@ document.addEventListener('alpine:init', () => {
                     
                     // 更新进度和消息
                     this.installProgress = taskInfo.progress * 100;
-                    this.installMessage = taskInfo.message || '处理中...';
+                    this.installMessage = taskInfo.message || this.t('plugins.install_modal.processing', '处理中...');
                     this.installStatus = taskInfo.status;
                     
                     // 更新日志消息
@@ -428,9 +459,9 @@ document.addEventListener('alpine:init', () => {
                         
                         // 显示完成通知
                         if (taskInfo.status === 'completed') {
-                            this.showNotificationMsg(`插件 ${this.installPluginId} 操作成功！`, 'success');
+                            this.showNotificationMsg('page.plugins.msg.operation_success', 'success', { pluginId: this.installPluginId });
                         } else {
-                            this.showNotificationMsg(`插件 ${this.installPluginId} 操作失败: ${taskInfo.message}`, 'error');
+                            this.showNotificationMsg('page.plugins.msg.operation_failed_prefix', 'error', { pluginId: this.installPluginId, message: taskInfo.message });
                         }
                     }
                 } else if (response.status === 404 || (data.error && data.error.includes('不存在'))) {
@@ -448,7 +479,7 @@ document.addEventListener('alpine:init', () => {
                             
                             // 更新进度和消息
                             this.installProgress = retryData.task_info.progress * 100;
-                            this.installMessage = retryData.task_info.message || '处理中...';
+                            this.installMessage = retryData.task_info.message || this.t('plugins.install_modal.processing', '处理中...');
                             this.installStatus = retryData.task_info.status;
                             
                             // 更新日志消息
@@ -474,9 +505,9 @@ document.addEventListener('alpine:init', () => {
                                 
                                 // 显示通知
                                 if (retryData.task_info.status === 'completed') {
-                                    this.showNotificationMsg(`插件 ${this.installPluginId} 操作成功！`, 'success');
+                                    this.showNotificationMsg('page.plugins.msg.operation_success', 'success', { pluginId: this.installPluginId });
                                 } else {
-                                    this.showNotificationMsg(`插件 ${this.installPluginId} 操作失败: ${retryData.task_info.message}`, 'error');
+                                    this.showNotificationMsg('page.plugins.msg.operation_failed_prefix', 'error', { pluginId: this.installPluginId, message: retryData.task_info.message });
                                 }
                                 return;
                             }
@@ -494,7 +525,7 @@ document.addEventListener('alpine:init', () => {
                     // 标记为完成
                     this.installStatus = 'completed';
                     this.installProgress = 100;
-                    this.installMessage = `插件 ${this.installPluginId} 操作可能已完成，请检查插件列表`;
+                    this.installMessage = this.t('page.plugins.msg.op_maybe_done_check_list', '插件 {pluginId} 操作可能已完成，请检查插件列表', { pluginId: this.installPluginId });
                     
                     // 停止轮询
                     if (this.installProgressTimer) {
@@ -506,17 +537,17 @@ document.addEventListener('alpine:init', () => {
                     this.processingPlugins[this.installPluginId] = false;
                     
                     // 显示通知
-                    this.showNotificationMsg(`任务状态未知，请检查插件列表确认是否成功`, 'info');
+                    this.showNotificationMsg('page.plugins.msg.task_status_unknown', 'info');
                 } else if (data.error) {
                     console.warn('获取任务状态出错，但将继续尝试:', data.error);
-                    this.installMessage = "获取任务状态出错，但操作可能正在进行中...";
-                    this.installLogMessages.push(`获取任务状态出错: ${data.error}`);
+                    this.installMessage = this.t('page.plugins.msg.task_query_error_continue', '获取任务状态出错，但操作可能正在进行中...');
+                    this.installLogMessages.push(this.t('page.plugins.msg.task_query_error_prefix', '获取任务状态出错: {message}', { message: data.error }));
                 }
             } catch (error) {
                 console.error('Error checking install progress:', error);
                 // 错误可能是暂时的，继续轮询
-                this.installMessage = "获取任务状态出错，但操作可能正在进行中...";
-                this.installLogMessages.push(`获取任务状态出错: ${error.message}`);
+                this.installMessage = this.t('page.plugins.msg.task_query_error_continue', '获取任务状态出错，但操作可能正在进行中...');
+                this.installLogMessages.push(this.t('page.plugins.msg.task_query_error_prefix', '获取任务状态出错: {message}', { message: error.message }));
             }
         },
         
@@ -549,20 +580,39 @@ document.addEventListener('alpine:init', () => {
             return 'error';
         },
 
-        filterPlugins() {
-            if (!this.searchQuery) return this.plugins;
-            
-            const query = this.searchQuery.toLowerCase();
-            return this.plugins.filter(plugin => 
-                plugin.id.toLowerCase().includes(query) ||
-                plugin.name.toLowerCase().includes(query) ||
-                (plugin.description && plugin.description.toLowerCase().includes(query)) ||
-                (plugin.author && plugin.author.toLowerCase().includes(query))
-            );
+        // 根据当前语言获取插件描述（兼容字符串与多语言对象）
+        getPluginDescription(plugin) {
+            if (!plugin || !plugin.description) return '';
+            if (typeof plugin.description === 'string') return plugin.description;
+            if (typeof plugin.description !== 'object') return '';
+            // 使用本组件语言状态，保证跟随 i18n:changed 响应式刷新
+            const current = this.pluginsLang || (window.I18n && window.I18n.lang) || 'zh-CN';
+            const normalized = String(current).toLowerCase().replace('-', '_');
+            const preferKeys = [normalized];
+            // 兜底优先 zh_cn / en_us，然后再任意一个有效描述
+            preferKeys.push('zh_cn', 'en_us');
+            for (const k of preferKeys) {
+                const v = plugin.description[k];
+                if (v && typeof v === 'string') return v;
+            }
+            const any = Object.values(plugin.description).find(v => typeof v === 'string');
+            return any || '';
         },
 
-        showNotificationMsg(message, type = 'success') {
-            this.notificationMessage = message;
+        filterPlugins() {
+            if (!this.searchQuery) return this.plugins;
+            const query = this.searchQuery.toLowerCase();
+            return this.plugins.filter(plugin => {
+                const desc = (this.getPluginDescription(plugin) || '').toLowerCase();
+                const name = (plugin.name || '').toLowerCase();
+                const pid = (plugin.id || '').toLowerCase();
+                const author = (plugin.author || '').toLowerCase();
+                return pid.includes(query) || name.includes(query) || desc.includes(query) || author.includes(query);
+            });
+        },
+
+        showNotificationMsg(messageOrKey, type = 'success', vars = {}) {
+            this.notificationMessage = this.t(messageOrKey, messageOrKey, vars);
             this.notificationType = type;
             this.showNotification = true;
             
@@ -585,7 +635,7 @@ document.addEventListener('alpine:init', () => {
                 this.configFiles = data.files || [];
             } catch (error) {
                 console.error('Error fetching config files:', error);
-                this.showNotificationMsg('获取配置文件列表失败', 'error');
+                this.showNotificationMsg('page.plugins.msg.load_config_files_failed', 'error');
             }
         },
         
@@ -750,7 +800,7 @@ document.addEventListener('alpine:init', () => {
                 }
             } catch (error) {
                 console.error('Error loading config file:', error);
-                this.showNotificationMsg('加载配置文件失败', 'error');
+                this.showNotificationMsg('page.plugins.msg.load_file_failed', 'error');
                 // 确保在发生错误时也重置数据
                 this.configData = {};
             }
@@ -776,17 +826,17 @@ document.addEventListener('alpine:init', () => {
                     const result = await response.json();
                     
                     if (result.status === 'success') {
-                        this.showNotificationMsg('配置文件保存成功', 'success');
+                        this.showNotificationMsg('page.plugins.msg.save_success', 'success');
                         // 关闭编辑器
                         this.showEditor = false;
                         this.selectedFile = '';
                     } else {
-                        this.showNotificationMsg(`保存失败: ${result.message || ''}`, 'error');
+                        this.showNotificationMsg('page.plugins.msg.save_failed_prefix', 'error', { message: result.message || '' });
                     }
                 } else {
                     // 如果是HTML类型，则不需要保存
                     if (this.configData && this.configData.type === 'html') {
-                        this.showNotificationMsg('HTML界面不需要保存', 'success');
+                        this.showNotificationMsg('page.plugins.msg.html_no_save', 'success');
                         return;
                     }
                     
@@ -805,17 +855,17 @@ document.addEventListener('alpine:init', () => {
                     const result = await response.json();
                     
                     if (result.status === 'success') {
-                        this.showNotificationMsg('配置文件保存成功', 'success');
+                        this.showNotificationMsg('page.plugins.msg.save_success', 'success');
                         // 关闭编辑器
                         this.showEditor = false;
                         this.selectedFile = '';
                     } else {
-                        this.showNotificationMsg(`保存失败: ${result.message || ''}`, 'error');
+                        this.showNotificationMsg('page.plugins.msg.save_failed_prefix', 'error', { message: result.message || '' });
                     }
                 }
             } catch (error) {
                 console.error('Error saving config file:', error);
-                this.showNotificationMsg('保存配置文件失败', 'error');
+                this.showNotificationMsg('page.plugins.msg.save_error', 'error');
             }
         },
         
@@ -848,7 +898,7 @@ document.addEventListener('alpine:init', () => {
         // 卸载插件函数
         async uninstallPlugin(pluginId) {
             if (pluginId === 'guguwebui') {
-                this.showNotificationMsg('不能卸载 WebUI 插件', 'error');
+                this.showNotificationMsg('page.plugins.msg.cannot_uninstall_webui', 'error');
                 return;
             }
 
@@ -856,8 +906,8 @@ document.addEventListener('alpine:init', () => {
             this.openConfirmModal(
                 'uninstall', 
                 pluginId,
-                '卸载插件',
-                `确定要卸载插件 ${pluginId} 吗？此操作不可恢复，将彻底删除插件文件。\n支持卸载已加载和未加载的插件。`,
+                'plugins.confirm_modal.title_uninstall',
+                'plugins.confirm_modal.message_uninstall',
                 async (id) => {
                     this.processingPlugins[id] = true;
                     
@@ -865,7 +915,7 @@ document.addEventListener('alpine:init', () => {
                         // 准备安装模态框
                         this.installPluginId = id;
                         this.installProgress = 0;
-                        this.installMessage = '正在准备卸载...';
+                        this.installMessage = this.t('page.plugins.install_msg.preparing_uninstall', '正在准备卸载...');
                         this.installStatus = 'running';
                         this.installLogMessages = [];
                         this.showInstallModal = true;
@@ -899,14 +949,14 @@ document.addEventListener('alpine:init', () => {
                         } else if (response.status !== 404 && !result.error?.includes('未知API')) {
                             // PIM API请求失败，但服务端存在此API（非404错误）
                             this.installStatus = 'failed';
-                            this.installMessage = `卸载失败: ${result.error || ''}`;
-                            this.showNotificationMsg(`卸载插件失败: ${result.error || ''}`, 'error');
+                            this.installMessage = this.t('page.plugins.msg.uninstall_failed_prefix', '卸载失败: {message}', { message: result.error || '' });
+                            this.showNotificationMsg('page.plugins.msg.uninstall_failed_prefix', 'error', { message: result.error || '' });
                             this.processingPlugins[id] = false;
                         } else {
                             // 回退到简单的卸载方式（仅卸载不删除文件）
                             console.log('PIM API不可用，回退到基本卸载');
-                            this.installMessage = '正在使用基本方式卸载...';
-                            this.installLogMessages.push('PIM卸载器不可用，使用简单卸载方式');
+                            this.installMessage = this.t('page.plugins.install_msg.using_basic_uninstall', '正在使用基本方式卸载...');
+                            this.installLogMessages.push(this.t('page.plugins.install_msg.pim_unavailable_simple_uninstall', 'PIM卸载器不可用，使用简单卸载方式'));
                             
                             // 使用toggle_plugin接口将插件卸载
                             response = await fetch('api/toggle_plugin', {
@@ -926,16 +976,16 @@ document.addEventListener('alpine:init', () => {
                                 // 旧版API成功
                                 this.installProgress = 100;
                                 this.installStatus = 'completed';
-                                this.installMessage = '插件已卸载（文件未删除）';
-                                this.showNotificationMsg(`插件 ${id} 已卸载，但文件仍保留在服务器上`, 'warning');
+                                this.installMessage = this.t('page.plugins.install_msg.uninstalled_file_kept', '插件 {pluginId} 已卸载（文件未删除）', { pluginId: id });
+                                this.showNotificationMsg('page.plugins.msg.uninstall_file_kept', 'warning', { pluginId: id });
                                 
                                 // 刷新插件列表
                                 await this.loadPlugins();
                             } else {
                                 // 旧版API失败
                                 this.installStatus = 'failed';
-                                this.installMessage = `卸载失败: ${result.message || ''}`;
-                                this.showNotificationMsg(`卸载插件失败: ${result.message || ''}`, 'error');
+                                this.installMessage = this.t('page.plugins.msg.uninstall_failed_prefix', '卸载失败: {message}', { message: result.message || '' });
+                                this.showNotificationMsg('page.plugins.msg.uninstall_failed_prefix', 'error', { message: result.message || '' });
                             }
                             
                             this.processingPlugins[id] = false;
@@ -943,8 +993,8 @@ document.addEventListener('alpine:init', () => {
                     } catch (error) {
                         console.error(`Error uninstalling plugin ${id}:`, error);
                         this.installStatus = 'failed';
-                        this.installMessage = '卸载插件失败';
-                        this.showNotificationMsg('卸载插件失败', 'error');
+                        this.installMessage = this.t('page.plugins.msg.uninstall_failed', '卸载插件失败');
+                        this.showNotificationMsg('page.plugins.msg.uninstall_failed', 'error');
                         this.processingPlugins[id] = false;
                     }
                 }
@@ -952,11 +1002,11 @@ document.addEventListener('alpine:init', () => {
         },
         
         // 打开确认模态框
-        openConfirmModal(type, pluginId, title, message, action) {
+        openConfirmModal(type, pluginId, title, message, action, vars = {}) {
             this.confirmType = type;
             this.confirmPluginId = pluginId;
-            this.confirmTitle = title;
-            this.confirmMessage = message;
+            this.confirmTitle = this.t(title, title, { pluginId, ...vars });
+            this.confirmMessage = this.t(message, message, { pluginId, ...vars });
             this.confirmAction = action;
             this.showConfirmModal = true;
         },
@@ -977,7 +1027,7 @@ document.addEventListener('alpine:init', () => {
 
         async showPluginVersions(plugin) {
             if (!plugin || plugin.id === 'guguwebui') {
-                this.showNotificationMsg('不能为 WebUI 选择版本', 'error');
+                this.showNotificationMsg('page.plugins.msg.cannot_select_version_webui', 'error');
                 return;
             }
             
@@ -1026,12 +1076,14 @@ document.addEventListener('alpine:init', () => {
                     this.installedVersion = result.installed_version;
                 } else {
                     this.versionError = true;
-                    this.versionErrorMessage = result.error || '获取版本列表失败';
+                    this.versionErrorMessage = result.error
+                        ? this.t('page.plugins.msg.versions_failed_prefix', '获取版本列表失败: {message}', { message: result.error })
+                        : this.t('page.plugins.msg.versions_failed', '获取版本列表失败');
                 }
             } catch (error) {
                 console.error(`Error loading versions for plugin ${plugin.id}:`, error);
                 this.versionError = true;
-                this.versionErrorMessage = '获取版本列表失败: ' + error.message;
+                this.versionErrorMessage = this.t('page.plugins.msg.versions_failed_prefix', '获取版本列表失败: {message}', { message: error.message });
             } finally {
                 this.versionsLoading = false;
             }
@@ -1047,7 +1099,7 @@ document.addEventListener('alpine:init', () => {
             
             // 检查是否与当前安装的版本相同
             if (this.installedVersion && version === this.installedVersion) {
-                this.showNotificationMsg(`当前已安装 ${pluginId} 的 ${version} 版本`, 'info');
+                this.showNotificationMsg('page.plugins.msg.version_already_installed', 'info', { pluginId, version });
                 return;
             }
             
@@ -1069,7 +1121,7 @@ document.addEventListener('alpine:init', () => {
                     
                     const uninstallResult = await response.json();
                     if (!uninstallResult.success) {
-                        throw new Error('卸载失败: ' + (uninstallResult.error || '未知错误'));
+                        throw new Error(this.t('page.plugins.msg.uninstall_failed_prefix', '卸载失败: {message}', { message: uninstallResult.error || this.t('common.unknown', '未知') }));
                     }
                     
                     // 获取卸载任务ID并开始轮询
@@ -1078,7 +1130,7 @@ document.addEventListener('alpine:init', () => {
                         this.installPluginId = pluginId;
                         this.installStatus = 'running';
                         this.installProgress = 0;
-                        this.installMessage = `正在卸载 ${pluginId}...`;
+                        this.installMessage = this.t('page.plugins.install_msg.uninstalling_prefix', '正在卸载 {pluginId}...', { pluginId });
                         this.installLogMessages = [];
                         this.showInstallModal = true;
                         
@@ -1096,7 +1148,7 @@ document.addEventListener('alpine:init', () => {
                         }
                         
                         if (this.installStatus === 'failed') {
-                            throw new Error('卸载失败: ' + this.installMessage);
+                            throw new Error(this.t('page.plugins.msg.uninstall_failed_prefix', '卸载失败: {message}', { message: this.installMessage }));
                         }
                     }
                 }
@@ -1127,7 +1179,7 @@ document.addEventListener('alpine:init', () => {
                     this.installPluginId = pluginId;
                     this.installStatus = 'running';
                     this.installProgress = 0;
-                    this.installMessage = `正在安装 ${pluginId} v${version}...`;
+                    this.installMessage = this.t('page.plugins.install_msg.installing_version', '正在安装 {pluginId} v{version}...', { pluginId, version });
                     this.installLogMessages = [];
                     this.showInstallModal = true;
                     
@@ -1145,11 +1197,11 @@ document.addEventListener('alpine:init', () => {
                     // 刷新插件列表
                     await this.loadPlugins();
                 } else {
-                    throw new Error(result.error || '安装失败');
+                    throw new Error(this.t('page.plugins.msg.install_failed_prefix', '安装失败: {message}', { message: result.error || '' }));
                 }
             } catch (error) {
                 console.error(`Error switching plugin ${pluginId} to version ${version}:`, error);
-                this.showNotificationMsg(`切换版本失败: ${error.message}`, 'error');
+                this.showNotificationMsg('page.plugins.msg.switch_version_failed_prefix', 'error', { message: error.message });
                 
                 // 清理定时器
                 if (this.installProgressTimer) {
@@ -1172,11 +1224,12 @@ document.addEventListener('alpine:init', () => {
         
         // 格式化日期显示
         formatDate(dateString) {
-            if (!dateString) return '未知日期';
+            if (!dateString) return this.t('page.plugins.msg.unknown_date', '未知日期');
             
             try {
                 const date = new Date(dateString);
-                return date.toLocaleDateString('zh-CN', { 
+                const lang = (window.I18n && window.I18n.lang) ? window.I18n.lang : 'zh-CN';
+                return date.toLocaleDateString(lang, { 
                     year: 'numeric', 
                     month: 'short', 
                     day: 'numeric',
@@ -1202,9 +1255,18 @@ document.addEventListener('alpine:init', () => {
         },
 
         init() {
+            this.loadLangDict();
             this.checkLoginStatus();
             this.checkServerStatus();
             this.loadPlugins();
+
+            document.addEventListener('i18n:changed', (e) => {
+                const nextLang = (e && e.detail && e.detail.lang) ? e.detail.lang : this.pluginsLang;
+                this.pluginsLang = nextLang.toLowerCase().startsWith('zh') ? 'zh-CN' : 'en-US';
+                this.loadLangDict().then(() => {
+                    this.loadLangDict();
+                });
+            });
             
             // 初始化处理中插件状态
             this.processingPlugins = {};
@@ -1226,12 +1288,7 @@ document.addEventListener('alpine:init', () => {
             this.$watch('darkMode', value => {
                 localStorage.setItem('darkMode', value);
             });
-            
-            // 设置当前年份
-            const yearElement = document.getElementById('year');
-            if (yearElement) {
-                yearElement.textContent = new Date().getFullYear();
-            }
+
         }
     }));
 });

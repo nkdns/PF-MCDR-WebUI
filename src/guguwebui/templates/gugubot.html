@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     
-    <title>MCDR WebUI - GUGUBot配置</title>
+    <title data-i18n="page.gugubot.title"></title>
     <!-- 主题预加载脚本 - 防止闪烁 -->
     <script src="js/theme-preload.js"></script>
     <!-- Tailwind CSS -->
@@ -14,6 +14,8 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <!-- 自定义CSS -->
     <link rel="stylesheet" href="css/main.css">
+    <!-- i18n -->
+    <script defer src="js/i18n.js"></script>
     <!-- 自定义配置 -->
     <script>
         tailwind.config = {
@@ -403,14 +405,14 @@
                         </button>
                         
                         <!-- 页面标题 -->
-                        <h1 class="ml-4 text-xl font-semibold text-gray-800 dark:text-white">GUGUBot 配置</h1>
+                        <h1 class="ml-4 text-xl font-semibold text-gray-800 dark:text-white" data-i18n="nav.gugubot"></h1>
                     </div>
                     
                     <!-- 右侧部分 -->
                     <div class="flex items-center space-x-4">
                         <!-- 公告 -->
                         <div class="nav-notice hidden md:flex items-center bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-300 px-3 py-1 rounded-full text-xs font-medium mr-2">
-                            <span class="nav-notice-text"><i class="fas fa-circle-notch fa-spin mr-1.5"></i> 加载公告中...</span>
+                            <span class="nav-notice-text"><i class="fas fa-circle-notch fa-spin mr-1.5"></i> <span data-i18n="common.notice_loading"></span></span>
                         </div>
                     
                         <!-- 服务器状态 -->
@@ -423,19 +425,19 @@
                             }">
                                 <span x-show="serverStatus === 'online'" class="flex items-center">
                                     <i class="fas fa-circle mr-1 text-xs"></i>
-                                    <span>在线</span>
+                                    <span data-i18n="nav.status_online"></span>
                                 </span>
                                 <span x-show="serverStatus === 'offline'" class="flex items-center">
                                     <i class="fas fa-circle mr-1 text-xs"></i>
-                                    <span>离线</span>
+                                    <span data-i18n="nav.status_offline"></span>
                                 </span>
                                 <span x-show="serverStatus === 'error'" class="flex items-center">
                                     <i class="fas fa-exclamation-triangle mr-1"></i>
-                                    <span>错误</span>
+                                    <span data-i18n="nav.status_error"></span>
                                 </span>
                                 <span x-show="serverStatus === 'loading'" class="flex items-center">
                                     <i class="fas fa-circle-notch fa-spin mr-1 text-xs"></i>
-                                    <span>加载中</span>
+                                    <span data-i18n="nav.status_loading"></span>
                                 </span>
                             </div>
                         </div>
@@ -450,7 +452,10 @@
                             <div class="w-8 h-8 rounded-full bg-blue-500 flex items-center justify-center text-white user-avatar overflow-hidden">
                                 <i class="fas fa-user"></i>
                             </div>
-                            <span class="ml-2 text-sm font-medium text-gray-700 dark:text-gray-300 js-username" x-text="userName || '用户'"></span>
+                            <span class="ml-2 text-sm font-medium text-gray-700 dark:text-gray-300 js-username">
+                                <span x-show="userName" x-text="userName"></span>
+                                <span x-show="!userName" data-i18n="common.user"></span>
+                            </span>
                         </div>
                     </div>
                 </div>
@@ -459,25 +464,25 @@
             <!-- 主内容 -->
             <main class="pt-24 px-4 sm:px-6 md:px-8 pb-8">
                 <div class="bg-white dark:bg-gray-800 shadow-sm rounded-lg p-6 border border-gray-200 dark:border-gray-700">
-                    <h2 class="text-xl font-bold text-gray-800 dark:text-white mb-4 pb-2 border-b border-gray-200 dark:border-gray-700">GUGUBot 插件配置</h2>
+                    <h2 class="text-xl font-bold text-gray-800 dark:text-white mb-4 pb-2 border-b border-gray-200 dark:border-gray-700" data-i18n="page.gugubot.plugin_config"></h2>
 
                     <!-- 配置说明 -->
                     <div class="mb-6 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-100 dark:border-blue-800">
                         <div class="flex items-start">
                             <i class="fas fa-info-circle text-blue-500 dark:text-blue-400 mt-0.5 mr-3 text-lg"></i>
                             <div>
-                                <h3 class="font-medium text-blue-700 dark:text-blue-300 mb-1">配置说明</h3>
-                                <p class="text-sm text-blue-600 dark:text-blue-200">GUGUBot 是一个用于连接 QQ 群与 MC 服务器的机器人，可以实现消息互通、命令执行等功能。多个配置文件控制不同的功能模块。</p>
-                                <p class="text-sm text-blue-600 dark:text-blue-200">本配置页面尚处于测试阶段，可能存在一些问题，请及时反馈。</p>
+                                <h3 class="font-medium text-blue-700 dark:text-blue-300 mb-1" data-i18n="page.gugubot.guide.title"></h3>
+                                <p class="text-sm text-blue-600 dark:text-blue-200" data-i18n="page.gugubot.guide.desc1"></p>
+                                <p class="text-sm text-blue-600 dark:text-blue-200" data-i18n="page.gugubot.guide.desc2"></p>
                             </div>
                         </div>
                     </div>
 
                     <!-- 加载动画 -->
-                    <div x-show="loading" class="flex justify-center items-center py-12">
-                        <div class="loading-spinner"></div>
-                        <span class="ml-3 text-gray-600 dark:text-gray-400">加载配置中...</span>
-                    </div>
+                        <div x-show="loading" class="flex justify-center items-center py-12">
+                            <div class="loading-spinner"></div>
+                            <span class="ml-3 text-gray-600 dark:text-gray-400" data-i18n="page.gugubot.loading"></span>
+                        </div>
 
                     <!-- 配置选项卡 -->
                     <div x-show="!loading" class="mb-4">
@@ -546,7 +551,7 @@
                                                              <button 
                                                                  class="ml-2 p-2 text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300"
                                                                  @click="removeMainConfigArrayItem(key, index)"
-                                                                 title="删除此项"
+                                                                 data-i18n="common.delete_item" data-i18n-attr="title"
                                                              >
                                                                  <i class="fas fa-trash-alt"></i>
                                                              </button>
@@ -557,7 +562,7 @@
                                                          @click="addMainConfigArrayItem(key)"
                                                      >
                                                          <i class="fas fa-plus mr-1"></i>
-                                                         <span>添加项目</span>
+                                                         <span data-i18n="page.gugubot.add_item"></span>
                                                      </button>
                                                  </div>
                                              </template>
@@ -571,7 +576,7 @@
                                                                  <button 
                                                                      class="p-1 text-xs text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300"
                                                                      @click="removeMainConfigObjectProperty(key, subKey)"
-                                                                     title="删除此属性"
+                                                                     data-i18n="common.delete_property" data-i18n-attr="title"
                                                                  >
                                                                      <i class="fas fa-trash-alt"></i>
                                                                  </button>
@@ -598,19 +603,19 @@
                                                          <input 
                                                              type="text" 
                                                              class="text-input w-1/3 mr-2 text-sm" 
-                                                             placeholder="新属性名"
+                                                             data-i18n-placeholder="page.gugubot.placeholder_new_property"
                                                              x-model="newObjectKey"
                                                          >
                                                          <input 
                                                              type="text" 
                                                              class="text-input flex-1 mr-2 text-sm"
-                                                             placeholder="新属性值 (bool填true/false)"
+                                                             data-i18n-placeholder="page.gugubot.placeholder_new_value"
                                                              x-model="newObjectValue"
                                                          >
                                                          <button 
                                                              class="p-2 text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
                                                              @click="addMainConfigObjectProperty(key)" 
-                                                             title="添加属性"
+                                                             data-i18n="common.add_property" data-i18n-attr="title"
                                                          >
                                                              <i class="fas fa-plus"></i>
                                                          </button>
@@ -621,9 +626,7 @@
                                     </div>
                                 </template>
                             </div>
-                            <div x-show="!configData.main" class="text-center text-gray-500 py-8">
-                                 主配置文件 (config.yml) 未找到或加载失败。
-                             </div>
+                            <div x-show="!configData.main" class="text-center text-gray-500 py-8" data-i18n="page.gugubot.main_config_missing"></div>
                         </div>
                         
                         <!-- 关键词配置 (key_word.json / key_word_ingame.json) -->
@@ -641,27 +644,33 @@
                                          <h3 class="font-medium mb-1" :class="{
                                              'text-yellow-700 dark:text-yellow-300': activeTab === 'key_word',
                                              'text-green-700 dark:text-green-300': activeTab === 'key_word_ingame'
-                                         }" x-text="activeTab === 'key_word' ? 'QQ关键词设置' : '游戏内关键词设置'"></h3>
+                                         }">
+                                             <span x-show="activeTab === 'key_word'" data-i18n="page.gugubot.keyword.qq_title"></span>
+                                             <span x-show="activeTab === 'key_word_ingame'" data-i18n="page.gugubot.keyword.ingame_title"></span>
+                                         </h3>
                                          <p class="text-sm" :class="{
                                              'text-yellow-600 dark:text-yellow-200': activeTab === 'key_word',
                                              'text-green-600 dark:text-green-200': activeTab === 'key_word_ingame'
-                                         }" x-text="activeTab === 'key_word' ? '在此配置QQ群内的关键词触发回复，支持文本和图片代码。' : '在此配置MC服务器内的关键词触发回复，支持文本和指令。'"></p>
+                                         }">
+                                             <span x-show="activeTab === 'key_word'" data-i18n="page.gugubot.keyword.qq_desc"></span>
+                                             <span x-show="activeTab === 'key_word_ingame'" data-i18n="page.gugubot.keyword.ingame_desc"></span>
+                                         </p>
                                     </div>
                                 </div>
                             </div>
                             
                              <div class="config-container" x-show="typeof configData[activeTab] === 'object' && configData[activeTab] !== null">
                                  <div class="flex justify-end mb-4">
-                                     <input type="text" x-model="newMapKey" placeholder="新关键词" class="text-input mr-2 w-1/3 text-sm">
-                                     <input type="text" x-model="newMapValue" placeholder="回复内容" class="text-input mr-2 flex-1 text-sm">
+                                     <input type="text" x-model="newMapKey" data-i18n-placeholder="page.gugubot.keyword.placeholder_key" class="text-input mr-2 w-1/3 text-sm">
+                                     <input type="text" x-model="newMapValue" data-i18n-placeholder="page.gugubot.keyword.placeholder_value" class="text-input mr-2 flex-1 text-sm">
                                     <button 
                                         class="flex items-center text-sm bg-blue-500 hover:bg-blue-600 text-white px-3 py-2 rounded-lg transition-colors"
                                          @click="addKeyword()" 
                                          :disabled="!newMapKey.trim()"
-                                         title="添加关键词"
+                                         data-i18n="page.gugubot.keyword.add" data-i18n-attr="title"
                                     >
                                         <i class="fas fa-plus mr-1"></i>
-                                        <span>添加</span>
+                                        <span data-i18n="common.add"></span>
                                     </button>
                                 </div>
                                 
@@ -676,7 +685,7 @@
                                                          :value="key"
                                                          @change=""
                                                          readonly 
-                                                         title="关键词 (如需修改请删除后重新添加)"
+                                                         data-i18n="page.gugubot.keyword.key_tip" data-i18n-attr="title"
                                                      >
                                                 </div>
                                                 <div class="config-input mt-1">
@@ -685,30 +694,24 @@
                                                          rows="2"
                                                          :value="value"
                                                          @input="updateKeywordValue(key, $event.target.value)"
-                                                         placeholder="回复内容"
+                                                         data-i18n-placeholder="page.gugubot.keyword.placeholder_reply"
                                                      ></textarea>
                                                 </div>
                                             </div>
                                             <button 
                                                 class="ml-2 p-2 text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300"
                                                 @click="removeKeyword(key)"
-                                                title="删除此关键词"
+                                                data-i18n="page.gugubot.keyword.delete" data-i18n-attr="title"
                                             >
                                                 <i class="fas fa-trash-alt"></i>
                                             </button>
                                         </div>
                                     </div>
                                 </template>
-                                 <div x-show="Object.keys(configData[activeTab] || {}).length === 0" class="text-center text-gray-500 py-4">
-                                     没有配置任何关键词。
-                                 </div>
+                                 <div x-show="Object.keys(configData[activeTab] || {}).length === 0" class="text-center text-gray-500 py-4" data-i18n="page.gugubot.keyword.empty"></div>
                             </div>
-                             <div x-show="configData[activeTab] === null" class="text-center text-gray-500 py-8">
-                                 配置文件加载失败。
-                             </div>
-                             <div x-show="configData[activeTab] === undefined" class="text-center text-gray-500 py-8">
-                                 正在加载配置...
-                             </div>
+                             <div x-show="configData[activeTab] === null" class="text-center text-gray-500 py-8" data-i18n="page.gugubot.config_load_failed"></div>
+                             <div x-show="configData[activeTab] === undefined" class="text-center text-gray-500 py-8" data-i18n="page.gugubot.loading_config"></div>
                         </div>
                         
                         <!-- 绑定配置 (GUGUbot.json) -->
@@ -717,8 +720,8 @@
                                  <div class="flex items-start">
                                     <i class="fas fa-link text-purple-500 dark:text-purple-400 mt-0.5 mr-2 text-lg"></i>
                                     <div>
-                                        <h3 class="font-medium text-purple-700 dark:text-purple-300 mb-0.5">QQ-游戏ID绑定设置</h3>
-                                        <p class="text-xs text-purple-600 dark:text-purple-200">管理QQ号与游戏ID的绑定关系。注意：这里的编辑仅修改 `GUGUbot.json` 文件。</p>
+                                        <h3 class="font-medium text-purple-700 dark:text-purple-300 mb-0.5" data-i18n="page.gugubot.bind.title"></h3>
+                                        <p class="text-xs text-purple-600 dark:text-purple-200" data-i18n="page.gugubot.bind.desc"></p>
                                     </div>
                                 </div>
                             </div>
@@ -730,7 +733,7 @@
                                          @click="addBindQQ()"
                                      >
                                          <i class="fas fa-plus mr-1"></i>
-                                         <span>添加QQ绑定</span>
+                                         <span data-i18n="page.gugubot.bind.add_qq"></span>
                                      </button>
                                  </div>
                                 
@@ -745,7 +748,7 @@
                                                  <button 
                                                      class="text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 p-1"
                                                      @click="removeBindQQ(qqId)"
-                                                     title="删除此QQ号的所有绑定"
+                                                     data-i18n="page.gugubot.bind.delete_all" data-i18n-attr="title"
                                                  >
                                                      <i class="fas fa-trash-alt text-xs"></i>
                                                  </button>
@@ -759,12 +762,12 @@
                                                              class="text-input flex-1 text-xs py-1 px-2"
                                                              :value="gameId"
                                                              @input="updateBindValue(qqId, index, $event.target.value)"
-                                                             placeholder="游戏ID"
+                                                             data-i18n-placeholder="page.gugubot.bind.placeholder_game_id"
                                                          >
                                                          <button 
                                                              class="ml-1 p-1 text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300"
                                                              @click="removeBindGameId(qqId, index)"
-                                                             title="删除此游戏ID"
+                                                             data-i18n="page.gugubot.bind.delete_game_id" data-i18n-attr="title"
                                                          >
                                                              <i class="fas fa-times text-xs"></i>
                                                          </button>
@@ -776,24 +779,18 @@
                                                      @click="addBindGameId(qqId)"
                                                  >
                                                      <i class="fas fa-plus mr-1 text-xs"></i>
-                                                     <span>添加游戏ID</span>
+                                                     <span data-i18n="page.gugubot.bind.add_game_id"></span>
                                                  </button>
                                              </div>
                                          </div>
                                      </template>
                                  </div>
                                  
-                                 <div x-show="Object.keys(configData.bind || {}).length === 0" class="text-center text-gray-500 py-4">
-                                     没有配置任何绑定关系。
-                                 </div>
+                                 <div x-show="Object.keys(configData.bind || {}).length === 0" class="text-center text-gray-500 py-4" data-i18n="page.gugubot.bind.empty"></div>
                              </div>
                              
-                             <div x-show="configData.bind === null" class="text-center text-gray-500 py-8">
-                                 绑定配置文件加载失败。
-                             </div>
-                             <div x-show="configData.bind === undefined" class="text-center text-gray-500 py-8">
-                                 正在加载配置...
-                             </div>
+                             <div x-show="configData.bind === null" class="text-center text-gray-500 py-8" data-i18n="page.gugubot.config_load_failed"></div>
+                             <div x-show="configData.bind === undefined" class="text-center text-gray-500 py-8" data-i18n="page.gugubot.loading_config"></div>
                         </div>
                         
                         <!-- 违禁词配置 (ban_word.json) / 审核员 (shenheman.json) -->
@@ -811,11 +808,17 @@
                                          <h3 class="font-medium mb-1" :class="{
                                              'text-red-700 dark:text-red-300': activeTab === 'ban_word',
                                              'text-indigo-700 dark:text-indigo-300': activeTab === 'shenheman'
-                                         }" x-text="activeTab === 'ban_word' ? '违禁词设置' : '审核员QQ号设置'"></h3>
+                                         }">
+                                             <span x-show="activeTab === 'ban_word'" data-i18n="page.gugubot.ban_word.title"></span>
+                                             <span x-show="activeTab === 'shenheman'" data-i18n="page.gugubot.shenhe.title"></span>
+                                         </h3>
                                          <p class="text-sm" :class="{
                                              'text-red-600 dark:text-red-200': activeTab === 'ban_word',
                                              'text-indigo-600 dark:text-indigo-200': activeTab === 'shenheman'
-                                         }" x-text="activeTab === 'ban_word' ? '配置QQ群内的违禁词，触发后会自动撤回消息。' : '配置有审核权限的QQ号列表。'"></p>
+                                         }">
+                                             <span x-show="activeTab === 'ban_word'" data-i18n="page.gugubot.ban_word.desc"></span>
+                                             <span x-show="activeTab === 'shenheman'" data-i18n="page.gugubot.shenhe.desc"></span>
+                                         </p>
                                     </div>
                                 </div>
                             </div>
@@ -823,16 +826,16 @@
                             <!-- 违禁词配置 (键值对形式，键是违禁词，值是违禁理由) -->
                             <div class="config-container" x-show="activeTab === 'ban_word' && typeof configData[activeTab] === 'object' && configData[activeTab] !== null">
                                 <div class="flex justify-end mb-4">
-                                    <input type="text" x-model="newMapKey" placeholder="新违禁词" class="text-input mr-2 w-1/3 text-sm">
-                                    <input type="text" x-model="newMapValue" placeholder="违禁理由" class="text-input mr-2 flex-1 text-sm">
+                                    <input type="text" x-model="newMapKey" data-i18n-placeholder="page.gugubot.ban_word.placeholder_word" class="text-input mr-2 w-1/3 text-sm">
+                                    <input type="text" x-model="newMapValue" data-i18n-placeholder="page.gugubot.ban_word.placeholder_reason" class="text-input mr-2 flex-1 text-sm">
                                     <button 
                                         class="flex items-center text-sm bg-blue-500 hover:bg-blue-600 text-white px-3 py-2 rounded-lg transition-colors"
                                         @click="addBanWord()" 
                                         :disabled="!newMapKey.trim()"
-                                        title="添加违禁词"
+                                        data-i18n="page.gugubot.ban_word.add" data-i18n-attr="title"
                                     >
                                         <i class="fas fa-plus mr-1"></i>
-                                        <span>添加</span>
+                                        <span data-i18n="common.add"></span>
                                     </button>
                                 </div>
                                 
@@ -847,7 +850,7 @@
                                                         :value="key"
                                                         @change=""
                                                         readonly 
-                                                        title="违禁词 (如需修改请删除后重新添加)"
+                                                        data-i18n="page.gugubot.ban_word.word_tip" data-i18n-attr="title"
                                                     >
                                                 </div>
                                                 <div class="config-input mt-1">
@@ -856,23 +859,21 @@
                                                         rows="2"
                                                         :value="value"
                                                         @input="updateConfigValue(key, $event.target.value)"
-                                                        placeholder="违禁理由"
+                                                        data-i18n-placeholder="page.gugubot.ban_word.placeholder_reason"
                                                     ></textarea>
                                                 </div>
                                             </div>
                                             <button 
                                                 class="ml-2 p-2 text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300"
                                                 @click="removeMapItem(key)"
-                                                title="删除此违禁词"
+                                                data-i18n="page.gugubot.ban_word.delete" data-i18n-attr="title"
                                             >
                                                 <i class="fas fa-trash-alt"></i>
                                             </button>
                                         </div>
                                     </div>
                                 </template>
-                                <div x-show="Object.keys(configData[activeTab] || {}).length === 0" class="text-center text-gray-500 py-4">
-                                    没有配置任何违禁词。
-                                </div>
+                                <div x-show="Object.keys(configData[activeTab] || {}).length === 0" class="text-center text-gray-500 py-4" data-i18n="page.gugubot.ban_word.empty"></div>
                             </div>
                             
                             <!-- 审核员配置 (数组形式) -->
@@ -883,7 +884,7 @@
                                          @click="addShenhemanQQ()" 
                                      >
                                          <i class="fas fa-plus mr-1"></i>
-                                         <span>添加审核员QQ</span>
+                                         <span data-i18n="page.gugubot.shenhe.add_qq"></span>
                                      </button>
                                 </div>
                                 
@@ -892,7 +893,7 @@
                                         <div class="flex justify-between items-start">
                                             <div class="flex-1 mr-4">
                                                 <div class="config-header mb-2">
-                                                    <h3 class="config-title">审核员QQ: <span x-text="qqId" class="font-mono"></span></h3>
+                                                    <h3 class="config-title" data-i18n="page.gugubot.shenhe.qq_title">: <span x-text="qqId" class="font-mono"></span></h3>
                                                 </div>
                                                 <div class="config-input">
                                                     <div class="space-y-2">
@@ -903,12 +904,12 @@
                                                                     class="text-input flex-1 text-sm"
                                                                     :value="alias"
                                                                     @input="updateShenhemanAlias(qqId, index, $event.target.value)"
-                                                                    placeholder="审核员别名"
+                                                                    data-i18n-placeholder="page.gugubot.shenhe.placeholder_alias"
                                                                 >
                                                                 <button 
                                                                     class="ml-2 p-2 text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300"
                                                                     @click="removeShenhemanAlias(qqId, index)"
-                                                                    title="删除此别名"
+                                                                    data-i18n="page.gugubot.shenhe.delete_alias" data-i18n-attr="title"
                                                                 >
                                                                     <i class="fas fa-times"></i>
                                                                 </button>
@@ -919,7 +920,7 @@
                                                             @click="addShenhemanAlias(qqId)"
                                                         >
                                                             <i class="fas fa-plus mr-1"></i>
-                                                            <span>添加别名</span>
+                                                            <span data-i18n="page.gugubot.shenhe.add_alias"></span>
                                                         </button>
                                                     </div>
                                                 </div>
@@ -927,24 +928,18 @@
                                             <button 
                                                 class="ml-2 p-2 text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300"
                                                 @click="removeShenhemanQQ(qqId)"
-                                                title="删除此审核员QQ号"
+                                                data-i18n="page.gugubot.shenhe.delete_qq" data-i18n-attr="title"
                                             >
                                                 <i class="fas fa-trash-alt"></i>
                                             </button>
                                         </div>
                                     </div>
                                 </template>
-                                <div x-show="Object.keys(configData[activeTab] || {}).length === 0" class="text-center text-gray-500 py-4">
-                                    没有配置任何审核员QQ号。
-                                </div>
+                                <div x-show="Object.keys(configData[activeTab] || {}).length === 0" class="text-center text-gray-500 py-4" data-i18n="page.gugubot.shenhe.empty"></div>
                              </div>
                              
-                             <div x-show="configData[activeTab] === null" class="text-center text-gray-500 py-8">
-                                 配置文件加载失败。
-                             </div>
-                              <div x-show="configData[activeTab] === undefined" class="text-center text-gray-500 py-8">
-                                 正在加载配置...
-                             </div>
+                             <div x-show="configData[activeTab] === null" class="text-center text-gray-500 py-8" data-i18n="page.gugubot.config_load_failed"></div>
+                              <div x-show="configData[activeTab] === undefined" class="text-center text-gray-500 py-8" data-i18n="page.gugubot.loading_config"></div>
                          </div>
 
                          <!-- UUID-QQID配置 -->
@@ -953,23 +948,23 @@
                                  <div class="flex items-start">
                                     <i class="fas fa-id-card text-amber-500 dark:text-amber-400 mt-0.5 mr-3 text-lg"></i>
                                     <div>
-                                        <h3 class="font-medium text-amber-700 dark:text-amber-300 mb-1">UUID-QQID 映射设置</h3>
-                                        <p class="text-sm text-amber-600 dark:text-amber-200">管理游戏UUID与QQ号的映射关系。UUID通常由系统自动生成，不建议手动修改。</p>
+                                        <h3 class="font-medium text-amber-700 dark:text-amber-300 mb-1" data-i18n="page.gugubot.uuid_qqid.title"></h3>
+                                        <p class="text-sm text-amber-600 dark:text-amber-200" data-i18n="page.gugubot.uuid_qqid.desc"></p>
                                     </div>
                                 </div>
                             </div>
                             
                              <div class="config-container" x-show="typeof configData.uuid_qqid === 'object' && configData.uuid_qqid !== null">
                                  <div class="flex justify-end mb-4">
-                                     <input type="text" x-model="newMapKey" placeholder="UUID" class="text-input mr-2 w-1/2 text-sm">
-                                     <input type="text" x-model="newMapValue" placeholder="QQ号" class="text-input mr-2 flex-1 text-sm">
+                                     <input type="text" x-model="newMapKey" data-i18n-placeholder="page.gugubot.uuid_qqid.placeholder_uuid" class="text-input mr-2 w-1/2 text-sm">
+                                     <input type="text" x-model="newMapValue" data-i18n-placeholder="page.gugubot.uuid_qqid.placeholder_qq" class="text-input mr-2 flex-1 text-sm">
                                      <button 
                                          class="flex items-center text-sm bg-blue-500 hover:bg-blue-600 text-white px-3 py-2 rounded-lg transition-colors"
                                          @click="addMapItem()"
                                          :disabled="!newMapKey.trim() || !newMapValue.trim()"
                                      >
                                          <i class="fas fa-plus mr-1"></i>
-                                         <span>添加</span>
+                                         <span data-i18n="common.add"></span>
                                      </button>
                                  </div>
                                 
@@ -979,7 +974,7 @@
                                              <div class="flex-1 mr-4">
                                                  <div class="flex items-center">
                                                      <div class="mr-3 w-1/2">
-                                                         <label class="block text-xs text-gray-500 dark:text-gray-400 mb-1">UUID</label>
+                                                         <label class="block text-xs text-gray-500 dark:text-gray-400 mb-1" data-i18n="page.gugubot.uuid_qqid.label_uuid"></label>
                                                          <input 
                                                              type="text" 
                                                              class="text-input text-sm font-mono text-gray-600 dark:text-gray-300 bg-gray-50 dark:bg-gray-800"
@@ -988,7 +983,7 @@
                                                          >
                                                      </div>
                                                      <div class="flex-1">
-                                                         <label class="block text-xs text-gray-500 dark:text-gray-400 mb-1">QQ号</label>
+                                                         <label class="block text-xs text-gray-500 dark:text-gray-400 mb-1" data-i18n="page.gugubot.uuid_qqid.label_qq"></label>
                                                          <input 
                                                              type="text" 
                                                              class="text-input text-sm" 
@@ -1001,33 +996,27 @@
                                              <button 
                                                  class="ml-2 p-2 text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300"
                                                  @click="removeMapItem(uuid)"
-                                                 title="删除此映射"
+                                                 data-i18n="page.gugubot.uuid_qqid.delete_mapping" data-i18n-attr="title"
                                              >
                                                  <i class="fas fa-trash-alt"></i>
                                              </button>
                                          </div>
                                      </div>
                                  </template>
-                                  <div x-show="Object.keys(configData.uuid_qqid || {}).length === 0" class="text-center text-gray-500 py-4">
-                                     没有配置任何UUID-QQ映射。
-                                 </div>
+                                  <div x-show="Object.keys(configData.uuid_qqid || {}).length === 0" class="text-center text-gray-500 py-4" data-i18n="page.gugubot.uuid_qqid.empty"></div>
                             </div>
-                             <div x-show="configData.uuid_qqid === null" class="text-center text-gray-500 py-8">
-                                 配置文件加载失败。
-                             </div>
-                             <div x-show="configData.uuid_qqid === undefined" class="text-center text-gray-500 py-8">
-                                 正在加载配置...
-                             </div>
+                             <div x-show="configData.uuid_qqid === null" class="text-center text-gray-500 py-8" data-i18n="page.gugubot.config_load_failed"></div>
+                             <div x-show="configData.uuid_qqid === undefined" class="text-center text-gray-500 py-8" data-i18n="page.gugubot.loading_config"></div>
                         </div>
 
                          <!-- 帮助信息配置 (help_msg.json) -->
-                         <div class="tab-content" :class="{ 'active': activeTab === 'help_msg' }" x-show="activeTab === 'help_msg'">
+                         <div class="tab-content" :class="{ 'active': activeTab === 'help_msg' }" x-show="activeTab === 'help_msg'" x-effect="I18n.applyTranslations($el)">
                              <div class="mb-4 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-100 dark:border-blue-800">
                                  <div class="flex items-start">
                                     <i class="fas fa-question-circle text-blue-500 dark:text-blue-400 mt-0.5 mr-3 text-lg"></i>
                                     <div>
-                                        <h3 class="font-medium text-blue-700 dark:text-blue-300 mb-1">帮助信息设置</h3>
-                                        <p class="text-sm text-blue-600 dark:text-blue-200">配置QQ群内的帮助消息文本。注意：只能修改文本内容，不能添加或删除配置项。配置文件中的\n表示换行，在本编辑器中已被渲染为真的换行，不必使用\n，直接回车即可。</p>
+                                        <h3 class="font-medium text-blue-700 dark:text-blue-300 mb-1" data-i18n="page.gugubot.help_msg.title"></h3>
+                                        <p class="text-sm text-blue-600 dark:text-blue-200" data-i18n="page.gugubot.help_msg.desc"></p>
                                     </div>
                                 </div>
                             </div>
@@ -1037,7 +1026,7 @@
                                 <div class="flex items-start">
                                     <i class="fas fa-lightbulb text-yellow-500 dark:text-yellow-400 mt-0.5 mr-3 text-lg"></i>
                                     <div>
-                                        <h3 class="font-medium text-yellow-700 dark:text-yellow-300 mb-1">编辑提示</h3>
+                                        <h3 class="font-medium text-yellow-700 dark:text-yellow-300 mb-1" data-i18n="page.gugubot.help_msg.edit_tip_title"></h3>
                                         <template x-for="(hint, key) in getHelpMsgHints()">
                                             <div class="text-sm text-yellow-600 dark:text-yellow-200 mb-1 whitespace-nowrap">
                                               <span class="font-medium" x-text="key"></span>: 
@@ -1052,32 +1041,34 @@
                                 <template x-for="key in getEditableHelpMsgFields()" :key="key">
                                     <div class="config-item">
                                         <div class="config-header">
-                                            <h3 class="config-title" x-text="key === 'admin_help_msg' ? '管理员帮助信息' : '普通用户帮助信息'"></h3>
+                                            <h3 class="config-title">
+                                                <span x-show="key === 'admin_help_msg'" data-i18n="page.gugubot.help_msg.admin_help"></span>
+                                                <span x-show="key !== 'admin_help_msg'" data-i18n="page.gugubot.help_msg.user_help"></span>
+                                            </h3>
                                             <span class="config-key" x-text="key"></span>
                                         </div>
-                                        <div class="config-description" x-text="key === 'admin_help_msg' ? '显示给管理员的帮助信息' : '显示给普通用户的帮助信息'"></div>
+                                        <div class="config-description">
+                                            <span x-show="key === 'admin_help_msg'" data-i18n="page.gugubot.help_msg.admin_desc"></span>
+                                            <span x-show="key !== 'admin_help_msg'" data-i18n="page.gugubot.help_msg.user_desc"></span>
+                                        </div>
                                         <div class="config-input mt-2">
                                             <textarea 
                                                 class="text-input w-full text-sm font-mono"
                                                 rows="10"
                                                 :value="configData.help_msg[key]"
                                                 @input="updateHelpMsgContent(key, $event.target.value)"
-                                                placeholder="帮助信息内容"
+                                                data-i18n-placeholder="page.gugubot.help_msg.placeholder_content"
                                             ></textarea>
                                             <div class="mt-2 text-xs text-gray-500">
-                                                <p>使用 \n 表示换行，编辑时请勿删除必要的格式。</p>
+                                                <p data-i18n="page.gugubot.help_msg.format_tip"></p>
                                             </div>
                                         </div>
                                     </div>
                                 </template>
                             </div>
                             
-                            <div x-show="configData.help_msg === null" class="text-center text-gray-500 py-8">
-                                配置文件加载失败。
-                            </div>
-                            <div x-show="configData.help_msg === undefined" class="text-center text-gray-500 py-8">
-                                正在加载配置...
-                            </div>
+                            <div x-show="configData.help_msg === null" class="text-center text-gray-500 py-8" data-i18n="page.gugubot.config_load_failed"></div>
+                            <div x-show="configData.help_msg === undefined" class="text-center text-gray-500 py-8" data-i18n="page.gugubot.loading_config"></div>
                         </div>
 
                          <!-- 其他 JSON/YML 配置文件通用编辑器 -->
@@ -1088,9 +1079,12 @@
                                  <div class="flex items-start">
                                      <i class="fas fa-file-alt text-gray-500 dark:text-gray-400 mt-0.5 mr-3 text-lg"></i>
                                      <div>
-                                         <h3 class="font-medium text-gray-700 dark:text-gray-300 mb-1" x-text="getTabLabel(activeTab) + ' (通用编辑器)'"></h3>
-                                         <p class="text-sm text-gray-600 dark:text-gray-400">此文件使用通用编辑器。请参考具体插件文档了解配置项含义。</p>
-                                         <p class="text-xs text-gray-500 dark:text-gray-500 mt-1">文件类型: <code x-text="getActiveFileType()"></code></p>
+                                         <h3 class="font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                             <span x-text="getTabLabel(activeTab)"></span>
+                                             <span> (</span><span data-i18n="page.gugubot.common_editor"></span><span>)</span>
+                                         </h3>
+                                         <p class="text-sm text-gray-600 dark:text-gray-400" data-i18n="page.gugubot.common_editor_tip"></p>
+                                         <p class="text-xs text-gray-500 dark:text-gray-500 mt-1" data-i18n="page.gugubot.file_type">: <code x-text="getActiveFileType()"></code></p>
                                      </div>
                                  </div>
                              </div>
@@ -1098,16 +1092,16 @@
                               <!-- 简单键值对编辑器 (适用于简单的JSON/YML) -->
                               <div class="config-container" x-show="typeof getActiveConfigData() === 'object' && getActiveConfigData() !== null && !Array.isArray(getActiveConfigData())">
                                   <div class="flex justify-end mb-4">
-                                      <input type="text" x-model="newMapKey" placeholder="新键" class="text-input mr-2 w-1/3 text-sm">
-                                      <input type="text" x-model="newMapValue" placeholder="新值 (JSON格式, 如 'true', 123, 'abc')" class="text-input mr-2 flex-1 text-sm">
+                                      <input type="text" x-model="newMapKey" data-i18n-placeholder="page.gugubot.placeholder_new_key" class="text-input mr-2 w-1/3 text-sm">
+                                      <input type="text" x-model="newMapValue" data-i18n-placeholder="page.gugubot.placeholder_new_value" class="text-input mr-2 flex-1 text-sm">
                                       <button 
                                           class="flex items-center text-sm bg-blue-500 hover:bg-blue-600 text-white px-3 py-2 rounded-lg transition-colors"
                                           @click="addMapItem()"
                                           :disabled="!newMapKey.trim()"
-                                          title="添加键值对"
+                                          data-i18n="page.gugubot.add_key_value" data-i18n-attr="title"
                                       >
                                           <i class="fas fa-plus mr-1"></i>
-                                          <span>添加</span>
+                                          <span data-i18n="common.add"></span>
                                       </button>
                                   </div>
 
@@ -1121,7 +1115,7 @@
                                                           class="text-input font-semibold border-transparent focus:border-blue-500 focus:ring-0 m-0"
                                                           :value="key"
                                                           readonly 
-                                                          title="键 (如需修改请删除后重新添加)"
+                                                          data-i18n="page.gugubot.key_tip" data-i18n-attr="title"
                                                       >
                                                   </div>
                                                   <div class="config-input mt-1">
@@ -1145,7 +1139,7 @@
                                                               rows="3" 
                                                               :value="JSON.stringify(value, null, 2)" 
                                                               @input="updateJsonValue(key, $event.target.value)"
-                                                              placeholder="输入有效的JSON数据"
+                                                              data-i18n-placeholder="page.gugubot.placeholder_json_data"
                                                           ></textarea>
                                                       </template>
                                                   </div>
@@ -1153,36 +1147,34 @@
                                               <button 
                                                   class="ml-2 p-2 text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300"
                                                   @click="removeMapItem(key)"
-                                                  title="删除此键值对"
+                                                  data-i18n="page.gugubot.delete_key_value" data-i18n-attr="title"
                                               >
                                                   <i class="fas fa-trash-alt"></i>
                                               </button>
                                           </div>
                                       </div>
                                   </template>
-                                  <div x-show="Object.keys(getActiveConfigData() || {}).length === 0" class="text-center text-gray-500 py-4">
-                                      此配置文件为空对象。
-                                  </div>
+                                  <div x-show="Object.keys(getActiveConfigData() || {}).length === 0" class="text-center text-gray-500 py-4" data-i18n="page.gugubot.empty_object"></div>
                               </div>
 
                                <!-- 简单列表编辑器 (适用于元素为简单类型的JSON数组) -->
                                <div class="config-container" x-show="Array.isArray(getActiveConfigData())">
                                    <div class="flex justify-end mb-4">
-                                       <input type="text" x-model="newListItem" placeholder="新列表项" class="text-input mr-2 flex-1 text-sm">
+                                       <input type="text" x-model="newListItem" data-i18n-placeholder="page.gugubot.placeholder_new_list_item" class="text-input mr-2 flex-1 text-sm">
                                        <button 
                                            class="flex items-center text-sm bg-blue-500 hover:bg-blue-600 text-white px-3 py-2 rounded-lg transition-colors"
                                            @click="addListItem()" 
                                            :disabled="!newListItem.trim()"
-                                           title="添加列表项"
+                                           data-i18n="page.gugubot.add_list_item" data-i18n-attr="title"
                                        >
                                            <i class="fas fa-plus mr-1"></i>
-                                           <span>添加</span>
+                                           <span data-i18n="common.add"></span>
                                        </button>
                                    </div>
 
                                    <div class="config-item">
                                        <div class="config-header">
-                                           <h3 class="config-title">列表项</h3>
+                                           <h3 class="config-title" data-i18n="page.gugubot.list_items"></h3>
                                        </div>
                                        <div class="config-input">
                                            <div class="space-y-2">
@@ -1194,31 +1186,25 @@
                                                           class="text-input flex-1 text-sm"
                                                           :value="item"
                                                           @input="updateListItem(index, $event.target.value)"
-                                                          placeholder="列表项值"
+                                                          data-i18n-placeholder="page.gugubot.placeholder_list_item_value"
                                                        >
                                                        <button 
                                                            class="ml-2 p-2 text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300"
                                                            @click="removeListItem(index)"
-                                                           title="删除此项"
+                                                           data-i18n="common.delete_item" data-i18n-attr="title"
                                                        >
                                                            <i class="fas fa-times"></i>
                                                        </button>
                                                    </div>
                                                </template>
-                                               <div x-show="getActiveConfigData()?.length === 0" class="text-center text-gray-500 py-4">
-                                                   列表为空。
-                                               </div>
+                                               <div x-show="getActiveConfigData()?.length === 0" class="text-center text-gray-500 py-4" data-i18n="page.gugubot.empty_list"></div>
                                            </div>
                                        </div>
                                    </div>
                                </div>
 
-                             <div x-show="getActiveConfigData() === null" class="text-center text-gray-500 py-8">
-                                 配置文件加载失败。
-                             </div>
-                              <div x-show="getActiveConfigData() === undefined" class="text-center text-gray-500 py-8">
-                                 正在加载配置...
-                             </div>
+                             <div x-show="getActiveConfigData() === null" class="text-center text-gray-500 py-8" data-i18n="page.gugubot.config_load_failed"></div>
+                              <div x-show="getActiveConfigData() === undefined" class="text-center text-gray-500 py-8" data-i18n="page.gugubot.loading_config"></div>
                          </div>
                     </div>
                     
@@ -1232,13 +1218,13 @@
                             <template x-if="!saving">
                                 <span>
                                     <i class="fas fa-save mr-2"></i>
-                                    保存配置
+                                    <span data-i18n="page.gugubot.save_config"></span>
                                 </span>
                             </template>
                             <template x-if="saving">
                                 <span>
                                     <i class="fas fa-circle-notch fa-spin mr-2"></i>
-                                    保存中...
+                                    <span data-i18n="page.gugubot.saving"></span>
                                 </span>
                             </template>
                         </button>
@@ -1328,14 +1314,14 @@
                                     class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-blue-600 text-base font-medium text-white hover:bg-blue-700 focus:outline-none sm:ml-3 sm:w-auto sm:text-sm"
                                     @click="confirmDialog()"
                                 >
-                                    确定
+                                    <span data-i18n="common.confirm"></span>
                                 </button>
                                 <button 
                                     type="button" 
                                     class="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 dark:border-gray-600 shadow-sm px-4 py-2 bg-white dark:bg-gray-700 text-base font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm"
                                     @click="cancelDialog()"
                                 >
-                                    取消
+                                    <span data-i18n="common.cancel"></span>
                                 </button>
                             </div>
                         </div>
@@ -1344,7 +1330,7 @@
                 
                 <!-- 页脚 -->
                 <footer class="mt-8 text-center text-gray-600 dark:text-gray-400 text-sm">
-                    <p>MCDR WebUI &copy; <span id="year"></span></p>
+                    <p data-i18n="common.copyright"></p>
                 </footer>
             </main>
         </div>

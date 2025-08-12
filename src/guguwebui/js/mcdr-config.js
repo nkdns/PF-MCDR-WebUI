@@ -2,18 +2,35 @@
  * MCDR配置页面的JavaScript功能
  * 处理配置加载、保存、表单数据绑定等功能
  */
-
-document.addEventListener('DOMContentLoaded', function() {
-    // 设置当前时间和版权年份
-    const yearElement = document.getElementById('year');
-    if (yearElement) {
-        yearElement.textContent = new Date().getFullYear();
-    }
-});
-
 // Alpine.js 组件
 window.mcdrConfigApp = function() {
     return {
+        // i18n（本页用）
+        mcdrLang: 'zh-CN',
+        mcdrDict: {},
+        t(key, fallback = '') {
+            if (window.I18n && typeof window.I18n.t === 'function') {
+                const v = window.I18n.t(key, fallback);
+                if (v && v !== key) return v;
+            }
+            const val = key.split('.').reduce((o, k) => (o && o[k] != null ? o[k] : undefined), this.mcdrDict);
+            return val != null ? String(val) : (fallback != null ? String(fallback) : key);
+        },
+        async loadLangDict() {
+            const stored = localStorage.getItem('lang') || (navigator.language || 'zh-CN');
+            this.mcdrLang = stored.toLowerCase().startsWith('zh') ? 'zh-CN' : 'en-US';
+            try {
+                const resp = await fetch(`lang/${this.mcdrLang}.json`, { cache: 'no-cache' });
+                if (resp.ok) {
+                    this.mcdrDict = await resp.json();
+                } else {
+                    this.mcdrDict = {};
+                }
+            } catch (e) {
+                console.warn('mcdr loadLangDict failed:', e);
+                this.mcdrDict = {};
+            }
+        },
         serverStatus: 'loading',
         userName: '',
         serverVersion: '',
@@ -23,6 +40,14 @@ window.mcdrConfigApp = function() {
 
         // 初始化
         init() {
+            // 语言
+            this.loadLangDict();
+            document.addEventListener('i18n:changed', (e) => {
+                const nextLang = (e && e.detail && e.detail.lang) ? e.detail.lang : this.mcdrLang;
+                this.mcdrLang = nextLang.toLowerCase().startsWith('zh') ? 'zh-CN' : 'en-US';
+                this.loadLangDict();
+            });
+
             this.checkLoginStatus();
             this.checkServerStatus();
             this.loadConfig('config.yml');
@@ -127,13 +152,13 @@ window.mcdrConfigApp = function() {
                 });
                 const result = await response.json();
                 if (result.status === 'success') {
-                    this.showNotification('配置保存成功', 'success');
+                    this.showNotification(this.t('page.mcdr.msg.save_success', '配置保存成功'), 'success');
                 } else {
-                    this.showNotification('配置保存失败: ' + result.message, 'error');
+                    this.showNotification(this.t('page.mcdr.msg.save_failed_prefix', '配置保存失败: ') + (result.message || this.t('common.unknown', '未知')), 'error');
                 }
             } catch (error) {
                 console.error('Error saving config:', error);
-                this.showNotification('保存出错: ' + error.message, 'error');
+                this.showNotification(this.t('page.mcdr.msg.save_error_prefix', '保存出错: ') + error.message, 'error');
             }
         },
 

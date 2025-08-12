@@ -159,6 +159,58 @@ def on_mcdr_info(server, info):
     if log_watcher:
         log_watcher.on_mcdr_info(server, info)
 
+
+# 语言列表 API：返回 /lang 目录下的 json 文件及其显示名称
+@app.get("/api/langs")
+def get_languages():
+    try:
+        lang_dir = Path(STATIC_PATH) / "lang"
+        if not lang_dir.exists():
+            return JSONResponse([], status_code=200)
+
+        # 常见语言的默认显示名映射
+        default_names = {
+            "zh-CN": "中文",
+            "zh-TW": "繁體中文",
+            "en-US": "English",
+            "ja-JP": "日本語",
+            "ko-KR": "한국어",
+            "ru-RU": "Русский",
+            "fr-FR": "Français",
+            "de-DE": "Deutsch",
+            "es-ES": "Español",
+            "pt-BR": "Português (Brasil)",
+            "vi-VN": "Tiếng Việt",
+            "tr-TR": "Türkçe",
+            "ar-SA": "العربية",
+            "it-IT": "Italiano",
+            "pl-PL": "Polski",
+            "uk-UA": "Українська",
+            "id-ID": "Bahasa Indonesia",
+            "th-TH": "ไทย",
+            "hi-IN": "हिन्दी"
+        }
+
+        langs = []
+        for file in sorted(lang_dir.glob("*.json")):
+            code = file.stem
+            name = default_names.get(code, code)
+            # 如果文件里包含更友好的显示名，优先使用
+            try:
+                with open(file, "r", encoding="utf-8") as f:
+                    data = json.load(f)
+                    meta = data.get("meta") or {}
+                    if isinstance(meta, dict):
+                        display = meta.get("name")
+                        if isinstance(display, str) and display.strip():
+                            name = display.strip()
+            except Exception:
+                pass
+            langs.append({"code": code, "name": name})
+        return JSONResponse(langs, status_code=200)
+    except Exception as e:
+        return JSONResponse({"error": str(e)}, status_code=500)
+
 # ============================================================#
 
 # redirect to login

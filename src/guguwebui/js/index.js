@@ -1,6 +1,33 @@
 // 控制面板页面的JavaScript功能
 document.addEventListener('alpine:init', () => {
     Alpine.data('indexData', () => ({
+        // i18n（仅本页用）
+        indexLang: 'zh-CN',
+        indexDict: {},
+        t(key, fallback = '') {
+            const val = key.split('.').reduce((o, k) => (o && o[k] != null ? o[k] : undefined), this.indexDict);
+            if (val != null) return String(val);
+            if (window.I18n && typeof window.I18n.t === 'function') {
+                const v = window.I18n.t(key);
+                if (v && v !== key) return v;
+            }
+            return fallback || key;
+        },
+        async loadLangDict() {
+            const stored = localStorage.getItem('lang') || (navigator.language || 'zh-CN');
+            this.indexLang = stored.toLowerCase().startsWith('zh') ? 'zh-CN' : 'en-US';
+            try {
+                const resp = await fetch(`lang/${this.indexLang}.json`, { cache: 'no-cache' });
+                if (resp.ok) {
+                    this.indexDict = await resp.json();
+                } else {
+                    this.indexDict = {};
+                }
+            } catch (e) {
+                console.warn('index loadLangDict failed:', e);
+                this.indexDict = {};
+            }
+        },
         serverStatus: 'loading',
         userName: '',
         serverVersion: '',
@@ -62,16 +89,25 @@ document.addEventListener('alpine:init', () => {
                 const data = await response.json();
                 
                 if (data.status === 'success') {
-                    this.showNotificationMsg(data.message || `服务器${action === 'start' ? '启动' : (action === 'stop' ? '停止' : '重启')}命令已发送`, 'success');
+                    const actionText = action === 'start'
+                        ? this.t('page.index.msg.action_start', '启动')
+                        : (action === 'stop' ? this.t('page.index.msg.action_stop', '停止') : this.t('page.index.msg.action_restart', '重启'));
+                    const msg = data.message || (
+                        this.t('page.index.msg.control_sent_prefix', '服务器') + actionText + this.t('page.index.msg.control_sent_suffix', '命令已发送')
+                    );
+                    this.showNotificationMsg(msg, 'success');
                     
                     // 延迟几秒后刷新服务器状态
                     setTimeout(() => this.checkServerStatus(), 5000);
                 } else {
-                    this.showNotificationMsg(`操作失败: ${data.message || '未知错误'}`, 'error');
+                    this.showNotificationMsg(
+                        this.t('page.index.msg.control_failed_prefix', '操作失败: ') + (data.message || this.t('common.unknown', '未知错误')),
+                        'error'
+                    );
                 }
             } catch (error) {
                 console.error('Error controlling server:', error);
-                this.showNotificationMsg('服务器控制操作失败', 'error');
+                this.showNotificationMsg(this.t('page.index.msg.control_error', '服务器控制操作失败'), 'error');
             } finally {
                 this.processingServer = false;
             }
@@ -97,12 +133,15 @@ document.addEventListener('alpine:init', () => {
                 if (data.status === 'success') {
                     this.pipPackages = data.packages || [];
                 } else {
-                    this.showNotificationMsg(`获取pip包列表失败: ${data.message || '未知错误'}`, 'error');
+                    this.showNotificationMsg(
+                        this.t('page.index.msg.pip_list_failed_prefix', '获取pip包列表失败: ') + (data.message || this.t('common.unknown', '未知错误')),
+                        'error'
+                    );
                     this.pipPackages = [];
                 }
             } catch (error) {
                 console.error('Error fetching pip packages:', error);
-                this.showNotificationMsg('获取pip包列表失败', 'error');
+                this.showNotificationMsg(this.t('page.index.msg.pip_list_failed', '获取pip包列表失败'), 'error');
                 this.pipPackages = [];
             } finally {
                 this.loadingPipPackages = false;
@@ -128,8 +167,8 @@ document.addEventListener('alpine:init', () => {
                 this.trackPipOperation(response);
             } catch (error) {
                 console.error('Error installing pip package:', error);
-                this.pipOutput.push('安装失败: ' + error.message);
-                this.showNotificationMsg('安装pip包失败', 'error');
+                this.pipOutput.push(this.t('page.index.msg.install_failed_prefix', '安装失败: ') + error.message);
+                this.showNotificationMsg(this.t('page.index.msg.install_pip_failed', '安装pip包失败'), 'error');
                 this.installingPip = false;
             }
         },
@@ -152,8 +191,8 @@ document.addEventListener('alpine:init', () => {
                 this.trackPipOperation(response);
             } catch (error) {
                 console.error('Error uninstalling pip package:', error);
-                this.pipOutput.push('卸载失败: ' + error.message);
-                this.showNotificationMsg('卸载pip包失败', 'error');
+                this.pipOutput.push(this.t('page.index.msg.uninstall_failed_prefix', '卸载失败: ') + error.message);
+                this.showNotificationMsg(this.t('page.index.msg.uninstall_pip_failed', '卸载pip包失败'), 'error');
                 this.uninstallingPip = false;
             }
         },
@@ -161,8 +200,8 @@ document.addEventListener('alpine:init', () => {
         trackPipOperation: async function(response) {
             if (!response.ok) {
                 const errorText = await response.text();
-                this.pipOutput.push('操作失败: ' + errorText);
-                this.showNotificationMsg('pip操作失败', 'error');
+                this.pipOutput.push(this.t('page.index.msg.operation_failed_prefix', '操作失败: ') + errorText);
+                this.showNotificationMsg(this.t('page.index.msg.pip_op_failed', 'pip操作失败'), 'error');
                 this.installingPip = false;
                 this.uninstallingPip = false;
                 return;
@@ -170,8 +209,8 @@ document.addEventListener('alpine:init', () => {
             
             const data = await response.json();
             if (data.status !== 'success' || !data.task_id) {
-                this.pipOutput.push('操作失败: ' + (data.message || '未知错误'));
-                this.showNotificationMsg('pip操作失败', 'error');
+                this.pipOutput.push(this.t('page.index.msg.operation_failed_prefix', '操作失败: ') + (data.message || this.t('common.unknown', '未知错误')));
+                this.showNotificationMsg(this.t('page.index.msg.pip_op_failed', 'pip操作失败'), 'error');
                 this.installingPip = false;
                 this.uninstallingPip = false;
                 return;
@@ -192,9 +231,9 @@ document.addEventListener('alpine:init', () => {
                         // 任务完成
                         if (statusData.completed) {
                             if (statusData.success) {
-                                this.showNotificationMsg('pip操作成功完成', 'success');
+                                this.showNotificationMsg(this.t('page.index.msg.pip_op_succeeded', 'pip操作成功完成'), 'success');
                             } else {
-                                this.showNotificationMsg('pip操作失败', 'error');
+                                this.showNotificationMsg(this.t('page.index.msg.pip_op_failed', 'pip操作失败'), 'error');
                             }
                             this.installingPip = false;
                             this.uninstallingPip = false;
@@ -206,13 +245,13 @@ document.addEventListener('alpine:init', () => {
                         // 继续检查进度
                         setTimeout(checkProgress, 1000);
                     } else {
-                        this.pipOutput.push('获取任务状态失败: ' + (statusData.message || '未知错误'));
+                        this.pipOutput.push(this.t('page.index.msg.get_task_status_failed_prefix', '获取任务状态失败: ') + (statusData.message || this.t('common.unknown', '未知错误')));
                         this.installingPip = false;
                         this.uninstallingPip = false;
                     }
                 } catch (error) {
                     console.error('Error checking pip task status:', error);
-                    this.pipOutput.push('获取任务状态失败: ' + error.message);
+                    this.pipOutput.push(this.t('page.index.msg.get_task_status_failed_prefix', '获取任务状态失败: ') + error.message);
                     this.installingPip = false;
                     this.uninstallingPip = false;
                 }
@@ -238,6 +277,14 @@ document.addEventListener('alpine:init', () => {
         },
         
         init() {
+            // 语言
+            this.loadLangDict();
+            document.addEventListener('i18n:changed', (e) => {
+                const nextLang = (e && e.detail && e.detail.lang) ? e.detail.lang : this.indexLang;
+                this.indexLang = nextLang.toLowerCase().startsWith('zh') ? 'zh-CN' : 'en-US';
+                this.loadLangDict();
+            });
+
             this.checkLoginStatus();
             this.checkServerStatus();
             this.refreshPipPackages();
@@ -266,11 +313,6 @@ document.addEventListener('DOMContentLoaded', function() {
     
     updateTime();
     setInterval(updateTime, 1000);
-    
-    const yearElement = document.getElementById('year');
-    if (yearElement) {
-        yearElement.textContent = new Date().getFullYear();
-    }
     
     // 获取WebUI版本
     async function getWebUIVersion() {

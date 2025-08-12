@@ -3,6 +3,39 @@
  * 从GitHub获取公告信息并显示在顶部导航栏
  */
 
+// i18n 支持
+let noticeLang = 'zh-CN';
+let noticeDict = {};
+
+// 翻译函数
+function t(key, fallback = '') {
+    // 在已加载的语言包中查找 key（支持 a.b.c 链式）
+    const val = key.split('.').reduce((o, k) => (o && o[k] != null ? o[k] : undefined), noticeDict);
+    if (val != null) return String(val);
+    // 回退到全局 I18n.t（若可用）
+    if (window.I18n && typeof window.I18n.t === 'function') {
+        const v = window.I18n.t(key);
+        if (v && v !== key) return v;
+    }
+    return fallback || key;
+}
+
+// 加载语言字典
+async function loadNoticeLangDict() {
+    // 读取本地存储语言（由 i18n.js 维护）
+    const stored = localStorage.getItem('lang') || (navigator.language || 'zh-CN');
+    noticeLang = stored.toLowerCase().startsWith('zh') ? 'zh-CN' : 'en-US';
+    try {
+        const resp = await fetch(`lang/${noticeLang}.json`, { cache: 'no-cache' });
+        if (resp.ok) {
+            noticeDict = await resp.json();
+        }
+    } catch (e) {
+        // 忽略，保持空字典，使用 fallback
+        console.warn('loadNoticeLangDict failed:', e);
+    }
+}
+
 const owner = 'LoosePrince';
 const repo = 'PF-GUGUbot-Web';
 const tag = 'notice';
@@ -41,7 +74,7 @@ function displayRelease(releaseData) {
         if (!noticeElement) return;
 
         // 从release名称中获取公告标题
-        const title = releaseData.name || '公告';
+        const title = releaseData.name || t('notice.default_title', '公告');
         // 从release正文中获取公告内容
         const body = releaseData.body || '';
         
@@ -56,7 +89,7 @@ function displayRelease(releaseData) {
             const noticeContainer = document.querySelector('.nav-notice');
             if (noticeContainer) {
                 noticeContainer.style.cursor = 'pointer';
-                noticeContainer.title = '点击查看公告详情';
+                noticeContainer.title = t('notice.click_to_view', '点击查看公告详情');
                 
                 noticeContainer.addEventListener('click', () => {
                     // 创建模态窗口显示公告详情
@@ -65,7 +98,7 @@ function displayRelease(releaseData) {
             }
         }
     } catch (error) {
-        console.error('处理公告数据出错:', error);
+        console.error(t('notice.error.processing_data', '处理公告数据出错:'), error);
     }
 }
 
@@ -98,9 +131,9 @@ function showNoticeModal(title, noticeData) {
             </div>
             <div class="overflow-hidden">
                 ${noticeData.bg ? `<div class="w-full flex justify-center p-3" id="notice-img-container">
-                    <img src="${noticeData.bg}" alt="${noticeData.bgtitle || '公告图片'}" 
+                    <img src="${noticeData.bg}" alt="${noticeData.bgtitle || t('notice.image_alt', '公告图片')}" 
                         class="max-w-full h-auto rounded-lg shadow-md" 
-                        onerror="this.parentElement.style.display='none'; document.getElementById('notice-content').style.maxHeight = 'calc(80vh - 180px)';" />
+                        onerror="this.parentElement.style.display='none'; document.getElementById('notice-content').style.maxHeight = 'calc(80vh - 180px);" />
                 </div>` : ''}
                 <div id="notice-content" class="p-5 overflow-y-auto" style="max-height: calc(80vh - ${noticeData.bg ? '280' : '180'}px);">
                     <div class="prose dark:prose-invert prose-sm max-w-none">${markdownToHtml(noticeData.text)}</div>
@@ -108,7 +141,7 @@ function showNoticeModal(title, noticeData) {
             </div>
             <div class="p-4 border-t border-gray-200 dark:border-gray-700 text-right">
                 <button class="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:focus:ring-offset-gray-800">
-                    关闭
+                    ${t('notice.close', '关闭')}
                 </button>
             </div>
         `;
@@ -126,7 +159,7 @@ function showNoticeModal(title, noticeData) {
             </div>
             <div class="p-4 border-t border-gray-200 dark:border-gray-700 text-right">
                 <button class="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:focus:ring-offset-gray-800">
-                    关闭
+                    ${t('notice.close', '关闭')}
                 </button>
             </div>
         `;
@@ -217,17 +250,17 @@ async function fetchReleases() {
     try {
         const response = await fetch(url);
         if (!response.ok) {
-            throw new Error('网络响应错误');
+            throw new Error(t('notice.error.network_response', '网络响应错误'));
         }
 
         const data = await response.json();
         localStorage.setItem(cacheKey, JSON.stringify({ timestamp: now, data }));
         displayRelease(data);
     } catch (error) {
-        console.error('获取公告失败:', error);
+        console.error(t('notice.error.fetch_failed', '获取公告失败:'), error);
         const noticeElement = document.querySelector('.nav-notice-text');
         if (noticeElement) {
-            noticeElement.innerHTML = '<i class="fas fa-exclamation-circle mr-1.5"></i> 获取公告失败';
+            noticeElement.innerHTML = `<i class="fas fa-exclamation-circle mr-1.5"></i> ${t('notice.error.fetch_failed_text', '获取公告失败')}`;
         }
     }
 }
@@ -236,16 +269,27 @@ async function fetchReleases() {
 window.testNotice = function(jsonString) {
     try {
         const data = {
-            name: '测试公告',
+            name: t('notice.test.title', '测试公告'),
             body: jsonString
         };
         displayRelease(data);
     } catch (error) {
-        console.error('测试公告错误:', error);
+        console.error(t('notice.error.test_error', '测试公告错误:'), error);
     }
 };
 
 // 页面加载完成后初始化公告
 document.addEventListener('DOMContentLoaded', () => {
+    // 初始化语言
+    loadNoticeLangDict();
+    
+    // 获取公告
     fetchReleases();
+    
+    // 监听语言切换
+    document.addEventListener('i18n:changed', (e) => {
+        const nextLang = (e && e.detail && e.detail.lang) ? e.detail.lang : noticeLang;
+        noticeLang = nextLang.toLowerCase().startsWith('zh') ? 'zh-CN' : 'en-US';
+        loadNoticeLangDict();
+    });
 });

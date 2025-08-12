@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="zh-CN" class="h-full" x-data="{ darkMode: localStorage.getItem('darkMode') === 'true' }" :class="{ 'dark': darkMode }">
 <head>
-  <title>404 - 页面未找到</title>
+  <title data-i18n="page.404.title"></title>
   <!-- 元信息 -->
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -15,6 +15,8 @@
   <script defer src="js/alpine.min.js"></script>
   <!-- Font Awesome -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <!-- i18n -->
+  <script defer src="js/i18n.js"></script>
   <script>
     tailwind.config = {
       darkMode: 'class',
@@ -67,18 +69,18 @@
     </div>
     
     <!-- 错误信息 -->
-    <h1 class="text-3xl font-bold mb-4 text-gray-800 dark:text-white">页面未找到</h1>
-    <p class="text-xl text-gray-600 dark:text-gray-300 mb-8">很抱歉，您访问的页面不存在或失效。</p>
+    <h1 class="text-3xl font-bold mb-4 text-gray-800 dark:text-white" data-i18n="page.404.heading"></h1>
+    <p class="text-xl text-gray-600 dark:text-gray-300 mb-8" data-i18n="page.404.description"></p>
     
     <!-- 按钮 -->
     <div class="flex flex-col sm:flex-row gap-4 justify-center">
       <a href="./index" class="px-6 py-3 bg-primary-600 hover:bg-primary-700 text-white font-medium rounded-lg shadow-md hover:shadow-lg transition-all duration-300 flex items-center justify-center">
         <i class="fas fa-home mr-2"></i>
-        返回首页
+        <span data-i18n="page.404.back_home"></span>
       </a>
       <button onclick="history.back()" class="px-6 py-3 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-800 dark:text-gray-200 font-medium rounded-lg shadow-md hover:shadow-lg transition-all duration-300 flex items-center justify-center">
         <i class="fas fa-arrow-left mr-2"></i>
-        返回上一页
+        <span data-i18n="page.404.back_prev"></span>
       </button>
     </div>
     
@@ -95,12 +97,7 @@
   
   <!-- 页脚 -->
   <footer class="absolute bottom-4 w-full text-center text-gray-500 dark:text-gray-400 text-sm">
-    <p>MCDR WebUI © <span id="year"></span></p>
+    <p data-i18n="common.copyright"></p>
   </footer>
-  
-  <script>
-    // 设置当前年份
-    document.getElementById('year').textContent = new Date().getFullYear();
-  </script>
 </body>
 </html>
