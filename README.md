@@ -1,8 +1,6 @@
 # PF-MCDR-WebUI
 为 MCDR 开发的在线 WebUI 插件
 
-[![页面浏览量计数](https://badges.toozhao.com/badges/01JC0ZMB6718E924N6H2FEZRC5/green.svg)](/) 
-[![查看次数起始时间](https://img.shields.io/badge/查看次数统计起始于-2024%2F11%2F06-2?style=flat-square)](/)
 [![仓库大小](https://img.shields.io/github/repo-size/LoosePrince/PF-MCDR-WebUI?style=flat-square&label=仓库占用)](/) 
 [![最新版](https://img.shields.io/github/v/release/LoosePrince/PF-MCDR-WebUI?style=flat-square&label=最新版)](https://github.com/LoosePrince/PF-MCDR-WebUI/releases/latest/)
 [![议题](https://img.shields.io/github/issues/LoosePrince/PF-MCDR-WebUI?style=flat-square&label=Issues)](https://github.com/LoosePrince/PF-MCDR-WebUI/issues) 
@@ -117,8 +115,8 @@ A:并不会深入涉及管理MC服务器，如有这方面的需求请查询MC�
 Q:可以加入开发吗？<br>
 A:当然可以，您可以提交 [pr](https://github.com/LoosePrince/PF-MCDR-WebUI/pulls) 或者 参与交流 来参与开发。
 
-Q:会支持多语言吗。<br>
-A:我只会中文，你要是愿意可以参与。
+Q:会支持我的语言吗。<br>
+A:我只会中文，你要是愿意可以参与，目前已有中午（zh-CN）和英文（en-US），在 [lang文件夹](https://github.com/LoosePrince/PF-MCDR-WebUI/tree/v1.5.0/src/guguwebui/lang)。
 
 Q:为什么有私货（有未使用的插件，如gugubot等）。<br>
 A:因为这就是为它所开发（虽然GUGUbot的配置一直不完善[doge]）。
@@ -132,15 +130,9 @@ A:WebUI不打算使用任何插件前置，如果有好的方案我们会考虑�
 Q:[PIM插件](https://github.com/LoosePrince/PF-MCDR-WebUI/blob/main/src/guguwebui/utils/PIM.py)是什么？<br>
 A:[PIM插件](https://github.com/LoosePrince/PF-MCDR-WebUI/blob/main/src/guguwebui/utils/PIM.py)是WebUI的插件安装管理器，它可以帮助您安装、卸载、更新插件，并且可以查看插件信息。
 
-Q:对于开发者如何提供配置文件以支持中文描述?
+Q:对于开发者如何提供配置文件以支持多语言（中文、英文等）描述?
 
-A:如下配置
-> `yml文件` 识别每项上一行注释作为中文标题，使用 `::` 分割，第二项为副标题，例 `标题::副标题` ，请注意，使用的是英文的符号；
->
-> `json文件` 需要创建同级文件 `需要加标题的配置文件名_lang.josn` 例如 `abc_lang.json` 则会为 `abc.json` 创建中文标题，使用 `[标题,副标题]` 创建标题和副标题，参考示例: [config_lang.json](https://github.com/LoosePrince/PF-MCDR-WebUI/blob/main/config_lang.json)；
->
-> `html格式`, 使用 `main.json` 在其中使用键对值的方式指定每个配置文件对应的 `html文件` ，届时加载时会加载 `html文件内容` ，如果您有样式请不要使用外链式加载本地css和js，请使用 `style` 和 `script` 标签。
-
+A:查看 [插件兼容](https://pf-doc.pfingan.com/main/#/PF-webui/开发/插件兼容) 文档。
 
 ## 示例图
 
