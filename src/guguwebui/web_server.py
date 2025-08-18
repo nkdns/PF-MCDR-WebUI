@@ -52,6 +52,9 @@ templates = Jinja2Templates(directory=f"{STATIC_PATH}/templates")
 # 全局LogWatcher实例
 log_watcher = LogWatcher()
 
+# Web在线玩家心跳（基于 /api/chat/get_new_messages 请求），值为最近心跳Unix秒
+WEB_ONLINE_PLAYERS: dict[str, int] = {}
+
 # 用于保存pip任务状态的字典
 pip_tasks = {}
 
@@ -1502,10 +1505,30 @@ async def save_config_file(request: Request, data: SaveContent):
 # read MC server status
 @app.get("/api/get_server_status")
 async def get_server_status(request: Request):
-    if not request.session.get("logged_in"):
-        return JSONResponse(
-            {"status": "error", "message": "User not logged in"}, status_code=401
-        )
+    # 认证：允许管理员已登录，或携带有效的聊天会话ID
+    permitted = False
+    try:
+        if request.session.get("logged_in"):
+            permitted = True
+        else:
+            from .utils.constant import user_db
+            session_id = request.query_params.get("session_id", "")
+            if session_id and session_id in user_db["chat_sessions"]:
+                sess = user_db["chat_sessions"][session_id]
+                try:
+                    expire_time = datetime.datetime.fromisoformat(sess["expire_time"].replace('Z', '+00:00'))
+                    if datetime.datetime.now(datetime.timezone.utc) <= expire_time:
+                        permitted = True
+                    else:
+                        # 过期则清理
+                        del user_db["chat_sessions"][session_id]
+                        user_db.save()
+                except Exception:
+                    pass
+    except Exception:
+        pass
+    if not permitted:
+        return JSONResponse({"status": "error", "message": "Unauthorized"}, status_code=401)
     server:PluginServerInterface = app.state.server_interface
 
     server_status = "online" if server.is_server_running() or server.is_server_startup() else "offline"
@@ -3185,6 +3208,7 @@ async def get_new_chat_messages(request: Request):
     try:
         data = await request.json()
         after_id = data.get("after_id", 0)
+        player_id_heartbeat = data.get("player_id")
         
         # 导入聊天日志记录器
         from .utils.chat_logger import ChatLogger
@@ -3212,11 +3236,42 @@ async def get_new_chat_messages(request: Request):
                 m['uuid'] = uuid_val
         except Exception:
             pass
+
+        # 记录Web在线心跳（+5秒）
+        try:
+            if isinstance(player_id_heartbeat, str) and player_id_heartbeat:
+                WEB_ONLINE_PLAYERS[player_id_heartbeat] = int(time.time()) + 5
+        except Exception:
+            pass
+
+        # 生成在线列表：游戏在线（通过 get_java_server_info），Web在线（通过心跳）
+        online_web = set(pid for pid, until in WEB_ONLINE_PLAYERS.items() if until >= int(time.time()))
+        online_game = set()
+        try:
+            # 优先通过RCON获取具体在线玩家列表
+            server:PluginServerInterface = app.state.server_interface
+            if hasattr(server, "is_rcon_running") and server.is_rcon_running():
+                try:
+                    feedback = server.rcon_query("list")
+                    # 期望形如: There are 2 of a max of 20 players online: player1, player2
+                    if ":" in feedback:
+                        names_part = feedback.split(":", 1)[1].strip()
+                        if names_part:
+                            for name in [n.strip() for n in names_part.split(",") if n.strip()]:
+                                online_game.add(name)
+                except Exception:
+                    pass
+        except Exception:
+            pass
         
         return JSONResponse({
             "status": "success",
             "messages": messages,
-            "last_message_id": chat_logger.get_last_message_id()
+            "last_message_id": chat_logger.get_last_message_id(),
+            "online": {
+                "web": list(online_web),
+                "game": list(online_game)
+            }
         })
     except Exception as e:
         server:PluginServerInterface = app.state.server_interface
@@ -3353,6 +3408,12 @@ async def send_chat_message(request: Request):
         # 执行tellraw命令
         tellraw_command = f'/tellraw @a {json.dumps(tellraw_json, ensure_ascii=False)}'
         server.execute(tellraw_command)
+        
+        # 记录Web在线心跳（发送者计为在线5秒）
+        try:
+            WEB_ONLINE_PLAYERS[player_id] = int(time.time()) + 5
+        except Exception:
+            pass
         
         # 记录到聊天日志
         try:

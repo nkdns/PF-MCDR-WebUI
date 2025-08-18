@@ -107,7 +107,7 @@
     </style>
 </head>
 <body class="h-full bg-gradient-to-br from-gray-50 via-gray-100 to-gray-50 dark:from-gray-900 dark:via-gray-950 dark:to-gray-900">
-    <div id="chatApp" x-data="chatApp()" class="min-h-full">
+    <div id="chatApp" x-data="chatApp()" class="min-h-full" x-init="$nextTick(()=>{})">
         <header class="sticky top-0 z-30 bg-white/80 dark:bg-gray-900/60 backdrop-blur supports-[backdrop-filter]:bg-white/60 dark:supports-[backdrop-filter]:bg-gray-900/40 border-b border-gray-200/70 dark:border-gray-800">
             <div class="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
                 <div class="flex items-center justify-between h-16">
@@ -297,10 +297,43 @@
             <!-- 聊天界面（统一卡片风格） -->
             <div x-show="isLoggedIn" class="relative mx-auto w-11/12 max-w-3xl">
                 <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-xl backdrop-blur-sm border border-gray-200 dark:border-gray-700">
-                    <div class="px-6 pt-4 pb-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
+                    <!-- 手机端：两行顶栏 -->
+                    <div class="px-4 pt-3 pb-3 border-b border-gray-200 dark:border-gray-700 md:hidden">
+                        <div class="flex items-center justify-between">
+                            <h2 class="text-base font-semibold text-gray-800 dark:text-gray-200" data-i18n="page.chat.room.title"></h2>
+                            <div class="flex items-center space-x-2">
+                                <button @click="toggleAvatarSource()" class="text-xs px-2 py-1 rounded-md border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700">
+                                    <span x-show="avatarSource === 'crafatar'" data-i18n="page.chat.avatar_source.crafatar"></span>
+                                    <span x-show="avatarSource === 'mccag'" data-i18n="page.chat.avatar_source.mccag"></span>
+                                </button>
+                                <button @click="toggleMcStyleMode()" class="text-xs px-2 py-1 rounded-md border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700">
+                                    <span x-show="mcStyleMode" data-i18n="page.chat.mc_style.mc"></span>
+                                    <span x-show="!mcStyleMode" data-i18n="page.chat.mc_style.standard"></span>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="mt-2 flex items-center justify-between text-xs text-gray-500 dark:text-gray-400">
+                            <div>
+                                <span x-text="serverStatus"></span>
+                                <span class="ml-2" x-text="serverVersion"></span>
+                                <span class="ml-2" x-text="serverPlayers"></span>
+                            </div>
+                            <button @click="showOnlinePanel = true" class="inline-flex items-center justify-center w-8 h-8 rounded-md border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700">
+                                <i class="fas fa-users"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- 桌面端：单行顶栏 -->
+                    <div class="hidden md:flex items-center justify-between px-6 pt-4 pb-4 border-b border-gray-200 dark:border-gray-700">
                         <div>
                             <h2 class="text-lg font-semibold text-gray-800 dark:text-gray-200" data-i18n="page.chat.room.title"></h2>
-                            <p class="hidden md:block text-sm text-gray-600 dark:text-gray-400" data-i18n="page.chat.room.desc"></p>
+                            <p class="text-sm text-gray-600 dark:text-gray-400" data-i18n="page.chat.room.desc"></p>
+                            <div class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                                <span x-text="serverStatus"></span>
+                                <span class="ml-2" x-text="serverVersion"></span>
+                                <span class="ml-2" x-text="serverPlayers"></span>
+                            </div>
                         </div>
                         <div class="flex items-center space-x-2">
                             <button @click="toggleAvatarSource()" class="text-xs px-2 py-1 rounded-md border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700">
@@ -408,6 +441,46 @@
                     </div>
                 </div>
             </div>
+        <!-- 桌面端右侧在线列表（置于chatApp作用域内） -->
+        <div x-show="isLoggedIn" x-cloak class="hidden md:block fixed right-4 top-24 w-64 bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 p-4 z-20">
+            <h3 class="text-sm font-semibold text-gray-800 dark:text-gray-200 mb-2" data-i18n="page.index.online_players"></h3>
+            <div class="space-y-2 max-h-80 overflow-y-auto">
+                <template x-for="name in Array.from(new Set([...(onlineGame||[]), ...(onlineWeb||[])]))" :key="name">
+                    <div class="flex items-center justify-between text-sm text-gray-700 dark:text-gray-300">
+                        <span x-text="name"></span>
+                        <span>
+                            <i class="fas fa-gamepad mr-1 text-green-500" x-show="onlineGame && onlineGame.includes(name)"></i>
+                            <i class="fas fa-globe text-blue-500" x-show="onlineWeb && onlineWeb.includes(name)"></i>
+                        </span>
+                    </div>
+                </template>
+                <div x-show="(!onlineGame || onlineGame.length===0) && (!onlineWeb || onlineWeb.length===0)" class="text-xs text-gray-500 dark:text-gray-400" data-i18n="page.chat.room.empty.title"></div>
+            </div>
+        </div>
+
+        <!-- 移动端抽屉在线列表（置于chatApp作用域内） -->
+        <div x-show="showOnlinePanel" x-cloak class="md:hidden fixed inset-0 z-40" aria-modal="true">
+            <div class="absolute inset-0 bg-black/30" @click="showOnlinePanel = false"></div>
+            <div class="absolute right-0 top-0 bottom-0 w-60 bg-white dark:bg-gray-800 shadow-xl p-4 border-l border-gray-200 dark:border-gray-700">
+                <div class="flex items-center justify-between mb-2">
+                    <h3 class="text-sm font-semibold text-gray-800 dark:text-gray-200" data-i18n="page.index.online_players"></h3>
+                    <button @click="showOnlinePanel = false" class="text-gray-600 dark:text-gray-300"><i class="fas fa-times"></i></button>
+                </div>
+                <div class="space-y-2 max-h-[80vh] overflow-y-auto">
+                    <template x-for="name in Array.from(new Set([...(onlineGame||[]), ...(onlineWeb||[])]))" :key="name">
+                        <div class="flex items-center justify-between text-sm text-gray-700 dark:text-gray-300">
+                            <span x-text="name"></span>
+                            <span>
+                                <i class="fas fa-gamepad mr-1 text-green-500" x-show="onlineGame && onlineGame.includes(name)"></i>
+                                <i class="fas fa-globe text-blue-500" x-show="onlineWeb && onlineWeb.includes(name)"></i>
+                            </span>
+                        </div>
+                    </template>
+                    <div x-show="(!onlineGame || onlineGame.length===0) && (!onlineWeb || onlineWeb.length===0)" class="text-xs text-gray-500 dark:text-gray-400" data-i18n="page.chat.room.empty.title"></div>
+                </div>
+            </div>
+        </div>
+
         </main>
     </div>
 

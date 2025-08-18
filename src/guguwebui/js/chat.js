@@ -16,6 +16,36 @@ function chatApp() {
             } catch (_) {}
             return fallback || key;
         },
+        
+        // 服务器状态刷新
+        startStatusRefresh() {
+            if (this.statusInterval) {
+                clearInterval(this.statusInterval);
+            }
+            // 立即拉取一次
+            this.fetchServerStatus();
+            // 每5秒刷新
+            this.statusInterval = setInterval(() => {
+                if (this.isLoggedIn) {
+                    this.fetchServerStatus();
+                }
+            }, 5000);
+        },
+        async fetchServerStatus() {
+            try {
+                const sessionId = localStorage.getItem('chat_session_id') || '';
+                const url = sessionId ? `/api/get_server_status?session_id=${encodeURIComponent(sessionId)}` : '/api/get_server_status';
+                const resp = await fetch(url);
+                const data = await resp.json();
+                if (data) {
+                    this.serverStatus = data.status || 'unknown';
+                    this.serverVersion = data.version || '';
+                    this.serverPlayers = data.players || '0/0';
+                }
+            } catch (e) {
+                // 静默失败
+            }
+        },
         async loadLangDict() {
             const stored = localStorage.getItem('lang') || (navigator.language || 'zh-CN');
             this.chatLang = stored.toLowerCase().startsWith('zh') ? 'zh-CN' : 'en-US';
@@ -65,6 +95,15 @@ function chatApp() {
         isSending: false,  // 发送消息状态
         lastSendAtMs: 0,   // 前端冷却：上次发送时间戳（ms）
         
+        // 服务器状态与在线列表
+        serverStatus: 'unknown',
+        serverVersion: '',
+        serverPlayers: '',
+        statusInterval: null,
+        onlineWeb: [],
+        onlineGame: [],
+        showOnlinePanel: false,
+        
         // 主题管理
         darkMode: false,
         
@@ -107,6 +146,8 @@ function chatApp() {
             
             // 启动定时刷新（每1秒）
             this.startMessageRefresh();
+            // 启动服务器状态刷新（每5秒）
+            this.startStatusRefresh();
             
             // 页面卸载时清理资源
             window.addEventListener('beforeunload', () => {
@@ -154,6 +195,10 @@ function chatApp() {
             if (this.refreshInterval) {
                 clearInterval(this.refreshInterval);
                 this.refreshInterval = null;
+            }
+            if (this.statusInterval) {
+                clearInterval(this.statusInterval);
+                this.statusInterval = null;
             }
         },
         
@@ -205,11 +250,11 @@ function chatApp() {
                     headers: {
                         'Content-Type': 'application/json'
                     },
-                    body: JSON.stringify({ after_id: this.lastMessageId })
+                    body: JSON.stringify({ after_id: this.lastMessageId, player_id: this.currentPlayer })
                 });
                 
                 const result = await response.json();
-                if (result.status === 'success' && result.messages.length > 0) {
+                if (result.status === 'success' && result.messages && result.messages.length > 0) {
                     // 将新消息添加到列表顶部
                     this.chatMessages = [...result.messages, ...this.chatMessages];
                     
@@ -223,6 +268,10 @@ function chatApp() {
                     
                     // 更新消息计数
                     this.messageOffset = this.chatMessages.length;
+                }
+                if (result.status === 'success' && result.online) {
+                    this.onlineWeb = Array.isArray(result.online.web) ? result.online.web : [];
+                    this.onlineGame = Array.isArray(result.online.game) ? result.online.game : [];
                 }
             } catch (error) {
                 console.error('加载新消息失败:', error);
