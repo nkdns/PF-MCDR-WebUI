@@ -957,7 +957,8 @@
       "placeholder_username": "Enter username",
       "placeholder_password": "Enter password",
       "placeholder_temp": "Enter temporary code",
-      "temp_tip": "Get temporary login code via !!webui temp"
+      "temp_tip": "Get temporary login code via !!webui temp",
+      "go_chat": "I'm a player, I need to access the server chat page"
     },
     "gugubot": {
       "title": "GUGUBot Settings",

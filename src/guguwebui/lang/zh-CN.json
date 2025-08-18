@@ -957,7 +957,8 @@
       "placeholder_username": "请输入账号",
       "placeholder_password": "请输入密码",
       "placeholder_temp": "请输入临时登录码",
-      "temp_tip": "通过 !!webui temp 命令获取临时登录码"
+      "temp_tip": "通过 !!webui temp 命令获取临时登录码",
+      "go_chat": "我是玩家，我需要访问服务器聊天页"
     },
     "gugubot": {
       "title": "GUGUBot 配置",
