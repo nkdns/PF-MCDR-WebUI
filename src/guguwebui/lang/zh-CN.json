@@ -273,8 +273,8 @@
       "mccag": "MCCAG"
     },
     "mc_style": {
-      "enable": "MC样式",
-      "disable": "标准样式"
+      "mc": "MC样式",
+      "standard": "标准样式"
     },
     "msg": {
       "generate_failed": "生成验证码失败",

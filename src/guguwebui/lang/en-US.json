@@ -272,8 +272,8 @@
       "mccag": "MCCAG"
     },
     "mc_style": {
-      "enable": "MC Style",
-      "disable": "Standard Style"
+      "mc": "MC Style",
+      "standard": "Standard Style"
     },
     "msg": {
       "generate_failed": "Failed to generate code",
