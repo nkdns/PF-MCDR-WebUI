@@ -2995,6 +2995,42 @@ async def chat_login(request: Request):
         if not verify_password(password, user_db["chat_users"][player_id]["password"]):
             return JSONResponse({"status": "error", "message": "密码错误"}, status_code=400)
         
+        # 登录IP限制：同一玩家最多允许两个不同IP同时在线
+        try:
+            client_ip = request.client.host if request and request.client else "unknown"
+        except Exception:
+            client_ip = "unknown"
+        
+        # 清理过期会话并统计该玩家的有效IP集合
+        now_utc = datetime.datetime.now(datetime.timezone.utc)
+        active_ips = set()
+        sessions_to_delete = []
+        for sid, sess in list(user_db["chat_sessions"].items()):
+            try:
+                expire_time = datetime.datetime.fromisoformat(sess["expire_time"].replace('Z', '+00:00'))
+            except Exception:
+                # 异常数据直接清理
+                sessions_to_delete.append(sid)
+                continue
+            if now_utc > expire_time:
+                sessions_to_delete.append(sid)
+                continue
+            if sess.get("player_id") == player_id:
+                ip = sess.get("ip") or "unknown"
+                active_ips.add(ip)
+        # 执行清理
+        for sid in sessions_to_delete:
+            try:
+                del user_db["chat_sessions"][sid]
+            except KeyError:
+                pass
+        if sessions_to_delete:
+            user_db.save()
+        
+        # 若已有两个不同IP且当前IP不在其中，拒绝登录
+        if len(active_ips) >= 2 and client_ip not in active_ips:
+            return JSONResponse({"status": "error", "message": "该账号登录IP已达上限，请先在其他设备退出或等待会话过期"}, status_code=429)
+        
         # 生成会话ID
         session_id = secrets.token_hex(16)
         
@@ -3007,7 +3043,9 @@ async def chat_login(request: Request):
         # 保存会话信息
         user_db["chat_sessions"][session_id] = {
             "player_id": player_id,
-            "expire_time": str(expire_time)
+            "expire_time": str(expire_time),
+            "ip": client_ip,
+            "last_sent_ms": 0
         }
         user_db.save()
         
@@ -3241,6 +3279,19 @@ async def send_chat_message(request: Request):
             del user_db["chat_sessions"][session_id]
             user_db.save()
             return JSONResponse({"status": "error", "message": "会话已过期，请重新登录"}, status_code=401)
+
+        # 发言速率限制：同一会话2秒/条
+        try:
+            now_ms = int(datetime.datetime.now(datetime.timezone.utc).timestamp() * 1000)
+            last_ms = int(session.get("last_sent_ms") or 0)
+            if now_ms - last_ms < 2000:
+                return JSONResponse({"status": "error", "message": "发送过于频繁，请稍后再试"}, status_code=429)
+            # 通过频控，更新发送时间
+            session["last_sent_ms"] = now_ms
+            user_db.save()
+        except Exception:
+            # 出现异常不影响正常发送
+            pass
         
         # 获取服务器接口
         server:PluginServerInterface = app.state.server_interface
@@ -3251,6 +3302,27 @@ async def send_chat_message(request: Request):
         config = server.load_config_simple("config.json", DEFALUT_CONFIG, echo_in_console=False)
         if not config.get("public_chat_to_game_enabled", False):
             return JSONResponse({"status": "error", "message": "聊天到游戏功能未启用"}, status_code=403)
+
+        # 如果当前服务器内没有玩家在线，则仅记录，不下发到游戏
+        try:
+            from .utils.utils import get_java_server_info
+            info = get_java_server_info()
+            player_count_raw = info.get("server_player_count")
+            player_count = int(player_count_raw) if player_count_raw is not None and str(player_count_raw).isdigit() else 0
+        except Exception:
+            player_count = 0
+        if player_count <= 0:
+            # 仅记录到聊天日志
+            try:
+                from .utils.chat_logger import ChatLogger
+                chat_logger = ChatLogger()
+                chat_logger.add_message(player_id, message)
+            except Exception as e:
+                server.logger.warning(f"记录聊天消息失败: {e}")
+            return JSONResponse({
+                "status": "success",
+                "message": "已记录（当前无在线玩家）"
+            })
         
         # 获取玩家UUID（如果可用）
         try:

@@ -63,6 +63,7 @@ function chatApp() {
         lastMessageId: 0,  // 最后一条消息的ID
         refreshInterval: null,  // 定时刷新间隔
         isSending: false,  // 发送消息状态
+        lastSendAtMs: 0,   // 前端冷却：上次发送时间戳（ms）
         
         // 主题管理
         darkMode: false,
@@ -579,6 +580,11 @@ function chatApp() {
         // 发送消息
         async sendMessage() {
             if (!this.chatMessage.trim() || this.isSending) return;
+            // 前端冷却：2秒内不允许再次发送
+            const nowMs = Date.now();
+            if (nowMs - this.lastSendAtMs < 2000) {
+                return;
+            }
             
             const message = this.chatMessage.trim();
             this.isSending = true;
@@ -607,6 +613,7 @@ function chatApp() {
                 if (result.status === 'success') {
                     // 清空输入框
                     this.chatMessage = '';
+                    this.lastSendAtMs = Date.now();
                     
                     // 显示成功提示
                     this.showMessageNotification(this.t('page.chat.msg.send_success', '消息发送成功'), 'success');
