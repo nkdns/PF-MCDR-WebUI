@@ -32,10 +32,16 @@ pwd_context = CryptContext(schemes=["argon2"], deprecated="auto")
 # token: {token : {expire_time, user_name}}
 # user : {username: password}
 # temp : {temppassword: expire_time}
+# chat_users: {player_id: {password: hashed_password, created_time: timestamp}}
+# chat_verification: {code: {player_id: None, expire_time: timestamp, used: False}}
+# chat_sessions: {session_id: {player_id: player_id, expire_time: timestamp}}
 DEFALUT_DB = {
     "token" : {},
     "user": {},
-    "temp": {}
+    "temp": {},
+    "chat_users": {},
+    "chat_verification": {},
+    "chat_sessions": {}
 }
 DEFALUT_CONFIG = {
     "host": "127.0.0.1",
@@ -51,7 +57,11 @@ DEFALUT_CONFIG = {
     "ssl_enabled": False,  # 是否启用HTTPS
     "ssl_certfile": "",  # SSL证书文件路径
     "ssl_keyfile": "",  # SSL密钥文件路径
-    "ssl_keyfile_password": ""  # SSL密钥文件密码（如果有）
+    "ssl_keyfile_password": "",  # SSL密钥文件密码（如果有）
+    "public_chat_enabled": False,  # 是否启用公开聊天页
+    "public_chat_to_game_enabled": False,  # 公开聊天页发送消息到游戏
+    "chat_verification_expire_minutes": 10,  # 聊天页验证码过期时间（分钟）
+    "chat_session_expire_hours": 24  # 聊天页会话过期时间（小时）
 }
 
 user_db = table(USER_DB_PATH, default_content=DEFALUT_DB)
@@ -76,6 +86,10 @@ class saveconfig(BaseModel):
     ssl_certfile: Optional[str] = None
     ssl_keyfile: Optional[str] = None
     ssl_keyfile_password: Optional[str] = None
+    public_chat_enabled: Optional[bool] = None
+    public_chat_to_game_enabled: Optional[bool] = None
+    chat_verification_expire_minutes: Optional[int] = None
+    chat_session_expire_hours: Optional[int] = None
 
 class toggleconfig(BaseModel):
     plugin_id: str

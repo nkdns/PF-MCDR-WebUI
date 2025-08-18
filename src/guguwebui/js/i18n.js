@@ -125,14 +125,26 @@
     if (observer) return;
     try {
       observer = new MutationObserver((mutations) => {
-        let needApply = false;
+        const rootsToApply = new Set();
         for (const m of mutations) {
-          if (m.type === 'childList' && (m.addedNodes && m.addedNodes.length > 0)) {
-            needApply = true;
-            break;
-          }
+          if (m.type !== 'childList' || !m.addedNodes || m.addedNodes.length === 0) continue;
+          m.addedNodes.forEach((node) => {
+            if (!node || node.nodeType !== 1) return; // 仅元素节点
+            const el = node;
+            // 频繁变动区域（如聊天消息容器）若无 i18n 标记则忽略
+            const inChatStream = !!el.closest && !!el.closest('.chat-messages-container');
+            const hasI18nHere = el.matches && (el.matches('[data-i18n], [data-i18n-placeholder]'));
+            const hasI18nInside = el.querySelector && el.querySelector('[data-i18n], [data-i18n-placeholder]');
+            if (inChatStream && !hasI18nHere && !hasI18nInside) return;
+            if (hasI18nHere || hasI18nInside) {
+              // 以更接近变动处的根节点为应用范围，减少整页扫描
+              rootsToApply.add(el);
+            }
+          });
         }
-        if (needApply) scheduleApply(document);
+        if (rootsToApply.size > 0) {
+          rootsToApply.forEach((root) => scheduleApply(root));
+        }
       });
       observer.observe(document.documentElement || document.body, {
         childList: true,

@@ -540,6 +540,123 @@
                     </div>
                 </div>
                 
+                <!-- 公开聊天页设置 -->
+                <div class="bg-white dark:bg-gray-800 shadow-md rounded-lg p-6 mb-6">
+                    <h2 class="text-xl font-semibold mb-4 text-gray-800 dark:text-gray-200 flex items-center">
+                        <i class="fas fa-comments mr-2"></i> <span data-i18n="page.settings.public_chat.title"></span>
+                    </h2>
+                    
+                    <div class="space-y-4">
+                        <div class="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg text-sm text-blue-800 dark:text-blue-300 mb-4">
+                            <div class="flex">
+                                <div class="flex-shrink-0">
+                                    <i class="fas fa-info-circle mt-0.5"></i>
+                                </div>
+                                <div class="ml-3">
+                                    <p data-i18n="page.settings.public_chat.tip"></p>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- 启用公开聊天页 -->
+                        <div class="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
+                            <div class="flex-1">
+                                <h3 class="text-lg font-medium text-gray-800 dark:text-gray-200" data-i18n="page.settings.public_chat.enable"></h3>
+                                <p class="text-sm text-gray-600 dark:text-gray-400 mt-1" data-i18n="page.settings.public_chat.enable_desc"></p>
+                            </div>
+                            <div class="flex items-center">
+                                <label class="relative inline-flex items-center cursor-pointer">
+                                    <input type="checkbox" x-model="publicChatEnabled" class="sr-only peer" @change="savePublicChatSettings">
+                                    <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600"></div>
+                                </label>
+                            </div>
+                        </div>
+                        
+                        <!-- 发送消息到游戏 -->
+                        <div class="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
+                            <div class="flex-1">
+                                <h3 class="text-lg font-medium text-gray-800 dark:text-gray-200" data-i18n="page.settings.public_chat.enable_to_game"></h3>
+                                <p class="text-sm text-gray-600 dark:text-gray-400 mt-1" data-i18n="page.settings.public_chat.enable_to_game_desc"></p>
+                            </div>
+                            <div class="flex items-center">
+                                <label class="relative inline-flex items-center cursor-pointer">
+                                    <input type="checkbox" x-model="publicChatToGameEnabled" class="sr-only peer" @change="savePublicChatSettings" :disabled="!publicChatEnabled">
+                                    <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed"></div>
+                                </label>
+                            </div>
+                        </div>
+                        
+                        <!-- 验证码过期时间 -->
+                        <div class="p-4 bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
+                            <div class="flex-1">
+                                <h3 class="text-lg font-medium text-gray-800 dark:text-gray-200 mb-2" data-i18n="page.settings.public_chat.verification_expire.title"></h3>
+                                <p class="text-sm text-gray-600 dark:text-gray-400 mb-3" data-i18n="page.settings.public_chat.verification_expire.desc"></p>
+                                <div class="flex items-center space-x-2">
+                                    <input 
+                                        type="number" 
+                                        x-model="chatVerificationExpireMinutes" 
+                                        min="1" 
+                                        max="60"
+                                        class="w-20 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                    >
+                                    <span class="text-sm text-gray-600 dark:text-gray-400" data-i18n="page.settings.public_chat.verification_expire.unit_min"></span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- 会话过期时间 -->
+                        <div class="p-4 bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
+                            <div class="flex-1">
+                                <h3 class="text-lg font-medium text-gray-800 dark:text-gray-200 mb-2" data-i18n="page.settings.public_chat.session_expire.title"></h3>
+                                <p class="text-sm text-gray-600 dark:text-gray-400 mb-3" data-i18n="page.settings.public_chat.session_expire.desc"></p>
+                                <div class="flex items-center space-x-2">
+                                    <input 
+                                        type="number" 
+                                        x-model="chatSessionExpireHours" 
+                                        min="1" 
+                                        max="168"
+                                        class="w-20 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                    >
+                                    <span class="text-sm text-gray-600 dark:text-gray-400" data-i18n="page.settings.public_chat.session_expire.unit_hour"></span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- 聊天记录管理 -->
+                        <div class="p-4 bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
+                            <div class="flex-1">
+                                <h3 class="text-lg font-medium text-gray-800 dark:text-gray-200 mb-2" data-i18n="page.settings.public_chat.history.title"></h3>
+                                <p class="text-sm text-gray-600 dark:text-gray-400 mb-3" data-i18n="page.settings.public_chat.history.desc"></p>
+                                <div class="flex items-center space-x-4">
+                                    <button 
+                                        @click="clearChatMessages()" 
+                                        class="px-4 py-2 bg-red-500 text-white rounded-md hover:bg-red-600 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 dark:focus:ring-offset-gray-800 flex items-center"
+                                    >
+                                        <i class="fas fa-trash mr-2"></i>
+                                        <span data-i18n="page.settings.public_chat.history.clear"></span>
+                                    </button>
+                                    <span class="text-sm text-gray-500 dark:text-gray-400">
+                                        <span data-i18n="page.settings.public_chat.history.count_prefix"></span>
+                                        <span x-text="(chatMessageCount || 0)"></span>
+                                        <span data-i18n="page.settings.public_chat.history.count_suffix"></span>
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="flex justify-end">
+                            <button 
+                                type="button" 
+                                @click="savePublicChatSettings"
+                                class="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:focus:ring-offset-gray-800 flex items-center"
+                            >
+                                <i class="fas fa-save mr-2"></i>
+                                <span data-i18n="page.settings.public_chat.save"></span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                
                 <!-- PIM独立安装配置 -->
                 <div class="bg-white dark:bg-gray-800 shadow-md rounded-lg p-6 mb-6">
                         <h2 class="text-xl font-semibold mb-4 text-gray-800 dark:text-gray-200 flex items-center">

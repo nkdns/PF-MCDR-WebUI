@@ -25,6 +25,10 @@ from .constant import user_db, pwd_context, SERVER_PROPERTIES_PATH
 # verify password
 def verify_password(plain_password, hashed_password):
     return pwd_context.verify(plain_password, hashed_password)
+
+# hash password
+def hash_password(plain_password):
+    return pwd_context.hash(plain_password)
 # create temp password
 def create_temp_password()->str:
     characters = string.ascii_uppercase + string.digits
@@ -67,6 +71,73 @@ def change_account_command(src, ctx, host:str, port:int):
 def get_temp_password_command(src, ctx, host:str, port:int):
     temp_password = create_temp_password()
     src.reply(f"临时密码(15分钟后过期): {temp_password}\nguguwebui 地址: http://{host}:{port}")
+
+# 清理过期或失效的聊天验证码
+def cleanup_chat_verifications():
+	try:
+		if 'chat_verification' not in user_db:
+			return
+		now = datetime.datetime.now(datetime.timezone.utc)
+		codes_to_delete = []
+		for code, rec in list(user_db['chat_verification'].items()):
+			try:
+				expire_time = datetime.datetime.fromisoformat(rec.get('expire_time', '').replace('Z', '+00:00'))
+				# 过期即清理
+				if now > expire_time:
+					codes_to_delete.append(code)
+			except Exception:
+				# 解析失败也清理
+				codes_to_delete.append(code)
+		for code in codes_to_delete:
+			try:
+				del user_db['chat_verification'][code]
+			except Exception:
+				pass
+		if codes_to_delete:
+			user_db.save()
+	except Exception:
+		pass
+
+# MCDR command for chat verification
+def verify_chat_code_command(src, ctx):
+	code = ctx['code']
+	player_id = src.player
+	
+	# 先清理一次过期验证码
+	cleanup_chat_verifications()
+	
+	# 检查验证码是否存在
+	if code not in user_db['chat_verification']:
+		src.reply(f"§c验证码 {code} 不存在！")
+		return
+	
+	verification = user_db['chat_verification'][code]
+	
+	# 检查是否已过期
+	expire_time = datetime.datetime.fromisoformat(verification['expire_time'].replace('Z', '+00:00'))
+	if datetime.datetime.now(datetime.timezone.utc) > expire_time:
+		del user_db['chat_verification'][code]
+		user_db.save()
+		src.reply(f"§c验证码 {code} 已过期！")
+		return
+	
+	# 检查是否已被使用（已验证）
+	if verification.get('used'):
+		src.reply(f"§c验证码 {code} 已被使用！")
+		return
+	
+	# 检查是否已绑定其他玩家
+	if verification['player_id'] is not None and verification['player_id'] != player_id:
+		src.reply(f"§c验证码 {code} 已被玩家 {verification['player_id']} 使用！")
+		return
+	
+	# 绑定玩家ID到验证码，并立刻使验证码失效（不可再次用于游戏内验证）
+	verification['player_id'] = player_id
+	verification['used'] = True
+	verification['verified_time'] = str(datetime.datetime.now(datetime.timezone.utc))
+	user_db.save()
+	
+	src.reply(f"§a验证码 {code} 验证成功！请在聊天页设置密码完成注册。")
 #============================================================#
 # Find all configs for a plugin
 def find_plugin_config_paths(plugin_id:str)->list:
@@ -866,16 +937,24 @@ def migrate_old_config():
 
 #============================================================#
 
-def get_minecraft_log_path(server_interface=None):
+def get_minecraft_path(server_interface=None, path_type="working_directory"):
     """
-    获取Minecraft服务器日志文件的完整路径
+    获取Minecraft服务器相关路径
     基于MCDR配置中的working_directory值
     
     Args:
         server_interface: MCDR服务器接口，用于获取配置
+        path_type: 路径类型，支持以下值：
+            - "working_directory": 服务器工作目录
+            - "logs": 日志目录
+            - "usercache": usercache.json文件路径
+            - "server_jar": 服务器jar文件目录
+            - "worlds": 世界文件夹目录
+            - "plugins": 插件目录（如果有）
+            - "mods": 模组目录（如果有）
         
     Returns:
-        str: Minecraft服务器日志文件的完整路径
+        str: 请求的路径
     """
     try:
         import os
@@ -898,23 +977,221 @@ def get_minecraft_log_path(server_interface=None):
             mcdr_config_path = "config.yml"
             if not os.path.exists(mcdr_config_path):
                 # 如果找不到配置文件，返回默认路径
-                return "server/logs/latest.log"
-            
-            # 读取配置文件
-            yaml = YAML()
-            with open(mcdr_config_path, 'r', encoding='utf-8') as f:
-                config = yaml.load(f)
-            
-            # 获取工作目录
-            working_directory = config.get('working_directory', '')
+                working_directory = "server"
+            else:
+                # 读取配置文件
+                yaml = YAML()
+                with open(mcdr_config_path, 'r', encoding='utf-8') as f:
+                    config = yaml.load(f)
+                
+                # 获取工作目录
+                working_directory = config.get('working_directory', 'server')
         
-        # 构建日志路径
-        if working_directory:
-            return os.path.join(working_directory, "logs", "latest.log")
+        # 根据请求的路径类型返回相应的路径
+        if path_type == "working_directory":
+            return working_directory
+        elif path_type == "logs":
+            return os.path.join(working_directory, "logs")
+        elif path_type == "usercache":
+            return os.path.join(working_directory, "usercache.json")
+        elif path_type == "server_jar":
+            return working_directory  # 服务器jar通常在根目录
+        elif path_type == "worlds":
+            return os.path.join(working_directory, "worlds")
+        elif path_type == "plugins":
+            return os.path.join(working_directory, "plugins")
+        elif path_type == "mods":
+            return os.path.join(working_directory, "mods")
         else:
-            return "server/logs/latest.log"
+            # 默认返回工作目录
+            return working_directory
+            
     except Exception as e:
         # 出错时返回默认路径
-        return "server/logs/latest.log"
+        if path_type == "working_directory":
+            return "server"
+        elif path_type == "logs":
+            return "server/logs"
+        elif path_type == "usercache":
+            return "server/usercache.json"
+        elif path_type == "server_jar":
+            return "server"
+        elif path_type == "worlds":
+            return "server/worlds"
+        elif path_type == "plugins":
+            return "server/plugins"
+        elif path_type == "mods":
+            return "server/mods"
+        else:
+            return "server"
 
 #============================================================#
+
+def get_player_uuid(player_name, server_interface=None, use_api=True):
+    """
+    获取指定玩家的UUID
+    
+    Args:
+        player_name: 玩家名称
+        server_interface: MCDR服务器接口，用于获取配置
+        use_api: 是否使用Mojang API在线查询（如果本地查询失败）
+        
+    Returns:
+        str: 玩家的UUID，如果获取失败返回None
+    """
+    try:
+        import json
+        import requests
+        from pathlib import Path
+        
+        # 首先尝试从本地usercache.json读取
+        try:
+            usercache_path = Path(get_minecraft_path(server_interface, "usercache"))
+            if usercache_path.exists():
+                with open(usercache_path, 'r', encoding='utf-8') as f:
+                    usercache_data = json.load(f)
+                
+                # 在usercache中查找玩家
+                for entry in usercache_data:
+                    if entry.get('name') == player_name:
+                        uuid = entry.get('uuid')
+                        if uuid:
+                            # 格式化UUID，添加连字符
+                            return format_uuid(uuid)
+        except Exception as e:
+            # 本地查询失败，记录调试信息
+            if server_interface:
+                server_interface.logger.debug(f"从usercache.json获取UUID失败: {e}")
+        
+        # 如果本地查询失败且允许使用API，尝试在线查询
+        if use_api:
+            try:
+                # 使用Mojang API查询
+                api_url = f"https://api.mojang.com/users/profiles/minecraft/{player_name}"
+                response = requests.get(api_url, timeout=10)
+                
+                if response.status_code == 200:
+                    data = response.json()
+                    uuid = data.get('id')
+                    if uuid:
+                        # 格式化UUID，添加连字符
+                        return format_uuid(uuid)
+                elif response.status_code == 404:
+                    # 玩家不存在
+                    if server_interface:
+                        server_interface.logger.debug(f"玩家 {player_name} 不存在")
+                    return None
+                else:
+                    # API请求失败
+                    if server_interface:
+                        server_interface.logger.debug(f"Mojang API请求失败: {response.status_code}")
+                    
+            except requests.exceptions.Timeout:
+                if server_interface:
+                    server_interface.logger.debug(f"Mojang API请求超时")
+            except Exception as e:
+                if server_interface:
+                    server_interface.logger.debug(f"Mojang API查询失败: {e}")
+        
+        # 所有方法都失败了
+        return None
+        
+    except Exception as e:
+        if server_interface:
+            server_interface.logger.error(f"获取玩家UUID时发生错误: {e}")
+        return None
+
+
+def format_uuid(uuid_string):
+    """
+    格式化UUID字符串，添加连字符
+    
+    Args:
+        uuid_string: 原始UUID字符串（32位无连字符）
+        
+    Returns:
+        str: 格式化后的UUID字符串（带连字符）
+    """
+    try:
+        # 移除可能存在的连字符
+        uuid_clean = uuid_string.replace('-', '')
+        
+        # 检查是否为有效的32位十六进制字符串
+        if len(uuid_clean) == 32 and all(c in '0123456789abcdefABCDEF' for c in uuid_clean):
+            # 添加连字符：xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
+            formatted_uuid = f"{uuid_clean[:8]}-{uuid_clean[8:12]}-{uuid_clean[12:16]}-{uuid_clean[16:20]}-{uuid_clean[20:32]}"
+            return formatted_uuid.lower()  # 转换为小写
+        
+        # 如果已经是格式化后的UUID，直接返回
+        if len(uuid_string) == 36 and uuid_string.count('-') == 4:
+            return uuid_string.lower()
+        
+        # 无效格式，返回原字符串
+        return uuid_string
+        
+    except Exception:
+        # 格式化失败，返回原字符串
+        return uuid_string
+
+
+def get_player_info(player_name, server_interface=None, include_uuid=True):
+    """
+    获取玩家信息，包括UUID和在线状态
+    
+    Args:
+        player_name: 玩家名称
+        server_interface: MCDR服务器接口
+        include_uuid: 是否包含UUID信息
+        
+    Returns:
+        dict: 玩家信息字典，包含以下字段：
+            - name: 玩家名称
+            - uuid: 玩家UUID（如果include_uuid为True）
+            - online: 是否在线
+            - last_seen: 最后在线时间（如果可用）
+    """
+    try:
+        player_info = {
+            'name': player_name,
+            'online': False,
+            'last_seen': None
+        }
+        
+        # 获取UUID
+        if include_uuid:
+            uuid = get_player_uuid(player_name, server_interface)
+            player_info['uuid'] = uuid
+        
+        # 检查在线状态
+        if server_interface:
+            try:
+                # 尝试获取玩家信息
+                player = server_interface.get_player_info(player_name)
+                if player:
+                    player_info['online'] = True
+                    # 如果有更多信息，可以在这里添加
+            except:
+                pass
+        
+        # 尝试从usercache.json获取最后在线时间
+        try:
+            usercache_path = Path(get_minecraft_path(server_interface, "usercache"))
+            if usercache_path.exists():
+                with open(usercache_path, 'r', encoding='utf-8') as f:
+                    usercache_data = json.load(f)
+                
+                for entry in usercache_data:
+                    if entry.get('name') == player_name:
+                        expires_on = entry.get('expiresOn')
+                        if expires_on:
+                            player_info['last_seen'] = expires_on
+                        break
+        except:
+            pass
+        
+        return player_info
+        
+    except Exception as e:
+        if server_interface:
+            server_interface.logger.error(f"获取玩家信息时发生错误: {e}")
+        return {'name': player_name, 'error': str(e)}

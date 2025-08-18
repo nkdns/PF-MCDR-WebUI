@@ -45,7 +45,9 @@ function settingsApp() {
             ssl_enabled: false,
             ssl_certfile: '',
             ssl_keyfile: '',
-            ssl_keyfile_password: ''
+            ssl_keyfile_password: '',
+            public_chat_enabled: false,
+            public_chat_to_game_enabled: false
         },
         
         // AI配置
@@ -54,6 +56,13 @@ function settingsApp() {
         aiApiUrl: 'https://api.deepseek.com/chat/completions',
         isKeyValid: false,
         keyValidated: false,
+        
+        // 公开聊天页配置
+        publicChatEnabled: false,
+        publicChatToGameEnabled: false,
+        chatVerificationExpireMinutes: 10,
+        chatSessionExpireHours: 24,
+        chatMessageCount: 0,
         
         repositories: [],
         officialRepoUrl: 'https://api.mcdreforged.com/catalogue/everything_slim.json.xz',
@@ -135,6 +144,13 @@ function settingsApp() {
                 this.webConfig.ssl_certfile = config.ssl_certfile || '';
                 this.webConfig.ssl_keyfile = config.ssl_keyfile || '';
                 this.webConfig.ssl_keyfile_password = config.ssl_keyfile_password || '';
+                
+                // 公开聊天页配置
+                this.publicChatEnabled = config.public_chat_enabled || false;
+                this.publicChatToGameEnabled = config.public_chat_to_game_enabled || false;
+                this.chatVerificationExpireMinutes = config.chat_verification_expire_minutes || 10;
+                this.chatSessionExpireHours = config.chat_session_expire_hours || 24;
+                this.chatMessageCount = config.chat_message_count || 0;
                 
                 // 检查插件目录URL
                 if (config.mcdr_plugins_url) {
@@ -689,6 +705,66 @@ function settingsApp() {
             } catch (error) {
                 console.error('Error saving HTTPS config:', error);
                 this.showNotification(this.t('page.settings.msg.save_error_prefix', '保存出错: ') + error.message, 'error');
+            }
+        },
+        
+        // 保存公开聊天页设置
+        async savePublicChatSettings() {
+            try {
+                // 准备请求数据
+                const requestData = {
+                    action: 'config',
+                    public_chat_enabled: this.publicChatEnabled,
+                    public_chat_to_game_enabled: this.publicChatToGameEnabled,
+                    chat_verification_expire_minutes: this.chatVerificationExpireMinutes,
+                    chat_session_expire_hours: this.chatSessionExpireHours,
+                    chat_message_count: this.chatMessageCount
+                };
+                
+                const response = await fetch('api/save_web_config', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(requestData)
+                });
+                
+                const result = await response.json();
+                if (result.status === 'success') {
+                    this.showNotification(this.t('page.settings.msg.public_chat_save_success', '聊天页设置保存成功'), 'success');
+                } else {
+                    this.showNotification(this.t('page.settings.msg.save_failed_prefix', '保存失败: ') + (result.message || ''), 'error');
+                }
+            } catch (error) {
+                console.error('Error saving public chat settings:', error);
+                this.showNotification(this.t('page.settings.msg.save_error_prefix', '保存出错: ') + error.message, 'error');
+            }
+        },
+        
+        // 清空聊天记录
+        async clearChatMessages() {
+            if (!confirm('确定要清空所有聊天记录吗？此操作不可恢复！')) {
+                return;
+            }
+            
+            try {
+                const response = await fetch('/api/chat/clear_messages', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                const result = await response.json();
+                if (result.status === 'success') {
+                    this.chatMessageCount = 0;
+                    this.showNotification('聊天记录已清空', 'success');
+                } else {
+                    this.showNotification(result.message || '清空聊天记录失败', 'error');
+                }
+            } catch (error) {
+                console.error('清空聊天记录失败:', error);
+                this.showNotification('清空聊天记录失败', 'error');
             }
         }
     };

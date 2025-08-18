@@ -19,8 +19,8 @@
     "lang": "Language"
   },
   "app": {
-    "name": "MCDR WebUI",
-    "desc": "Server Management Platform"
+    "name": "Server Chat Page",
+    "desc": "Server Chat Login"
   },
   "common": {
     "notice_loading": "Loading...",
@@ -196,6 +196,99 @@
     }
   },
   "page": {
+    "chat": {
+      "title": "Server Chat - GUGUWebUI",
+      "header_title": "Server Chat Page",
+      "player_label": "Player: ",
+      "steps": {
+        "get_code": "Get Code",
+        "verify_in_game": "Verify In-Game",
+        "set_password": "Set Password"
+      },
+      "get_code": {
+        "title": "Get Verification Code",
+        "desc_before": "Click the button to get a 6-digit code, then run ",
+        "desc_after": " in-game to verify.",
+        "your_code": "Your Code:",
+        "hint_use_cmd": "Use !!webui verify <code> in-game to verify",
+        "expire_hint": "The code expires in 10 minutes",
+        "generate": "Generate Code",
+        "loading": "Generating..."
+      },
+      "verify": {
+        "title": "In-Game Verification",
+        "desc": "Please use the following command in-game to verify:",
+        "next_hint": "After verification succeeds, click the button below to continue:",
+        "check": "Check Verification"
+      },
+      "set_password": {
+        "title": "Set Password",
+        "desc": "Set a password for your chat account for future logins.",
+        "password_label": "Password",
+        "password_placeholder": "Enter password (at least 6 chars)",
+        "confirm_label": "Confirm Password",
+        "confirm_placeholder": "Re-enter password",
+        "submit": "Set Password",
+        "loading": "Setting..."
+      },
+      "login": {
+        "title": "Login to Chat",
+        "desc": "Login with your player ID and password.",
+        "player_id_label": "Player ID",
+        "player_id_placeholder": "Enter your player ID",
+        "password_label": "Password",
+        "password_placeholder": "Enter password",
+        "submit": "Login",
+        "loading": "Logging in..."
+      },
+      "room": {
+        "title": "Server Chat",
+        "desc": "Welcome to the web portal of the server chat section (we recommend chatting in-game)",
+        "empty": {
+          "title": "No messages yet",
+          "hint": "Start chatting!"
+        },
+        "load_more": "Load more history",
+        "loading": {
+          "title": "Loading...",
+          "hint": "Fetching chat history"
+        },
+        "input": {
+          "placeholder": "Type a message...",
+          "hint": "Press Enter or click Send to post to the game"
+        },
+        "send": {
+          "submit": "Send",
+          "loading": "Sending..."
+        }
+      }
+    ,
+    "tabs": {
+      "verify_flow": "Verification Flow",
+      "direct_login": "Direct Login"
+    },
+    "avatar_source": {
+      "crafatar": "Crafatar",
+      "mccag": "MCCAG"
+    },
+    "mc_style": {
+      "enable": "MC Style",
+      "disable": "Standard Style"
+    },
+    "msg": {
+      "generate_failed": "Failed to generate code",
+      "network_retry": "Network error, please retry",
+      "verify_failed": "Verification failed. Make sure to run the command in-game",
+      "password_mismatch": "Passwords do not match",
+      "password_too_short": "Password must be at least 6 characters",
+      "set_password_failed": "Failed to set password",
+      "login_failed": "Login failed",
+      "session_expired": "Session expired, please login again",
+      "send_success": "Message sent",
+      "send_failed": "Send failed",
+      "network_send_failed": "Network error, send failed"
+    }
+    },
     "index": {
       "title": "Dashboard",
       "server": "Server",
@@ -498,7 +591,8 @@
         "pim_install_success": "PIM plugin installed successfully",
         "pim_install_failed_prefix": "Install failed: ",
         "pim_install_error_prefix": "Install error: ",
-        "ai_save_success": "AI configuration saved successfully"
+        "ai_save_success": "AI configuration saved successfully",
+        "public_chat_save_success": "Chat page settings saved successfully"
       },
       "network": {
         "title": "Network Settings",
@@ -551,6 +645,32 @@
         "placeholder_api_key": "Enter new API key",
         "placeholder_api_url": "https://api.deepseek.com/chat/completions",
         "placeholder_model": "deepseek-chat"
+      },
+      "public_chat": {
+        "title": "Public Chat Page Settings",
+        "tip": "Configure public chat page functionality options. These settings affect chat page access permissions and message forwarding features.",
+        "enable": "Enable Public Chat Page",
+        "enable_desc": "Allow users to access the public chat page",
+        "enable_to_game": "Send Messages to Game",
+        "enable_to_game_desc": "Allow public chat page users to send messages to Minecraft game",
+        "save": "Save Chat Page Settings",
+        "verification_expire": {
+          "title": "Verification Code Expiry",
+          "desc": "Set the validity period of verification code (minutes)",
+          "unit_min": "minutes"
+        },
+        "session_expire": {
+          "title": "Session Expiry",
+          "desc": "Set chat page user session validity (hours)",
+          "unit_hour": "hours"
+        },
+        "history": {
+          "title": "Chat History Management",
+          "desc": "Manage historical messages of the chat page",
+          "clear": "Clear Chat History",
+          "count_prefix": "Current records: ",
+          "count_suffix": " messages"
+        }
       },
       "repo": {
         "title": "MCDR Plugin Repository Settings",

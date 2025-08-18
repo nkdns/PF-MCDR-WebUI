@@ -66,6 +66,19 @@ def init_app(server_instance):
     # 存储服务器接口
     app.state.server_interface = server_instance
     
+    # 确保user_db包含所有必要的键
+    try:
+        from .utils.constant import user_db, DEFALUT_DB
+        # 检查并添加缺失的键
+        for key in DEFALUT_DB:
+            if key not in user_db:
+                user_db[key] = DEFALUT_DB[key]
+                server_instance.logger.debug(f"添加缺失的数据库键: {key}")
+        user_db.save()
+        server_instance.logger.debug("数据库结构已更新")
+    except Exception as e:
+        server_instance.logger.error(f"更新数据库结构时出错: {e}")
+    
     # 清理现有监听器，避免重复注册
     if log_watcher:
         log_watcher.stop()
@@ -455,6 +468,24 @@ async def about(request: Request, token_valid: bool = Depends(verify_token)):
     except Exception:
         return templates.TemplateResponse("404.html", {"request": request}, status_code=404)
 
+# 公开聊天页
+@app.get("/chat", response_class=HTMLResponse)
+async def chat_page(request: Request):
+    try:
+        # 检查是否启用公开聊天页
+        server:PluginServerInterface = app.state.server_interface
+        server_config = server.load_config_simple("config.json", DEFALUT_CONFIG, echo_in_console=False)
+        
+        if not server_config.get("public_chat_enabled", False):
+            return templates.TemplateResponse("404.html", {"request": request}, status_code=404)
+        
+        return templates.TemplateResponse("chat.html", {"request": request})
+    except Exception as e:
+        server:PluginServerInterface = app.state.server_interface
+        if server:
+            server.logger.error(f"聊天页加载失败: {e}")
+        return templates.TemplateResponse("404.html", {"request": request}, status_code=404)
+
 # 404 page
 @app.exception_handler(404)
 async def custom_404_handler(request: Request, exc: StarletteHTTPException):
@@ -463,7 +494,7 @@ async def custom_404_handler(request: Request, exc: StarletteHTTPException):
 @app.exception_handler(ConnectionResetError)
 async def connection_reset_handler(request: Request, exc: ConnectionResetError):
     # 在日志中记录错误，但向客户端返回友好消息
-    app.state.server_interface.logger.warning(f"[GUGUWebUI] 连接重置错误: {str(exc)}")
+    app.state.server_interface.logger.warning(f"连接重置错误: {str(exc)}")
     return JSONResponse(
         status_code=500,
         content={"status": "error", "message": "连接被重置，请刷新页面重试"}
@@ -477,11 +508,11 @@ async def global_exception_handler(request: Request, exc: Exception):
     # 尝试获取服务器接口记录日志
     try:
         if hasattr(app.state, "server_interface"):
-            app.state.server_interface.logger.error(f"[GUGUWebUI] {error_message}")
+            app.state.server_interface.logger.error(f"{error_message}")
         else:
-            print(f"[GUGUWebUI] {error_message}")
+            print(f"{error_message}")
     except:
-        print(f"[GUGUWebUI] {error_message}")
+        print(f"{error_message}")
     
     # 返回友好的错误消息
     return JSONResponse(
@@ -977,8 +1008,14 @@ async def get_web_config(request: Request):
     ai_api_key_value = config.get("ai_api_key", "")
     ai_api_key_configured = bool(ai_api_key_value and ai_api_key_value.strip())
     
-    return JSONResponse(
-        {   
+    # 获取聊天消息数量
+    try:
+        from .utils.chat_logger import ChatLogger
+        chat_logger = ChatLogger()
+        chat_message_count = chat_logger.get_message_count()
+        
+        # 更新返回数据中的聊天消息数量
+        response_data = {
             "host": config["host"],
             "port": config["port"],
             "super_admin_account": config["super_admin_account"],
@@ -994,8 +1031,40 @@ async def get_web_config(request: Request):
             "ssl_certfile": config.get("ssl_certfile", ""),
             "ssl_keyfile": config.get("ssl_keyfile", ""),
             "ssl_keyfile_password": config.get("ssl_keyfile_password", ""),
+            "public_chat_enabled": config.get("public_chat_enabled", False),
+            "public_chat_to_game_enabled": config.get("public_chat_to_game_enabled", False),
+            "chat_verification_expire_minutes": config.get("chat_verification_expire_minutes", 10),
+            "chat_session_expire_hours": config.get("chat_session_expire_hours", 24),
+            "chat_message_count": chat_message_count,
         }
-    )
+        
+        return JSONResponse(response_data)
+    except Exception as e:
+        # 如果获取聊天消息数量失败，返回默认值
+        response_data = {
+            "host": config["host"],
+            "port": config["port"],
+            "super_admin_account": config["super_admin_account"],
+            "disable_admin_login_web": config["disable_other_admin"],
+            "enable_temp_login_password": config["allow_temp_password"],
+            "ai_api_key": "",  # 出于安全考虑不返回实际密钥
+            "ai_api_key_configured": ai_api_key_configured,  # 新增：指示是否已配置
+            "ai_model": config.get("ai_model", "deepseek-chat"),
+            "ai_api_url": config.get("ai_api_url", "https://api.deepseek.com/chat/completions"),
+            "mcdr_plugins_url": config.get("mcdr_plugins_url", "https://api.mcdreforged.com/catalogue/everything_slim.json.xz"),
+            "repositories": config.get("repositories", []),
+            "ssl_enabled": config.get("ssl_enabled", False),
+            "ssl_certfile": config.get("ssl_certfile", ""),
+            "ssl_keyfile": config.get("ssl_keyfile", ""),
+            "ssl_keyfile_password": config.get("ssl_keyfile_password", ""),
+            "public_chat_enabled": config.get("public_chat_enabled", False),
+            "public_chat_to_game_enabled": config.get("public_chat_to_game_enabled", False),
+            "chat_verification_expire_minutes": config.get("chat_verification_expire_minutes", 10),
+            "chat_session_expire_hours": config.get("chat_session_expire_hours", 24),
+            "chat_message_count": 0,
+        }
+        
+        return JSONResponse(response_data)
 
 
 @app.post("/api/save_web_config")
@@ -1045,6 +1114,16 @@ async def save_web_config(request: Request, config: saveconfig):
         if config.ssl_keyfile_password is not None:
             if isinstance(config.ssl_keyfile_password, str):
                 web_config["ssl_keyfile_password"] = config.ssl_keyfile_password
+        # 更新公开聊天页配置
+        if config.public_chat_enabled is not None:
+            web_config["public_chat_enabled"] = config.public_chat_enabled
+        if config.public_chat_to_game_enabled is not None:
+            web_config["public_chat_to_game_enabled"] = config.public_chat_to_game_enabled
+        # 更新聊天页验证和会话配置
+        if config.chat_verification_expire_minutes is not None:
+            web_config["chat_verification_expire_minutes"] = config.chat_verification_expire_minutes
+        if config.chat_session_expire_hours is not None:
+            web_config["chat_session_expire_hours"] = config.chat_session_expire_hours
         
         response = {"status": "success", "message": "配置已保存，重启插件后生效"}
     # disable_admin_login_web & enable_temp_login_password
@@ -2773,3 +2852,456 @@ async def api_pip_task_status(
         "success": task_info["success"],
         "output": task_info["output"]
     }
+
+# ============================================================#
+# 聊天页相关API端点
+# ============================================================#
+
+@app.post("/api/chat/generate_code")
+async def chat_generate_code(request: Request):
+	"""生成聊天页验证码"""
+	try:
+		server:PluginServerInterface = app.state.server_interface
+		server_config = server.load_config_simple("config.json", DEFALUT_CONFIG, echo_in_console=False)
+		if not server_config.get("public_chat_enabled", False):
+			return JSONResponse({"status": "error", "message": "公开聊天页未启用"}, status_code=403)
+		# 生成前清理一次
+		from .utils.utils import cleanup_chat_verifications
+		cleanup_chat_verifications()
+		
+		# 生成6位数字+大写字母验证码
+		import random, string
+		code = ''.join(random.choices(string.digits + string.ascii_uppercase, k=6))
+		expire_minutes = server_config.get("chat_verification_expire_minutes", 10)
+		expire_time = datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(minutes=expire_minutes)
+		user_db["chat_verification"][code] = {
+			"player_id": None,
+			"expire_time": str(expire_time),
+			"used": False
+		}
+		user_db.save()
+		server.logger.debug(f"生成聊天页验证码: {code}")
+		return JSONResponse({"status": "success", "code": code, "expire_minutes": expire_minutes})
+	except Exception as e:
+		server:PluginServerInterface = app.state.server_interface
+		if server:
+			server.logger.error(f"生成验证码失败: {e}")
+		return JSONResponse({"status": "error", "message": "生成验证码失败"}, status_code=500)
+
+@app.post("/api/chat/check_verification")
+async def chat_check_verification(request: Request):
+	"""检查验证码验证状态"""
+	try:
+		data = await request.json()
+		code = data.get("code", "")
+		
+		if not code:
+			return JSONResponse({"status": "error", "message": "验证码不能为空"}, status_code=400)
+		
+		# 检查验证码是否存在且未过期
+		if code not in user_db["chat_verification"]:
+			return JSONResponse({"status": "error", "message": "验证码不存在"}, status_code=400)
+		
+		verification = user_db["chat_verification"][code]
+		
+		# 检查是否已过期
+		expire_time = datetime.datetime.fromisoformat(verification["expire_time"].replace('Z', '+00:00'))
+		if datetime.datetime.now(datetime.timezone.utc) > expire_time:
+			# 删除过期验证码
+			del user_db["chat_verification"][code]
+			user_db.save()
+			return JSONResponse({"status": "error", "message": "验证码已过期"}, status_code=400)
+		
+		# 若已绑定玩家则视为验证成功（即使used为True）
+		if verification.get("player_id"):
+			return JSONResponse({
+				"status": "success",
+				"verified": True,
+				"player_id": verification["player_id"]
+			})
+		
+		# 未绑定则尚未在游戏内验证
+		return JSONResponse({"status": "error", "message": "验证码尚未在游戏内验证"}, status_code=400)
+		
+	except Exception as e:
+		server:PluginServerInterface = app.state.server_interface
+		if server:
+			server.logger.error(f"检查验证状态失败: {e}")
+		return JSONResponse({"status": "error", "message": "检查验证状态失败"}, status_code=500)
+
+@app.post("/api/chat/set_password")
+async def chat_set_password(request: Request):
+	"""设置聊天页用户密码"""
+	try:
+		data = await request.json()
+		code = data.get("code", "")
+		password = data.get("password", "")
+		if not code or not password:
+			return JSONResponse({"status": "error", "message": "验证码和密码不能为空"}, status_code=400)
+		if len(password) < 6:
+			return JSONResponse({"status": "error", "message": "密码长度至少6位"}, status_code=400)
+		if code not in user_db["chat_verification"]:
+			return JSONResponse({"status": "error", "message": "验证码不存在"}, status_code=400)
+		verification = user_db["chat_verification"][code]
+		# 过期则删除
+		expire_time = datetime.datetime.fromisoformat(verification["expire_time"].replace('Z', '+00:00'))
+		if datetime.datetime.now(datetime.timezone.utc) > expire_time:
+			del user_db["chat_verification"][code]
+			user_db.save()
+			return JSONResponse({"status": "error", "message": "验证码已过期"}, status_code=400)
+		# 已使用但未绑定当前玩家，拒绝
+		if verification.get("used") and (verification.get("player_id") is None):
+			return JSONResponse({"status": "error", "message": "验证码已被使用"}, status_code=400)
+		if verification.get("player_id") is None:
+			return JSONResponse({"status": "error", "message": "验证码尚未在游戏内验证"}, status_code=400)
+		player_id = verification["player_id"]
+		# 保存用户密码
+		from .utils.utils import hash_password
+		user_db["chat_users"][player_id] = {"password": hash_password(password), "created_time": str(datetime.datetime.now(datetime.timezone.utc))}
+		user_db.save()
+		# 设置成功后删除验证码记录，避免复用
+		try:
+			del user_db["chat_verification"][code]
+			user_db.save()
+		except Exception:
+			pass
+		server:PluginServerInterface = app.state.server_interface
+		if server:
+			server.logger.debug(f"聊天页用户 {player_id} 设置密码成功")
+		return JSONResponse({"status": "success", "message": "密码设置成功", "player_id": player_id})
+	except Exception as e:
+		server:PluginServerInterface = app.state.server_interface
+		if server:
+			server.logger.error(f"设置密码失败: {e}")
+		return JSONResponse({"status": "error", "message": "设置密码失败"}, status_code=500)
+
+@app.post("/api/chat/login")
+async def chat_login(request: Request):
+    """聊天页用户登录"""
+    try:
+        data = await request.json()
+        player_id = data.get("player_id", "")
+        password = data.get("password", "")
+        
+        if not player_id or not password:
+            return JSONResponse({"status": "error", "message": "玩家ID和密码不能为空"}, status_code=400)
+        
+        # 检查用户是否存在
+        if player_id not in user_db["chat_users"]:
+            return JSONResponse({"status": "error", "message": "用户不存在"}, status_code=400)
+        
+        # 验证密码
+        from .utils.utils import verify_password
+        if not verify_password(password, user_db["chat_users"][player_id]["password"]):
+            return JSONResponse({"status": "error", "message": "密码错误"}, status_code=400)
+        
+        # 生成会话ID
+        session_id = secrets.token_hex(16)
+        
+        # 设置会话过期时间
+        server:PluginServerInterface = app.state.server_interface
+        server_config = server.load_config_simple("config.json", DEFALUT_CONFIG, echo_in_console=False)
+        expire_hours = server_config.get("chat_session_expire_hours", 24)
+        expire_time = datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(hours=expire_hours)
+        
+        # 保存会话信息
+        user_db["chat_sessions"][session_id] = {
+            "player_id": player_id,
+            "expire_time": str(expire_time)
+        }
+        user_db.save()
+        
+        if server:
+            server.logger.debug(f"聊天页用户 {player_id} 登录成功")
+        
+        return JSONResponse({
+            "status": "success",
+            "message": "登录成功",
+            "session_id": session_id
+        })
+        
+    except Exception as e:
+        server:PluginServerInterface = app.state.server_interface
+        if server:
+            server.logger.error(f"聊天页登录失败: {e}")
+        return JSONResponse({"status": "error", "message": "登录失败"}, status_code=500)
+
+@app.post("/api/chat/check_session")
+async def chat_check_session(request: Request):
+    """检查聊天页会话状态"""
+    try:
+        data = await request.json()
+        session_id = data.get("session_id", "")
+        
+        if not session_id:
+            return JSONResponse({"status": "error", "message": "会话ID不能为空"}, status_code=400)
+        
+        # 检查会话是否存在
+        if session_id not in user_db["chat_sessions"]:
+            return JSONResponse({"status": "error", "message": "会话不存在"}, status_code=400)
+        
+        session = user_db["chat_sessions"][session_id]
+        
+        # 检查是否已过期
+        expire_time = datetime.datetime.fromisoformat(session["expire_time"].replace('Z', '+00:00'))
+        if datetime.datetime.now(datetime.timezone.utc) > expire_time:
+            # 删除过期会话
+            del user_db["chat_sessions"][session_id]
+            user_db.save()
+            return JSONResponse({"status": "error", "message": "会话已过期"}, status_code=400)
+        
+        return JSONResponse({
+            "status": "success",
+            "valid": True,
+            "player_id": session["player_id"]
+        })
+        
+    except Exception as e:
+        server:PluginServerInterface = app.state.server_interface
+        if server:
+            server.logger.error(f"检查会话状态失败: {e}")
+        return JSONResponse({"status": "error", "message": "检查会话状态失败"}, status_code=500)
+
+@app.post("/api/chat/logout")
+async def chat_logout(request: Request):
+    """聊天页用户退出登录"""
+    try:
+        data = await request.json()
+        session_id = data.get("session_id", "")
+        
+        if not session_id:
+            return JSONResponse({"status": "error", "message": "会话ID不能为空"}, status_code=400)
+        
+        # 删除会话
+        if session_id in user_db["chat_sessions"]:
+            del user_db["chat_sessions"][session_id]
+            user_db.save()
+        
+        return JSONResponse({"status": "success", "message": "退出登录成功"})
+        
+    except Exception as e:
+        server:PluginServerInterface = app.state.server_interface
+        if server:
+            server.logger.error(f"聊天页退出登录失败: {e}")
+        return JSONResponse({"status": "error", "message": "退出登录失败"}, status_code=500)
+
+@app.post("/api/chat/get_messages")
+async def get_chat_messages(request: Request):
+    """获取聊天消息"""
+    try:
+        data = await request.json()
+        limit = data.get("limit", 50)
+        offset = data.get("offset", 0)
+        after_id = data.get("after_id")  # 新增：基于消息ID获取
+        
+        # 导入聊天日志记录器
+        from .utils.chat_logger import ChatLogger
+        chat_logger = ChatLogger()
+        
+        if after_id is not None:
+            # 获取指定ID之后的新消息
+            messages = chat_logger.get_new_messages(after_id)
+        else:
+            # 兼容旧版本，使用offset方式
+            messages = chat_logger.get_messages(limit, offset)
+        
+        # 为消息补充UUID信息（使用本地usercache优先，失败再尝试API）
+        try:
+            from .utils.utils import get_player_uuid
+            server:PluginServerInterface = app.state.server_interface
+            uuid_cache = {}
+            for m in messages:
+                pid = m.get('player_id')
+                if not pid:
+                    continue
+                if pid in uuid_cache:
+                    uuid_val = uuid_cache[pid]
+                else:
+                    try:
+                        uuid_val = get_player_uuid(pid, server)
+                    except Exception:
+                        uuid_val = None
+                    uuid_cache[pid] = uuid_val
+                m['uuid'] = uuid_val
+        except Exception:
+            # 静默失败，不影响消息返回
+            pass
+        
+        return JSONResponse({
+            "status": "success",
+            "messages": messages,
+            "has_more": len(messages) == limit
+        })
+    except Exception as e:
+        server:PluginServerInterface = app.state.server_interface
+        if server:
+            server.logger.error(f"获取聊天消息失败: {e}")
+        return JSONResponse({
+            "status": "error",
+            "message": f"获取聊天消息失败: {e}"
+        }, status_code=500)
+
+@app.post("/api/chat/get_new_messages")
+async def get_new_chat_messages(request: Request):
+    """获取新消息（基于最后消息ID）"""
+    try:
+        data = await request.json()
+        after_id = data.get("after_id", 0)
+        
+        # 导入聊天日志记录器
+        from .utils.chat_logger import ChatLogger
+        chat_logger = ChatLogger()
+        
+        messages = chat_logger.get_new_messages(after_id)
+        
+        # 为消息补充UUID信息
+        try:
+            from .utils.utils import get_player_uuid
+            server:PluginServerInterface = app.state.server_interface
+            uuid_cache = {}
+            for m in messages:
+                pid = m.get('player_id')
+                if not pid:
+                    continue
+                if pid in uuid_cache:
+                    uuid_val = uuid_cache[pid]
+                else:
+                    try:
+                        uuid_val = get_player_uuid(pid, server)
+                    except Exception:
+                        uuid_val = None
+                    uuid_cache[pid] = uuid_val
+                m['uuid'] = uuid_val
+        except Exception:
+            pass
+        
+        return JSONResponse({
+            "status": "success",
+            "messages": messages,
+            "last_message_id": chat_logger.get_last_message_id()
+        })
+    except Exception as e:
+        server:PluginServerInterface = app.state.server_interface
+        if server:
+            server.logger.error(f"获取新聊天消息失败: {e}")
+        return JSONResponse({
+            "status": "error",
+            "message": f"获取新聊天消息失败: {e}"
+        }, status_code=500)
+
+@app.post("/api/chat/clear_messages")
+async def chat_clear_messages(request: Request):
+    """清空聊天消息"""
+    try:
+        # 导入聊天日志记录器
+        from .utils.chat_logger import ChatLogger
+        chat_logger = ChatLogger()
+        
+        # 清空消息
+        chat_logger.clear_messages()
+        
+        server:PluginServerInterface = app.state.server_interface
+        if server:
+            server.logger.info("聊天消息已清空")
+        
+        return JSONResponse({"status": "success", "message": "聊天消息已清空"})
+        
+    except Exception as e:
+        server:PluginServerInterface = app.state.server_interface
+        if server:
+            server.logger.error(f"清空聊天消息失败: {e}")
+        return JSONResponse({"status": "error", "message": "清空聊天消息失败"}, status_code=500)
+
+@app.post("/api/chat/send_message")
+async def send_chat_message(request: Request):
+    """发送聊天消息到游戏"""
+    try:
+        data = await request.json()
+        message = data.get("message", "").strip()
+        player_id = data.get("player_id", "")
+        session_id = data.get("session_id", "")
+        
+        if not message:
+            return JSONResponse({"status": "error", "message": "消息内容不能为空"}, status_code=400)
+        
+        if not player_id or not session_id:
+            return JSONResponse({"status": "error", "message": "玩家ID或会话ID无效"}, status_code=400)
+        
+        # 验证会话
+        if session_id not in user_db["chat_sessions"]:
+            return JSONResponse({"status": "error", "message": "会话已过期，请重新登录"}, status_code=401)
+        
+        session = user_db["chat_sessions"][session_id]
+        if session["player_id"] != player_id:
+            return JSONResponse({"status": "error", "message": "玩家ID与会话不匹配"}, status_code=401)
+        
+        # 检查会话是否过期
+        expire_time = datetime.datetime.fromisoformat(session["expire_time"].replace('Z', '+00:00'))
+        if datetime.datetime.now(datetime.timezone.utc) > expire_time:
+            del user_db["chat_sessions"][session_id]
+            user_db.save()
+            return JSONResponse({"status": "error", "message": "会话已过期，请重新登录"}, status_code=401)
+        
+        # 获取服务器接口
+        server:PluginServerInterface = app.state.server_interface
+        if not server:
+            return JSONResponse({"status": "error", "message": "服务器接口不可用"}, status_code=500)
+        
+        # 检查是否启用了聊天到游戏功能
+        config = server.load_config_simple("config.json", DEFALUT_CONFIG, echo_in_console=False)
+        if not config.get("public_chat_to_game_enabled", False):
+            return JSONResponse({"status": "error", "message": "聊天到游戏功能未启用"}, status_code=403)
+        
+        # 获取玩家UUID（如果可用）
+        try:
+            # 使用新的get_player_uuid函数获取UUID
+            from .utils.utils import get_player_uuid
+            player_uuid = get_player_uuid(player_id, server)
+            
+            # 如果仍然没有找到UUID，设置为"未知"
+            if not player_uuid:
+                player_uuid = "未知"
+        except Exception as e:
+            server.logger.debug(f"获取玩家UUID失败: {e}")
+            player_uuid = "未知"
+        
+        # 构建tellraw命令
+        tellraw_json = {
+            "text": f"<{player_id}> {message}",
+            "hoverEvent": {
+                "action": "show_text",
+                "value": [
+                    {"text": f"{player_id}\n"},
+                    {"text": "来源: WebUI\n"},
+                    {"text": f"{player_uuid}"}
+                ]
+            }
+        }
+        
+        # 执行tellraw命令
+        tellraw_command = f'/tellraw @a {json.dumps(tellraw_json, ensure_ascii=False)}'
+        server.execute(tellraw_command)
+        
+        # 记录到聊天日志
+        try:
+            from .utils.chat_logger import ChatLogger
+            chat_logger = ChatLogger()
+            chat_logger.add_message(player_id, message)
+        except Exception as e:
+            server.logger.warning(f"记录聊天消息失败: {e}")
+        
+        server.logger.info(f"<{player_id}> {message}")
+        
+        return JSONResponse({
+            "status": "success",
+            "message": "消息发送成功"
+        })
+        
+    except Exception as e:
+        server:PluginServerInterface = app.state.server_interface
+        if server:
+            server.logger.error(f"发送聊天消息失败: {e}")
+        return JSONResponse({
+            "status": "error",
+            "message": f"发送消息失败: {e}"
+        }, status_code=500)
