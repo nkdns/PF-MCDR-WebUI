@@ -167,6 +167,8 @@ MC服务器配置![image](https://github.com/user-attachments/assets/08b3bdd5-ba
 AI分析![image](https://github.com/user-attachments/assets/91276765-ec5b-47eb-8a85-d5faf6629fbb)
 设置![image](https://github.com/user-attachments/assets/eb333411-3e59-4939-a957-c2e956f70f2f)
 浅色模式![image](https://github.com/user-attachments/assets/e514d1e4-09f7-41c4-ad27-5b46a8245513)
+公开聊天页登录（1.6.0新增）![IMAGE](https://github.com/user-attachments/assets/2caa2bfd-c63d-48cb-bc81-0ab45dae8d21)
+公开聊天页![](https://github.com/user-attachments/assets/90959aea-a9c9-4379-8811-6365abedfa42)
 
 # TODO
 
