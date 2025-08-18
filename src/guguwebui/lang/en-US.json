@@ -19,8 +19,8 @@
     "lang": "Language"
   },
   "app": {
-    "name": "Server Chat Page",
-    "desc": "Server Chat Login"
+    "name": "MCDR WebUI",
+    "desc": "Server Management Platform"
   },
   "common": {
     "notice_loading": "Loading...",

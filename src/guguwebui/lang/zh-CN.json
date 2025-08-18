@@ -19,8 +19,8 @@
     "lang": "切换语言"
   },
   "app": {
-    "name": "服务器聊天页",
-    "desc": "服务器聊天板块登录"
+    "name": "MCDR WebUI",
+    "desc": "服务器管理平台"
   },
   "common": {
     "notice_loading": "加载中...",
