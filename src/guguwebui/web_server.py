@@ -55,6 +55,13 @@ log_watcher = LogWatcher()
 # Web在线玩家心跳（基于 /api/chat/get_new_messages 请求），值为最近心跳Unix秒
 WEB_ONLINE_PLAYERS: dict[str, int] = {}
 
+# RCON 在线玩家缓存，降低查询频率
+RCON_ONLINE_CACHE = {
+    "names": set(),
+    "ts": 0,      # 上次刷新时间（秒）
+    "dirty": False  # 标记需要刷新
+}
+
 # 用于保存pip任务状态的字典
 pip_tasks = {}
 
@@ -97,6 +104,9 @@ def init_app(server_instance):
     # USER_INFO应该映射到on_server_output，处理用户输入的命令
     server_instance.register_event_listener(MCDR.MCDRPluginEvents.GENERAL_INFO, on_mcdr_info)
     server_instance.register_event_listener(MCDR.MCDRPluginEvents.USER_INFO, on_server_output)
+    # 注册玩家进出事件，刷新RCON在线缓存
+    server_instance.register_event_listener(MCDR.MCDRPluginEvents.PLAYER_JOINED, on_player_joined)
+    server_instance.register_event_listener(MCDR.MCDRPluginEvents.PLAYER_LEFT, on_player_left)
     
     # 初始化PIM模块
     try:
@@ -174,6 +184,18 @@ def on_mcdr_info(server, info):
     global log_watcher
     if log_watcher:
         log_watcher.on_mcdr_info(server, info)
+
+def on_player_joined(server, player: str, info=None):
+    try:
+        RCON_ONLINE_CACHE["dirty"] = True
+    except Exception:
+        pass
+
+def on_player_left(server, player: str):
+    try:
+        RCON_ONLINE_CACHE["dirty"] = True
+    except Exception:
+        pass
 
 
 # 语言列表 API：返回 /lang 目录下的 json 文件及其显示名称
@@ -3248,19 +3270,26 @@ async def get_new_chat_messages(request: Request):
         online_web = set(pid for pid, until in WEB_ONLINE_PLAYERS.items() if until >= int(time.time()))
         online_game = set()
         try:
-            # 优先通过RCON获取具体在线玩家列表
+            # 优先通过RCON获取具体在线玩家列表（5秒缓存）
             server:PluginServerInterface = app.state.server_interface
             if hasattr(server, "is_rcon_running") and server.is_rcon_running():
-                try:
-                    feedback = server.rcon_query("list")
-                    # 期望形如: There are 2 of a max of 20 players online: player1, player2
-                    if ":" in feedback:
-                        names_part = feedback.split(":", 1)[1].strip()
-                        if names_part:
-                            for name in [n.strip() for n in names_part.split(",") if n.strip()]:
-                                online_game.add(name)
-                except Exception:
-                    pass
+                now_sec = int(time.time())
+                if RCON_ONLINE_CACHE.get("dirty") or (now_sec - int(RCON_ONLINE_CACHE.get("ts", 0)) >= 300):
+                    try:
+                        feedback = server.rcon_query("list")
+                        names = set()
+                        if isinstance(feedback, str) and ":" in feedback:
+                            names_part = feedback.split(":", 1)[1].strip()
+                            if names_part:
+                                for name in [n.strip() for n in names_part.split(",") if n.strip()]:
+                                    names.add(name)
+                        RCON_ONLINE_CACHE["names"] = names
+                        RCON_ONLINE_CACHE["ts"] = now_sec
+                        RCON_ONLINE_CACHE["dirty"] = False
+                    except Exception:
+                        # 保留旧缓存
+                        pass
+                online_game = set(RCON_ONLINE_CACHE.get("names", set()))
         except Exception:
             pass
         

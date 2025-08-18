@@ -445,16 +445,20 @@
         <div x-show="isLoggedIn" x-cloak class="hidden md:block fixed right-4 top-24 w-64 bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 p-4 z-20">
             <h3 class="text-sm font-semibold text-gray-800 dark:text-gray-200 mb-2" data-i18n="page.index.online_players"></h3>
             <div class="space-y-2 max-h-80 overflow-y-auto">
-                <template x-for="name in Array.from(new Set([...(onlineGame||[]), ...(onlineWeb||[])]))" :key="name">
-                    <div class="flex items-center justify-between text-sm text-gray-700 dark:text-gray-300">
-                        <span x-text="name"></span>
-                        <span>
-                            <i class="fas fa-gamepad mr-1 text-green-500" x-show="onlineGame && onlineGame.includes(name)"></i>
-                            <i class="fas fa-globe text-blue-500" x-show="onlineWeb && onlineWeb.includes(name)"></i>
+                <template x-for="[name, info] in getAllMembers()" :key="name">
+                    <div class="flex items-center justify-between text-sm" :class="info.status === 'offline' ? 'text-gray-400 dark:text-gray-500' : 'text-gray-700 dark:text-gray-300'">
+                        <div class="flex-1 min-w-0">
+                            <div class="truncate" x-text="name"></div>
+                            <div x-show="info.status === 'offline'" class="text-xs text-gray-400 dark:text-gray-500" x-text="formatOfflineTime(info.lastSeen)"></div>
+                        </div>
+                        <span class="flex-shrink-0 ml-2">
+                            <i class="fas fa-gamepad mr-1 text-green-500" x-show="info.status === 'game' || info.status === 'both'"></i>
+                            <i class="fas fa-globe text-blue-500" x-show="info.status === 'web' || info.status === 'both'"></i>
+                            <i class="fas fa-user-slash text-gray-400" x-show="info.status === 'offline'"></i>
                         </span>
                     </div>
                 </template>
-                <div x-show="(!onlineGame || onlineGame.length===0) && (!onlineWeb || onlineWeb.length===0)" class="text-xs text-gray-500 dark:text-gray-400" data-i18n="page.chat.room.empty.title"></div>
+                <div x-show="getAllMembers().length === 0" class="text-xs text-gray-500 dark:text-gray-400" data-i18n="page.chat.room.empty.title"></div>
             </div>
         </div>
 
@@ -467,16 +471,20 @@
                     <button @click="showOnlinePanel = false" class="text-gray-600 dark:text-gray-300"><i class="fas fa-times"></i></button>
                 </div>
                 <div class="space-y-2 max-h-[80vh] overflow-y-auto">
-                    <template x-for="name in Array.from(new Set([...(onlineGame||[]), ...(onlineWeb||[])]))" :key="name">
-                        <div class="flex items-center justify-between text-sm text-gray-700 dark:text-gray-300">
-                            <span x-text="name"></span>
-                            <span>
-                                <i class="fas fa-gamepad mr-1 text-green-500" x-show="onlineGame && onlineGame.includes(name)"></i>
-                                <i class="fas fa-globe text-blue-500" x-show="onlineWeb && onlineWeb.includes(name)"></i>
+                    <template x-for="[name, info] in getAllMembers()" :key="name">
+                        <div class="flex items-center justify-between text-sm" :class="info.status === 'offline' ? 'text-gray-400 dark:text-gray-500' : 'text-gray-700 dark:text-gray-300'">
+                            <div class="flex-1 min-w-0">
+                                <div class="truncate" x-text="name"></div>
+                                <div x-show="info.status === 'offline'" class="text-xs text-gray-400 dark:text-gray-500" x-text="formatOfflineTime(info.lastSeen)"></div>
+                            </div>
+                            <span class="flex-shrink-0 ml-2">
+                                <i class="fas fa-gamepad mr-1 text-green-500" x-show="info.status === 'game' || info.status === 'both'"></i>
+                                <i class="fas fa-globe text-blue-500" x-show="info.status === 'web' || info.status === 'both'"></i>
+                                <i class="fas fa-user-slash text-gray-400" x-show="info.status === 'offline'"></i>
                             </span>
                         </div>
                     </template>
-                    <div x-show="(!onlineGame || onlineGame.length===0) && (!onlineWeb || onlineWeb.length===0)" class="text-xs text-gray-500 dark:text-gray-400" data-i18n="page.chat.room.empty.title"></div>
+                    <div x-show="getAllMembers().length === 0" class="text-xs text-gray-500 dark:text-gray-400" data-i18n="page.chat.room.empty.title"></div>
                 </div>
             </div>
         </div>

@@ -276,6 +276,11 @@
       "mc": "MC样式",
       "standard": "标准样式"
     },
+    "offline": {
+      "just_offline": "刚刚离线",
+      "minutes_ago": "分钟前离线",
+      "hours_ago": "小时前离线"
+    },
     "msg": {
       "generate_failed": "生成验证码失败",
       "network_retry": "网络错误，请重试",

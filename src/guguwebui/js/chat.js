@@ -104,6 +104,12 @@ function chatApp() {
         onlineGame: [],
         showOnlinePanel: false,
         
+        // 离线成员缓存：存储离线时间和状态
+        offlineMembers: {}, // {playerName: {lastSeen: timestamp, status: 'web'|'game'}}
+        
+        // 本地存储键名
+        OFFLINE_CACHE_KEY: 'chat_offline_members',
+        
         // 主题管理
         darkMode: false,
         
@@ -135,6 +141,10 @@ function chatApp() {
             this.loadTheme();
             this.loadAvatarSource();
             this.loadMcStyleMode();
+            // 加载离线成员缓存
+            this.loadOfflineMembers();
+            // 清理过期缓存
+            this.cleanupExpiredOfflineMembers();
             // 加载语言并监听切换事件
             this.loadLangDict();
             document.addEventListener('i18n:changed', (e) => {
@@ -225,6 +235,8 @@ function chatApp() {
                         if (result.messages.length > 0) {
                             this.lastMessageId = Math.max(...result.messages.map(m => m.id));
                         }
+                        // 首次加载后更新离线成员缓存
+                        this.updateOfflineMembers();
                     } else {
                         // 加载更多历史消息
                         this.chatMessages = [...this.chatMessages, ...result.messages];
@@ -270,8 +282,17 @@ function chatApp() {
                     this.messageOffset = this.chatMessages.length;
                 }
                 if (result.status === 'success' && result.online) {
+                    const oldOnlineWeb = [...this.onlineWeb];
+                    const oldOnlineGame = [...this.onlineGame];
+                    
                     this.onlineWeb = Array.isArray(result.online.web) ? result.online.web : [];
                     this.onlineGame = Array.isArray(result.online.game) ? result.online.game : [];
+                    
+                    // 检测玩家状态变化
+                    this.detectPlayerStatusChanges(oldOnlineWeb, oldOnlineGame);
+                    
+                    // 更新离线成员缓存
+                    this.updateOfflineMembers();
                 }
             } catch (error) {
                 console.error('加载新消息失败:', error);
@@ -325,6 +346,188 @@ function chatApp() {
             if (!timestamp) return '';
             const date = new Date(timestamp * 1000);
             return date.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+        },
+        
+        // 离线成员管理
+        updateOfflineMembers() {
+            const now = Math.floor(Date.now() / 1000);
+            const allOnline = new Set([...this.onlineWeb, ...this.onlineGame]);
+            
+            // 清理已上线的玩家
+            Object.keys(this.offlineMembers).forEach(name => {
+                if (allOnline.has(name)) {
+                    delete this.offlineMembers[name];
+                }
+            });
+            
+            // 从聊天消息中获取所有玩家，标记为离线
+            this.chatMessages.forEach(message => {
+                const playerName = message.player_id;
+                if (!allOnline.has(playerName) && !this.offlineMembers[playerName]) {
+                    this.offlineMembers[playerName] = {
+                        lastSeen: message.timestamp,
+                        status: 'offline'
+                    };
+                }
+            });
+            
+            // 保存到本地存储
+            this.saveOfflineMembers();
+        },
+        
+        // 检测玩家状态变化
+        detectPlayerStatusChanges(oldOnlineWeb, oldOnlineGame) {
+            const now = Math.floor(Date.now() / 1000);
+            
+            // 检测从游戏退出的玩家
+            oldOnlineGame.forEach(name => {
+                if (!this.onlineGame.includes(name)) {
+                    // 玩家从游戏退出，如果不在web中，标记为离线
+                    if (!this.onlineWeb.includes(name)) {
+                        this.offlineMembers[name] = {
+                            lastSeen: now,
+                            status: 'offline'
+                        };
+                    }
+                }
+            });
+            
+            // 检测从web退出的玩家
+            oldOnlineWeb.forEach(name => {
+                if (!this.onlineWeb.includes(name)) {
+                    // 玩家从web退出，如果不在游戏中，标记为离线
+                    if (!this.onlineGame.includes(name)) {
+                        this.offlineMembers[name] = {
+                            lastSeen: now,
+                            status: 'offline'
+                        };
+                    }
+                }
+            });
+            
+            // 保存到本地存储
+            this.saveOfflineMembers();
+        },
+        
+        // 加载离线成员缓存
+        loadOfflineMembers() {
+            try {
+                const cached = localStorage.getItem(this.OFFLINE_CACHE_KEY);
+                if (cached) {
+                    const parsed = JSON.parse(cached);
+                    // 验证缓存数据的有效性
+                    if (parsed && typeof parsed === 'object') {
+                        this.offlineMembers = parsed;
+                    }
+                }
+            } catch (e) {
+                console.warn('加载离线成员缓存失败:', e);
+                this.offlineMembers = {};
+            }
+        },
+        
+        // 保存离线成员缓存到本地存储
+        saveOfflineMembers() {
+            try {
+                localStorage.setItem(this.OFFLINE_CACHE_KEY, JSON.stringify(this.offlineMembers));
+            } catch (e) {
+                console.warn('保存离线成员缓存失败:', e);
+            }
+        },
+        
+        // 清理过期的离线成员缓存（超过一周）
+        cleanupExpiredOfflineMembers() {
+            const now = Math.floor(Date.now() / 1000);
+            const oneWeekInSeconds = 7 * 24 * 60 * 60; // 7天 * 24小时 * 60分钟 * 60秒
+            const cutoffTime = now - oneWeekInSeconds;
+            
+            let removedCount = 0;
+            Object.keys(this.offlineMembers).forEach(name => {
+                const member = this.offlineMembers[name];
+                if (member.lastSeen < cutoffTime) {
+                    delete this.offlineMembers[name];
+                    removedCount++;
+                }
+            });
+            
+            if (removedCount > 0) {
+                this.saveOfflineMembers();
+            }
+        },
+        
+        // 获取所有成员列表（在线+离线）
+        getAllMembers() {
+            const allMembers = [];
+            const now = Math.floor(Date.now() / 1000);
+            
+            // 创建一个Map来跟踪每个玩家的状态
+            const playerStatus = new Map();
+            
+            // 处理web在线玩家
+            this.onlineWeb.forEach(name => {
+                if (!playerStatus.has(name)) {
+                    playerStatus.set(name, { status: 'web', lastSeen: now });
+                } else {
+                    // 如果已经在game中，标记为both
+                    playerStatus.set(name, { status: 'both', lastSeen: now });
+                }
+            });
+            
+            // 处理game在线玩家
+            this.onlineGame.forEach(name => {
+                if (!playerStatus.has(name)) {
+                    playerStatus.set(name, { status: 'game', lastSeen: now });
+                } else {
+                    // 如果已经在web中，标记为both
+                    playerStatus.set(name, { status: 'both', lastSeen: now });
+                }
+            });
+            
+            // 转换为数组格式
+            playerStatus.forEach((info, name) => {
+                allMembers.push([name, info]);
+            });
+            
+            // 添加离线成员
+            Object.entries(this.offlineMembers).forEach(([name, info]) => {
+                allMembers.push([name, { status: 'offline', lastSeen: info.lastSeen }]);
+            });
+            
+            return allMembers;
+        },
+        
+        // 格式化离线时间
+        formatOfflineTime(timestamp) {
+            if (!timestamp) return '';
+            
+            const date = new Date(timestamp * 1000);
+            const now = new Date();
+            const diff = now - date;
+            
+            // 如果小于1分钟
+            if (diff < 60000) {
+                return this.t('page.chat.offline.just_offline', '刚刚离线');
+            }
+            
+            // 如果小于1小时
+            if (diff < 3600000) {
+                const minutes = Math.floor(diff / 60000);
+                return `${minutes}${this.t('page.chat.offline.minutes_ago', '分钟前离线')}`;
+            }
+            
+            // 如果小于24小时
+            if (diff < 86400000) {
+                const hours = Math.floor(diff / 3600000);
+                return `${hours}${this.t('page.chat.offline.hours_ago', '小时前离线')}`;
+            }
+            
+            // 超过24小时显示日期
+            return date.toLocaleDateString('zh-CN', {
+                month: '2-digit',
+                day: '2-digit',
+                hour: '2-digit',
+                minute: '2-digit'
+            });
         },
         
         // 加载主题设置

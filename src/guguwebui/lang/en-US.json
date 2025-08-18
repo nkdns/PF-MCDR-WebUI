@@ -275,6 +275,11 @@
       "mc": "MC Style",
       "standard": "Standard Style"
     },
+    "offline": {
+      "just_offline": "Just offline",
+      "minutes_ago": "minutes ago offline",
+      "hours_ago": "hours ago offline"
+    },
     "msg": {
       "generate_failed": "Failed to generate code",
       "network_retry": "Network error, please retry",
