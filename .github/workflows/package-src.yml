@@ -4,7 +4,6 @@ on:
   push:
     paths:
       - src/**
-
   workflow_dispatch:
 
 jobs:
@@ -38,7 +37,9 @@ jobs:
     permissions:
       contents: write
       packages: write
-    
+    env:
+      GH_TOKEN: ${{ github.token }}
+   
     steps:
     - name: Checkout repository
       uses: actions/checkout@v4
@@ -54,15 +55,26 @@ jobs:
     - name: Generate pre-release tag
       id: tag
       run: |
-        # 生成时间戳标签，格式：v0.0.1-beta.$(date +%Y%m%d-%H%M%S)
+        # 从mcdreforged.plugin.json读取版本号
+        echo "Reading version from mcdreforged.plugin.json..."
+        VERSION=$(cat src/mcdreforged.plugin.json | jq -r '.version')
+        if [ -z "$VERSION" ] || [ "$VERSION" = "null" ]; then
+          echo "Error: Failed to read version from mcdreforged.plugin.json"
+          exit 1
+        fi
+        echo "Current plugin version: $VERSION"
+        
+        # 生成时间戳标签，格式：v{version}-beta.$(date +%Y%m%d-%H%M%S)
         TIMESTAMP=$(date +%Y%m%d-%H%M%S)
-        TAG="v0.0.1-beta.${TIMESTAMP}"
+        TAG="v${VERSION}-beta.${TIMESTAMP}"
         echo "tag=${TAG}" >> $GITHUB_OUTPUT
         echo "Generated tag: ${TAG}"
         
         # 验证标签格式
         if [[ ! $TAG =~ ^v[0-9]+\.[0-9]+\.[0-9]+-beta\.[0-9]{8}-[0-9]{6}$ ]]; then
           echo "Error: Invalid tag format generated: $TAG"
+          echo "Expected format: vX.Y.Z-beta.YYYYMMDD-HHMMSS"
+          echo "Actual tag: $TAG"
           exit 1
         fi
         
@@ -80,7 +92,7 @@ jobs:
         echo "=========================================="
         echo "🔍 Pre-release Management Strategy"
         echo "=========================================="
-        echo "Will DELETE: Beta versions (v0.0.1-beta.*, v1.2.3-rc.*, etc.)"
+        echo "Will DELETE: Beta versions (vX.Y.Z-beta.*, vX.Y.Z-rc.*, etc.)"
         echo "Will PRESERVE: Formal versions (v1.0.0, v2.1.3, etc.)"
         echo "=========================================="
         
@@ -127,7 +139,7 @@ jobs:
         
         # 创建新的pre-release
         if gh release create ${{ steps.tag.outputs.tag }} \
-          --title "Beta Build - ${{ steps.tag.outputs.tag }}" \
+          --title "Beta Build v${VERSION} - ${{ steps.tag.outputs.tag }}" \
           --notes "Automated beta build from source changes
 
         **Build Info:**
