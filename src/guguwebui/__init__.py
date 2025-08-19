@@ -64,6 +64,39 @@ def on_load(server: PluginServerInterface, old):
         server.logger.debug("asyncio 补丁应用完成")
 
     plugin_config = server.load_config_simple("config.json", DEFALUT_CONFIG, echo_in_console=False)
+    
+    # 配置验证
+    try:
+        from .utils.config_validator import ConfigValidator
+        validator = ConfigValidator(server.logger)
+        is_valid, validated_config, has_critical_error = validator.validate_config(plugin_config)
+        
+        if has_critical_error:
+            server.logger.error("配置验证失败，IP或端口配置错误，拒绝启动Web服务")
+            server.logger.error(validator.get_validation_summary())
+            server.logger.error("请检查配置文件中的host和port设置，然后重新启动插件")
+            # 主动卸载插件
+            server.logger.info("正在卸载插件...")
+            try:
+                server.unload_plugin("guguwebui")
+            except Exception as e:
+                server.logger.error(f"卸载插件时出错: {e}")
+                # 如果无法正常卸载，抛出异常让MCDR处理
+                raise RuntimeError("配置验证失败，插件无法启动")
+            return
+        elif not is_valid:
+            server.logger.error("配置验证失败，使用默认配置启动")
+            server.logger.error(validator.get_validation_summary())
+            plugin_config = validated_config
+        else:
+            server.logger.info("配置验证通过")
+            if validator.warnings:
+                server.logger.info(validator.get_validation_summary())
+            plugin_config = validated_config
+    except Exception as e:
+        server.logger.error(f"配置验证过程中发生错误: {e}")
+        server.logger.warning("将使用原始配置继续启动")
+    
     host = plugin_config['host']
     port = plugin_config['port']
     register_command(server, host, port) # register MCDR command
