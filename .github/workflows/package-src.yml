@@ -94,10 +94,11 @@ jobs:
         echo "=========================================="
         echo "Will DELETE: Beta versions (vX.Y.Z-beta.*, vX.Y.Z-rc.*, etc.)"
         echo "Will PRESERVE: Formal versions (v1.0.0, v2.1.3, etc.)"
+        echo "Will PRESERVE: Notice versions (vX.Y.Z-notice.*, etc.)"
         echo "=========================================="
         
-        # 获取所有pre-release，但排除正式的vx.x.x版本
-        RELEASES=$(gh api repos/${{ github.repository }}/releases --jq '.[] | select(.prerelease==true and (.tag_name | test("^v[0-9]+\\.[0-9]+\\.[0-9]+$") | not)) | .id' 2>/dev/null || echo "")
+        # 获取所有pre-release，但排除正式的vx.x.x版本和notice版本
+        RELEASES=$(gh api repos/${{ github.repository }}/releases --jq '.[] | select(.prerelease==true and (.tag_name | test("^v[0-9]+\\.[0-9]+\\.[0-9]+$") | not) and (.tag_name | test("-notice\\.") | not)) | .id' 2>/dev/null || echo "")
         
         if [ ! -z "$RELEASES" ]; then
           echo "Found existing beta pre-releases, deleting them..."
@@ -119,6 +120,12 @@ jobs:
         FORMAL_RELEASES=$(gh api repos/${{ github.repository }}/releases --jq '.[] | select(.prerelease==true and (.tag_name | test("^v[0-9]+\\.[0-9]+\\.[0-9]+$"))) | .tag_name' 2>/dev/null || echo "")
         if [ ! -z "$FORMAL_RELEASES" ]; then
           echo "Preserving formal pre-releases: $FORMAL_RELEASES"
+        fi
+        
+        # 显示保留的notice版本
+        NOTICE_RELEASES=$(gh api repos/${{ github.repository }}/releases --jq '.[] | select(.prerelease==true and (.tag_name | test("-notice\\."))) | .tag_name' 2>/dev/null || echo "")
+        if [ ! -z "$NOTICE_RELEASES" ]; then
+          echo "Preserving notice pre-releases: $NOTICE_RELEASES"
         fi
         
         echo "=========================================="
