@@ -99,6 +99,15 @@ WebUI 文档：[WebUI 文档](https://pf-doc.pfingan.com/main/#PF-webui/)
 
 PIM 插件，已内置 WebUI，如有需要可以在设置页面将其安装到外部，以为其他可能需要的插件提供帮助。
 
+### 插件兼容性支持
+
+WebUI 对以下插件提供特殊支持，以增强功能体验（v1.6.2，非必须）：
+
+- `player_ip_logger`：当检测到 `player_ip_logger` 插件时，WebUI 的在线玩家列表会自动集成其玩家验证功能，并显示假人状态
+
+- `fastapi_mcdr`：当检测到 `fastapi_mcdr` 插件时，WebUI 会自动挂载为其子应用
+    当检测到 `fastapi_mcdr` 插件卸载时，WebUI 会自动切换到独立服务器模式，需要重新启动WebUI才会重新挂载到 `fastapi_mcdr` 的子应用
+
 ## 使用方式
 
 > 目前未对接 GUGUbot 账号系统；当账号为 QQ 号时会显示 QQ 头像和昵称作为管理员名称和头像。
