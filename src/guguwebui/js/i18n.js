@@ -176,7 +176,7 @@
 
     async function populate() {
       try {
-        const resp = await fetch('/api/langs', { cache: 'no-cache' });
+        const resp = await fetch('api/langs', { cache: 'no-cache' });
         const list = resp.ok ? await resp.json() : [];
         menu.innerHTML = '';
         list.forEach(({ code, name }) => {

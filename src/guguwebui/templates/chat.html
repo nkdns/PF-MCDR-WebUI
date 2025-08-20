@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title data-i18n="page.chat.title"></title>
-    <link rel="icon" type="image/x-icon" href="/src/default_avatar.jpg">
+    <link rel="icon" type="image/x-icon" href="src/default_avatar.jpg">
     <script src="js/theme-preload.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="js/alpine.min.js" defer></script>
@@ -112,7 +112,7 @@
             <div class="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
                 <div class="flex items-center justify-between h-16">
                     <div class="flex items-center">
-                        <img src="/src/default_avatar.jpg" alt="Logo" class="h-9 w-9 rounded-full shadow ring-1 ring-gray-200 dark:ring-gray-700 mr-3">
+                        <img src="src/default_avatar.jpg" alt="Logo" class="h-9 w-9 rounded-full shadow ring-1 ring-gray-200 dark:ring-gray-700 mr-3">
                         <h1 class="text-xl font-semibold tracking-tight text-gray-900 dark:text-white" data-i18n="page.chat.header_title"></h1>
                     </div>
                     <div class="flex items-center space-x-4">
@@ -358,11 +358,11 @@
                                         <div class="chat-message flex items-start space-x-3" :class="message.player_id === currentPlayer ? 'flex-row-reverse space-x-reverse' : ''">
                                             <div class="flex-shrink-0">
                                                 <template x-if="message.uuid && avatarSource === 'crafatar'">
-                                                    <img :src="`https://crafatar.com/avatars/${message.uuid}`" alt="avatar" class="w-8 h-8 object-cover shadow-md ring-2 ring-white dark:ring-gray-800"/>
+                                                    <img :src="`https://crafatar.com/avatars/${message.uuid}`" alt="avatar" class="w-8 h-8 object-cover shadow-md ring-2 ring-white dark:ring-gray-800">
                                                 </template>
                                                 <template x-if="avatarSource === 'mccag'">
                                                     <div class="w-8 h-8 overflow-hidden shadow-md ring-2 ring-white dark:ring-gray-800">
-                                                        <img :src="`https://x.xzt.plus/api/generate/minimal/mojang/${message.player_id}`" alt="avatar" class="w-full h-full object-cover transform scale-150 origin-center"/>
+                                                        <img :src="`https://x.xzt.plus/api/generate/minimal/mojang/${message.player_id}`" alt="avatar" class="w-full h-full object-cover transform scale-150 origin-center">
                                                     </div>
                                                 </template>
                                                 <template x-if="!message.uuid && avatarSource === 'crafatar'">
@@ -382,11 +382,11 @@
                                         <div class="flex items-center space-x-2 text-sm text-gray-900 dark:text-gray-100">
                                             <div class="flex-shrink-0">
                                                 <template x-if="message.uuid && avatarSource === 'crafatar'">
-                                                    <img :src="`https://crafatar.com/avatars/${message.uuid}`" alt="avatar" class="w-5 h-5 object-cover"/>
+                                                    <img :src="`https://crafatar.com/avatars/${message.uuid}`" alt="avatar" class="w-5 h-5 object-cover">
                                                 </template>
                                                 <template x-if="avatarSource === 'mccag'">
                                                     <div class="w-5 h-5 overflow-hidden">
-                                                        <img :src="`https://x.xzt.plus/api/generate/minimal/mojang/${message.player_id}`" alt="avatar" class="w-full h-full object-cover transform scale-150 origin-center"/>
+                                                        <img :src="`https://x.xzt.plus/api/generate/minimal/mojang/${message.player_id}`" alt="avatar" class="w-full h-full object-cover transform scale-150 origin-center">
                                                     </div>
                                                 </template>
                                                 <template x-if="!message.uuid && avatarSource === 'crafatar'">

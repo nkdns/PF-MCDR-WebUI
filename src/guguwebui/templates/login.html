@@ -135,7 +135,7 @@
             </div>
             
             <!-- 登录表单 -->
-            <form method="post" action="login" x-show="activeTab === 'account'" 
+            <form method="post" action="api/login" x-show="activeTab === 'account'" 
                   x-transition:enter="transition ease-out duration-300"
                   x-transition:enter-start="opacity-0 transform translate-x-4"
                   x-transition:enter-end="opacity-100 transform translate-x-0"
@@ -179,7 +179,7 @@
             </form>
             
             <!-- 临时码登录表单 -->
-            <form method="post" action="login" x-show="activeTab === 'temp'"
+            <form method="post" action="api/login" x-show="activeTab === 'temp'"
                   x-transition:enter="transition ease-out duration-300"
                   x-transition:enter-start="opacity-0 transform -translate-x-4"
                   x-transition:enter-end="opacity-100 transform translate-x-0"
@@ -213,7 +213,7 @@
             
             <!-- 玩家入口：跳转到服务器聊天页 -->
             <div class="mt-4 text-center">
-                <a href="/chat" class="inline-flex items-center px-3 py-2 text-sm rounded-md border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
+                <a href="chat" class="inline-flex items-center px-3 py-2 text-sm rounded-md border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
                     <i class="fas fa-comments mr-2"></i>
                     <span data-i18n="page.login.go_chat"></span>
                 </a>

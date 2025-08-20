@@ -34,7 +34,7 @@ function chatApp() {
         async fetchServerStatus() {
             try {
                 const sessionId = localStorage.getItem('chat_session_id') || '';
-                const url = sessionId ? `/api/get_server_status?session_id=${encodeURIComponent(sessionId)}` : '/api/get_server_status';
+                const url = sessionId ? `api/get_server_status?session_id=${encodeURIComponent(sessionId)}` : 'api/get_server_status';
                 const resp = await fetch(url);
                 const data = await resp.json();
                 if (data) {
@@ -218,7 +218,7 @@ function chatApp() {
             
             this.isLoadingMessages = true;
             try {
-                const response = await fetch('/api/chat/get_messages', {
+                const response = await fetch('api/chat/get_messages', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
@@ -257,7 +257,7 @@ function chatApp() {
             if (this.isLoadingMessages || this.lastMessageId === 0) return;
             
             try {
-                const response = await fetch('/api/chat/get_new_messages', {
+                const response = await fetch('api/chat/get_new_messages', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
@@ -562,7 +562,7 @@ function chatApp() {
         // 检查会话状态
         async checkSession(sessionId) {
             try {
-                const response = await fetch('/api/chat/check_session', {
+                const response = await fetch('api/chat/check_session', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
@@ -597,7 +597,7 @@ function chatApp() {
             this.verificationErrorFallback = '';
             
             try {
-                const response = await fetch('/api/chat/generate_code', {
+                const response = await fetch('api/chat/generate_code', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
@@ -637,7 +637,7 @@ function chatApp() {
             this.verificationErrorFallback = '';
             
             try {
-                const response = await fetch('/api/chat/check_verification', {
+                const response = await fetch('api/chat/check_verification', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
@@ -687,7 +687,7 @@ function chatApp() {
             this.passwordError = '';
             
             try {
-                const response = await fetch('/api/chat/set_password', {
+                const response = await fetch('api/chat/set_password', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
@@ -739,7 +739,7 @@ function chatApp() {
             this.loginError = '';
             
             try {
-                const response = await fetch('/api/chat/login', {
+                const response = await fetch('api/chat/login', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
@@ -790,7 +790,7 @@ function chatApp() {
             try {
                 const sessionId = localStorage.getItem('chat_session_id');
                 if (sessionId) {
-                    await fetch('/api/chat/logout', {
+                    await fetch('api/chat/logout', {
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json'
@@ -849,7 +849,7 @@ function chatApp() {
                     return;
                 }
                 
-                const response = await fetch('/api/chat/send_message', {
+                const response = await fetch('api/chat/send_message', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'

@@ -44,7 +44,34 @@ import mcdreforged.api.all as MCDR
 
 from .utils.utils import __copyFile
 
-app = FastAPI()
+# 获取插件真实版本号
+def get_plugin_version():
+    try:
+        import mcdreforged.api.types as MCDRTypes
+        # 获取当前插件的元数据
+        metadata = MCDRTypes.PluginServerInterface.get_self_metadata()
+        return metadata.version
+    except Exception:
+        # 如果无法获取，返回默认版本
+        return "1.0.0"
+
+app = FastAPI(
+    title="GUGU WebUI",
+    description="MCDR WebUI 管理界面",
+    version=get_plugin_version(),
+    docs_url="/docs",
+    redoc_url="/redoc",
+    openapi_url="/openapi.json"
+)
+
+# 辅助函数：根据当前应用路径生成正确的重定向URL
+def get_redirect_url(request: Request, path: str) -> str:
+    """根据当前应用路径生成正确的重定向URL"""
+    root_path = request.scope.get("root_path", "")
+    if root_path:
+        return f"{root_path}{path}"
+    else:
+        return f".{path}"
 
 # template engine -> jinja2
 templates = Jinja2Templates(directory=f"{STATIC_PATH}/templates")
@@ -254,7 +281,7 @@ def get_languages():
 # redirect to login
 @app.get("/", name="root")
 def read_root(request: Request):
-    return RedirectResponse(url='./login')
+    return RedirectResponse(url=get_redirect_url(request, "/login"))
 
 
 # login page
@@ -283,7 +310,8 @@ async def login_page(request: Request):
         request.session["logged_in"] = True
         request.session["token"] = token
         request.session["username"] = user_db["token"][token]["user_name"]
-        return RedirectResponse(url="./index", status_code=status.HTTP_302_FOUND)
+        
+        return RedirectResponse(url=get_redirect_url(request, "/index"), status_code=status.HTTP_302_FOUND)
 
     # no token / expired token
     response = templates.TemplateResponse("login.html", {"request": request})
@@ -296,7 +324,7 @@ async def login_page(request: Request):
 
 
 # login request
-@app.post("/login")
+@app.post("/api/login")
 async def login(
     request: Request,
     account: str = Form(""),
@@ -304,18 +332,27 @@ async def login(
     temp_code: str = Form(""),
     remember: bool = Form(False),
 ):
-    response = templates.TemplateResponse(
-        "login.html", {"request": request, "error": "未知错误。"}
-    )
     now = datetime.datetime.now(datetime.timezone.utc)
     server:PluginServerInterface = app.state.server_interface
     server_config = server.load_config_simple("config.json", DEFALUT_CONFIG, echo_in_console=False)
+
+    # 获取当前应用的根路径，用于处理子应用挂载
+    root_path = request.scope.get("root_path", "")
+    if root_path:
+        # 如果是子应用挂载，需要调整重定向URL和cookie路径
+        redirect_url = get_redirect_url(request, "/index")
+        cookie_path = root_path
+    else:
+        # 独立运行模式
+        redirect_url = "./index"
+        cookie_path = "/"
 
     # check account & password
     if account and password:
         # check if super admin & only_super_admin
         disable_other_admin = server_config.get("disable_other_admin", False)
         super_admin_account = str(server_config.get("super_admin_account"))
+        
         if disable_other_admin and account != super_admin_account:
             return templates.TemplateResponse(
                 "login.html", {"request": request, "error": "只有超级管理才能登录。"}
@@ -334,8 +371,8 @@ async def login(
             max_age = datetime.timedelta(days=365) if remember else datetime.timedelta(days=1)
             max_age = max_age.total_seconds()
 
-            response = RedirectResponse(url="./index", status_code=status.HTTP_302_FOUND)
-            response.set_cookie("token", token, expires=expiry, path="/", httponly=True, max_age=max_age)
+            response = RedirectResponse(url=redirect_url, status_code=status.HTTP_302_FOUND)
+            response.set_cookie("token", token, expires=expiry, path=cookie_path, httponly=True, max_age=max_age)
 
             # save token & username session
             request.session["logged_in"] = True
@@ -344,6 +381,8 @@ async def login(
 
             user_db["token"][token] = {"user_name": account, "expire_time": str(expiry)}
             user_db.save()
+            
+            return response
 
         else:
             return templates.TemplateResponse(
@@ -366,8 +405,8 @@ async def login(
             max_age = datetime.timedelta(hours=2)
             max_age = max_age.total_seconds()
 
-            response = RedirectResponse(url="./index", status_code=status.HTTP_302_FOUND)
-            response.set_cookie("token", token, expires=expiry, path="/", httponly=True, max_age=max_age)
+            response = RedirectResponse(url=redirect_url, status_code=status.HTTP_302_FOUND)
+            response.set_cookie("token", token, expires=expiry, path=cookie_path, httponly=True, max_age=max_age)
 
             # save token & username in session
             request.session["logged_in"] = True
@@ -376,6 +415,9 @@ async def login(
 
             user_db["token"][token] = {"user_name": "tempuser", "expire_time": str(expiry)}
             user_db.save()
+            
+            server.logger.info(f"临时用户登录成功，重定向到: {redirect_url}")
+            return response
 
         else:
             if temp_code in user_db["temp"]:  # delete expired token
@@ -392,16 +434,26 @@ async def login(
             "login.html", {"request": request, "error": "请填写完整的登录信息。"}
         )
 
-    return response
-
 
 # logout Endpoint
 @app.get("/logout", response_class=RedirectResponse)
 def logout(request: Request):
     request.session["logged_in"] = False
     request.session.clear()  # clear session data
-    response = RedirectResponse(url="./login", status_code=status.HTTP_302_FOUND)
-    response.delete_cookie("token", path="/")  # delete token cookie
+    
+    # 获取当前应用的根路径，用于处理子应用挂载
+    root_path = request.scope.get("root_path", "")
+    if root_path:
+        # 如果是子应用挂载，需要调整重定向URL和cookie路径
+        redirect_url = get_redirect_url(request, "/login")
+        cookie_path = root_path
+    else:
+        # 独立运行模式
+        redirect_url = "./login"
+        cookie_path = "/"
+    
+    response = RedirectResponse(url=redirect_url, status_code=status.HTTP_302_FOUND)
+    response.delete_cookie("token", path=cookie_path)  # delete token cookie
     return response
 
 app.add_middleware(SessionMiddleware, secret_key=SECRET_KEY)
@@ -410,7 +462,7 @@ app.add_middleware(SessionMiddleware, secret_key=SECRET_KEY)
 @app.get("/index", response_class=HTMLResponse)
 async def read_index(request: Request, token_valid: bool = Depends(verify_token)):
     if not request.session.get("logged_in"):
-        return RedirectResponse(url="./login")
+        return RedirectResponse(url=get_redirect_url(request, "/login"))
     return templates.TemplateResponse(
         "index.html", {"request": request, "index_path": "./index"}
     )
@@ -419,7 +471,7 @@ async def read_index(request: Request, token_valid: bool = Depends(verify_token)
 @app.get("/home", response_class=HTMLResponse)
 async def read_home(request: Request, token_valid: bool = Depends(verify_token)):
     if not request.session.get("logged_in"):
-        return RedirectResponse(url="./login")
+        return RedirectResponse(url=get_redirect_url(request, "/login"))
     return templates.TemplateResponse(
         "home.html", {"request": request, "message": "欢迎进入后台主页！", "index_path": "./index"}
     )
@@ -427,7 +479,7 @@ async def read_home(request: Request, token_valid: bool = Depends(verify_token))
 
 async def render_template_if_logged_in(request: Request, template_name: str):
     if not request.session.get("logged_in"):
-        return RedirectResponse(url="./login")
+        return RedirectResponse(url=get_redirect_url(request, "/login"))
     return templates.TemplateResponse(template_name, {"request": request, "index_path": "./index"})
 
 @app.get("/gugubot", response_class=HTMLResponse)

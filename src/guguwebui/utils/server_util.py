@@ -9,6 +9,15 @@ from fastapi import Request, status
 from fastapi.responses import RedirectResponse
 from mcdreforged.api.types import PluginServerInterface as ServerInterface
 
+# 辅助函数：根据当前应用路径生成正确的重定向URL
+def get_redirect_url(request, path: str) -> str:
+    """根据当前应用路径生成正确的重定向URL"""
+    root_path = request.scope.get("root_path", "")
+    if root_path:
+        return f"{root_path}{path}"
+    else:
+        return path
+
 from .constant import *
 
 # Github: https://github.com/zauberzeug/nicegui/issues/1956
@@ -208,9 +217,9 @@ def verify_token(request: Request):
     token = request.cookies.get("token")  # get token from cookie
     
     if not token: # token not exists
-        return RedirectResponse(url="/login", status_code=status.HTTP_302_FOUND)
+        return RedirectResponse(url=get_redirect_url(request, "/login"), status_code=status.HTTP_302_FOUND)
 
     if token not in user_db['token']: # check token in user_db
-        return RedirectResponse(url="/login", status_code=status.HTTP_302_FOUND)
+        return RedirectResponse(url=get_redirect_url(request, "/login"), status_code=status.HTTP_302_FOUND)
 
     return True

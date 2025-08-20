@@ -748,7 +748,7 @@ function settingsApp() {
             }
             
             try {
-                const response = await fetch('/api/chat/clear_messages', {
+                const response = await fetch('api/chat/clear_messages', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'

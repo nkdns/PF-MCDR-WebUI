@@ -72,7 +72,6 @@ class ConfigValidator:
             self.validation_errors.append(f"端口 {port} 在 {host} 上不可用")
             return False
         
-        self.logger.info(f"IP和端口验证通过: {host}:{port}")
         return True
     
     def _validate_other_configs(self, config: Dict[str, Any], validated_config: Dict[str, Any]):

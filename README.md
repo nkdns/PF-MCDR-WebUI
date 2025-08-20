@@ -1,9 +1,10 @@
 # PF-MCDR-WebUI
+
 为 MCDR 开发的在线 WebUI 插件
 
-[![仓库大小](https://img.shields.io/github/repo-size/LoosePrince/PF-MCDR-WebUI?style=flat-square&label=仓库占用)](/) 
+[![仓库大小](https://img.shields.io/github/repo-size/LoosePrince/PF-MCDR-WebUI?style=flat-square&label=仓库占用)](/)
 [![最新版](https://img.shields.io/github/v/release/LoosePrince/PF-MCDR-WebUI?style=flat-square&label=最新版)](https://github.com/LoosePrince/PF-MCDR-WebUI/releases/latest/)
-[![议题](https://img.shields.io/github/issues/LoosePrince/PF-MCDR-WebUI?style=flat-square&label=Issues)](https://github.com/LoosePrince/PF-MCDR-WebUI/issues) 
+[![议题](https://img.shields.io/github/issues/LoosePrince/PF-MCDR-WebUI?style=flat-square&label=Issues)](https://github.com/LoosePrince/PF-MCDR-WebUI/issues)
 [![已关闭issues](https://img.shields.io/github/issues-closed/LoosePrince/PF-MCDR-WebUI?style=flat-square&label=已关闭%20Issues)](https://github.com/LoosePrince/PF-MCDR-WebUI/issues?q=is%3Aissue+is%3Aclosed)
 [![下载量](https://img.shields.io/github/downloads/LoosePrince/PF-MCDR-WebUI/total?style=flat-square&label=下载量)](https://github.com/LoosePrince/PF-MCDR-WebUI/releases)
 [![最新发布下载量](https://img.shields.io/github/downloads/LoosePrince/PF-MCDR-WebUI/latest/total?style=flat-square&label=最新版本下载量)](https://github.com/LoosePrince/PF-MCDR-WebUI/releases/latest)
@@ -20,10 +21,11 @@ WebUI 文档：[WebUI 文档](https://pf-doc.pfingan.com/main/#PF-webui/)
 
 > [!NOTE]
 > **演示站地址：** [https://looseprince.github.io/PF-MCDR-WebUI/](https://looseprince.github.io/PF-MCDR-WebUI/)
-> 
+>
 > **重要说明：** 该演示站仅为UI界面和功能演示，**没有实际功能**。所有操作均为模拟演示，不会对真实的MCDR服务器产生任何影响。如需体验完整功能，请按照下方说明安装到您的MCDR服务器中。
 
 ### 主要功能
+>
 > 为MCDR提供一个 `在线WebUI管理界面` 和 `MCDR插件管理` 及 `表单配置功能`（可选使用在线编辑器）。
 
 #### pip包管理
@@ -43,7 +45,6 @@ WebUI 文档：[WebUI 文档](https://pf-doc.pfingan.com/main/#PF-webui/)
 
 - [x] **配置修改:** 使用在线表单 **或** 在线编辑器进行配置文件的修改（在 **`所有插件`** 选项卡处修改）。
 - [x] **支持的配置:** `yaml` 、 `json` 、 `html`
-
 
 #### 服务器终端
 
@@ -87,7 +88,6 @@ WebUI 文档：[WebUI 文档](https://pf-doc.pfingan.com/main/#PF-webui/)
 
 > [!IMPORTANT]
 > **关于V1.3.0版本:** 本项目于v1.3.0版本重构前端，如您是从v1.3.0版本之前升级的，请删除 `guguwebui_static` 文件夹中的内容，保留 `db.json` 即可。
-
 
 ## 依赖配置
 
@@ -187,7 +187,6 @@ AI分析![image](https://github.com/user-attachments/assets/91276765-ec5b-47eb-8
 | [树梢 (LoosePrince)](https://github.com/LoosePrince) | 功能设计、文档编写、Web设计、前端编写 |
 | [雪开 (XueK66)](https://github.com/XueK66) | 代码开发、维护、功能设计 |
 
-
 | 贡献项目 | 功能 | 备注 |
 |---|---|---|
 | [Ace Editor](https://ace.c9.io/) | 在线编辑器 | 已不再使用 |
@@ -198,7 +197,6 @@ AI分析![image](https://github.com/user-attachments/assets/91276765-ec5b-47eb-8
 | [TailwindCSS](https://tailwindcss.com/) | CSS框架 | |
 | [Alpine.js](https://alpinejs.dev/) | JS框架 | |
 | [Font Awesome](https://fontawesome.com/) | 图标库 | |
-
 
 | 特别鸣谢 | 说明 |
 |---|---|
