@@ -1195,3 +1195,96 @@ def get_player_info(player_name, server_interface=None, include_uuid=True):
         if server_interface:
             server_interface.logger.error(f"获取玩家信息时发生错误: {e}")
         return {'name': player_name, 'error': str(e)}
+
+def is_player(name: str, server_interface=None) -> bool:
+    """
+    检查是否是真实玩家（多用于假人判断）
+    
+    Args:
+        name: 玩家名称
+        server_interface: MCDR服务器接口
+        
+    Returns:
+        bool: 如果玩家存在记录返回True，否则返回False
+    """
+    try:
+        if not server_interface:
+            return True  # 如果没有服务器接口，默认返回True
+        
+        # 检查player_ip_logger插件是否存在
+        loaded_metadata, _, _, _ = load_plugin_info(server_interface)
+        
+        if "player_ip_logger" not in loaded_metadata:
+            # 插件不存在，默认返回True
+            return True
+        
+        # 插件存在，尝试调用其is_player方法
+        try:
+            # 通过MCDR的插件管理器获取插件实例
+            plugin_instance = server_interface.get_plugin_instance("player_ip_logger")
+            if plugin_instance and hasattr(plugin_instance, 'is_player'):
+                return plugin_instance.is_player(name)
+            else:
+                # 插件实例不存在或没有is_player方法，尝试通过命令查询
+                try:
+                    # 使用player_ip_logger插件的命令来检查
+                    result = server_interface.execute_command(f"!!player_ip_logger is_player {name}")
+                    # 这里需要根据插件的实际输出格式来解析结果
+                    # 暂时返回True，避免误判
+                    return True
+                except Exception:
+                    return True
+        except Exception as e:
+            if server_interface:
+                server_interface.logger.debug(f"调用player_ip_logger.is_player失败: {e}")
+            return True
+            
+    except Exception as e:
+        if server_interface:
+            server_interface.logger.error(f"is_player检查失败: {e}")
+        return True  # 出错时默认返回True，避免误判
+
+def get_bot_list(server_interface=None) -> list:
+    """
+    获取假人列表
+    
+    Args:
+        server_interface: MCDR服务器接口
+        
+    Returns:
+        list: 假人名称列表
+    """
+    try:
+        if not server_interface:
+            return []
+        
+        # 获取在线玩家列表
+        online_players = set()
+        try:
+            # 优先通过RCON获取具体在线玩家列表
+            if hasattr(server_interface, "is_rcon_running") and server_interface.is_rcon_running():
+                feedback = server_interface.rcon_query("list")
+                if isinstance(feedback, str) and ":" in feedback:
+                    names_part = feedback.split(":", 1)[1].strip()
+                    if names_part:
+                        for name in [n.strip() for n in names_part.split(",") if n.strip()]:
+                            online_players.add(name)
+        except Exception:
+            pass
+        
+        # 如果没有获取到在线玩家，返回空列表
+        if not online_players:
+            return []
+        
+        # 检查每个在线玩家是否为假人
+        bot_list = []
+        for player_name in online_players:
+            if not is_player(player_name, server_interface):
+                bot_list.append(player_name)
+        
+        return bot_list
+        
+    except Exception as e:
+        if server_interface:
+            server_interface.logger.error(f"获取假人列表失败: {e}")
+        return []

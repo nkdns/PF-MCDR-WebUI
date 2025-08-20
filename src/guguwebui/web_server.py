@@ -3345,13 +3345,23 @@ async def get_new_chat_messages(request: Request):
         except Exception:
             pass
         
+        # 获取假人列表
+        online_bot = []
+        try:
+            from .utils.utils import get_bot_list
+            online_bot = get_bot_list(server)
+        except Exception as e:
+            if server:
+                server.logger.debug(f"获取假人列表失败: {e}")
+        
         return JSONResponse({
             "status": "success",
             "messages": messages,
             "last_message_id": chat_logger.get_last_message_id(),
             "online": {
                 "web": list(online_web),
-                "game": list(online_game)
+                "game": list(online_game),
+                "bot": online_bot
             }
         })
     except Exception as e:

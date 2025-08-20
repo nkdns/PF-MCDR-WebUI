@@ -446,15 +446,16 @@
             <h3 class="text-sm font-semibold text-gray-800 dark:text-gray-200 mb-2" data-i18n="page.index.online_players"></h3>
             <div class="space-y-2 max-h-80 overflow-y-auto">
                 <template x-for="[name, info] in getAllMembers()" :key="name">
-                    <div class="flex items-center justify-between text-sm" :class="info.status === 'offline' ? 'text-gray-400 dark:text-gray-500' : 'text-gray-700 dark:text-gray-300'">
+                    <div class="flex items-center justify-between text-sm" :class="info.status === 'offline' || info.status === 'bot' ? 'text-gray-400 dark:text-gray-500' : 'text-gray-700 dark:text-gray-300'">
                         <div class="flex-1 min-w-0">
                             <div class="truncate" x-text="name"></div>
-                            <div x-show="info.status === 'offline'" class="text-xs text-gray-400 dark:text-gray-500" x-text="formatOfflineTime(info.lastSeen)"></div>
+                            <div x-show="info.status === 'offline' || info.status === 'bot'" class="text-xs text-gray-400 dark:text-gray-500" x-text="formatOfflineTime(info.lastSeen)"></div>
                         </div>
                         <span class="flex-shrink-0 ml-2">
-                            <i class="fas fa-gamepad mr-1 text-green-500" x-show="info.status === 'game' || info.status === 'both'"></i>
-                            <i class="fas fa-globe text-blue-500" x-show="info.status === 'web' || info.status === 'both'"></i>
-                            <i class="fas fa-user-slash text-gray-400" x-show="info.status === 'offline'"></i>
+                            <i class="fas fa-gamepad mr-1 text-green-500" x-show="info.status === 'game' || info.status === 'both' || info.status === 'game_bot' || info.status === 'all'"></i>
+                            <i class="fas fa-globe text-blue-500" x-show="info.status === 'web' || info.status === 'both' || info.status === 'web_bot' || info.status === 'all'"></i>
+                            <i class="fas fa-robot text-purple-500" x-show="info.status === 'bot' || info.status === 'web_bot' || info.status === 'game_bot' || info.status === 'all'"></i>
+                            <i class="fas fa-user-slash text-gray-400" x-show="info.status === 'offline' && info.status !== 'bot'"></i>
                         </span>
                     </div>
                 </template>
@@ -472,15 +473,16 @@
                 </div>
                 <div class="space-y-2 max-h-[80vh] overflow-y-auto">
                     <template x-for="[name, info] in getAllMembers()" :key="name">
-                        <div class="flex items-center justify-between text-sm" :class="info.status === 'offline' ? 'text-gray-400 dark:text-gray-500' : 'text-gray-700 dark:text-gray-300'">
+                        <div class="flex items-center justify-between text-sm" :class="info.status === 'offline' || info.status === 'bot' ? 'text-gray-400 dark:text-gray-500' : 'text-gray-700 dark:text-gray-300'">
                             <div class="flex-1 min-w-0">
                                 <div class="truncate" x-text="name"></div>
-                                <div x-show="info.status === 'offline'" class="text-xs text-gray-400 dark:text-gray-500" x-text="formatOfflineTime(info.lastSeen)"></div>
+                                <div x-show="info.status === 'offline' || info.status === 'bot'" class="text-xs text-gray-400 dark:text-gray-500" x-text="formatOfflineTime(info.lastSeen)"></div>
                             </div>
                             <span class="flex-shrink-0 ml-2">
-                                <i class="fas fa-gamepad mr-1 text-green-500" x-show="info.status === 'game' || info.status === 'both'"></i>
-                                <i class="fas fa-globe text-blue-500" x-show="info.status === 'web' || info.status === 'both'"></i>
-                                <i class="fas fa-user-slash text-gray-400" x-show="info.status === 'offline'"></i>
+                                <i class="fas fa-gamepad mr-1 text-green-500" x-show="info.status === 'game' || info.status === 'both' || info.status === 'game_bot' || info.status === 'all'"></i>
+                                <i class="fas fa-globe text-blue-500" x-show="info.status === 'web' || info.status === 'both' || info.status === 'web_bot' || info.status === 'all'"></i>
+                                <i class="fas fa-robot text-purple-500" x-show="info.status === 'bot' || info.status === 'web_bot' || info.status === 'game_bot' || info.status === 'all'"></i>
+                                <i class="fas fa-user-slash text-gray-400" x-show="info.status === 'offline' && info.status !== 'bot'"></i>
                             </span>
                         </div>
                     </template>

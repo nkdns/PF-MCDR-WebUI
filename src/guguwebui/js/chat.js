@@ -31,6 +31,20 @@ function chatApp() {
                 }
             }, 5000);
         },
+        
+        // 启动离线成员清理任务（每5分钟）
+        startOfflineCleanupTask() {
+            if (this.offlineCleanupInterval) {
+                clearInterval(this.offlineCleanupInterval);
+            }
+            // 立即清理一次
+            this.cleanupExpiredOfflineMembers();
+            // 每5分钟清理一次
+            this.offlineCleanupInterval = setInterval(() => {
+                this.cleanupExpiredOfflineMembers();
+            }, 5 * 60 * 1000); // 5分钟
+        },
+        
         async fetchServerStatus() {
             try {
                 const sessionId = localStorage.getItem('chat_session_id') || '';
@@ -100,12 +114,14 @@ function chatApp() {
         serverVersion: '',
         serverPlayers: '',
         statusInterval: null,
+        offlineCleanupInterval: null,
         onlineWeb: [],
         onlineGame: [],
+        onlineBot: [],
         showOnlinePanel: false,
         
         // 离线成员缓存：存储离线时间和状态
-        offlineMembers: {}, // {playerName: {lastSeen: timestamp, status: 'web'|'game'}}
+        offlineMembers: {}, // {playerName: {lastSeen: timestamp, status: 'web'|'game'|'bot'}}
         
         // 本地存储键名
         OFFLINE_CACHE_KEY: 'chat_offline_members',
@@ -158,6 +174,8 @@ function chatApp() {
             this.startMessageRefresh();
             // 启动服务器状态刷新（每5秒）
             this.startStatusRefresh();
+            // 启动离线成员清理任务（每5分钟）
+            this.startOfflineCleanupTask();
             
             // 页面卸载时清理资源
             window.addEventListener('beforeunload', () => {
@@ -209,6 +227,10 @@ function chatApp() {
             if (this.statusInterval) {
                 clearInterval(this.statusInterval);
                 this.statusInterval = null;
+            }
+            if (this.offlineCleanupInterval) {
+                clearInterval(this.offlineCleanupInterval);
+                this.offlineCleanupInterval = null;
             }
         },
         
@@ -284,12 +306,14 @@ function chatApp() {
                 if (result.status === 'success' && result.online) {
                     const oldOnlineWeb = [...this.onlineWeb];
                     const oldOnlineGame = [...this.onlineGame];
+                    const oldOnlineBot = [...this.onlineBot];
                     
                     this.onlineWeb = Array.isArray(result.online.web) ? result.online.web : [];
                     this.onlineGame = Array.isArray(result.online.game) ? result.online.game : [];
+                    this.onlineBot = Array.isArray(result.online.bot) ? result.online.bot : [];
                     
                     // 检测玩家状态变化
-                    this.detectPlayerStatusChanges(oldOnlineWeb, oldOnlineGame);
+                    this.detectPlayerStatusChanges(oldOnlineWeb, oldOnlineGame, oldOnlineBot);
                     
                     // 更新离线成员缓存
                     this.updateOfflineMembers();
@@ -351,7 +375,7 @@ function chatApp() {
         // 离线成员管理
         updateOfflineMembers() {
             const now = Math.floor(Date.now() / 1000);
-            const allOnline = new Set([...this.onlineWeb, ...this.onlineGame]);
+            const allOnline = new Set([...this.onlineWeb, ...this.onlineGame, ...this.onlineBot]);
             
             // 清理已上线的玩家
             Object.keys(this.offlineMembers).forEach(name => {
@@ -371,19 +395,21 @@ function chatApp() {
                 }
             });
             
+
+            
             // 保存到本地存储
             this.saveOfflineMembers();
         },
         
         // 检测玩家状态变化
-        detectPlayerStatusChanges(oldOnlineWeb, oldOnlineGame) {
+        detectPlayerStatusChanges(oldOnlineWeb, oldOnlineGame, oldOnlineBot) {
             const now = Math.floor(Date.now() / 1000);
             
             // 检测从游戏退出的玩家
             oldOnlineGame.forEach(name => {
                 if (!this.onlineGame.includes(name)) {
-                    // 玩家从游戏退出，如果不在web中，标记为离线
-                    if (!this.onlineWeb.includes(name)) {
+                    // 玩家从游戏退出，如果不在web和bot中，标记为离线
+                    if (!this.onlineWeb.includes(name) && !this.onlineBot.includes(name)) {
                         this.offlineMembers[name] = {
                             lastSeen: now,
                             status: 'offline'
@@ -395,11 +421,24 @@ function chatApp() {
             // 检测从web退出的玩家
             oldOnlineWeb.forEach(name => {
                 if (!this.onlineWeb.includes(name)) {
-                    // 玩家从web退出，如果不在游戏中，标记为离线
-                    if (!this.onlineGame.includes(name)) {
+                    // 玩家从web退出，如果不在游戏和bot中，标记为离线
+                    if (!this.onlineGame.includes(name) && !this.onlineBot.includes(name)) {
                         this.offlineMembers[name] = {
                             lastSeen: now,
                             status: 'offline'
+                        };
+                    }
+                }
+            });
+            
+            // 检测从bot退出的玩家
+            oldOnlineBot.forEach(name => {
+                if (!this.onlineBot.includes(name)) {
+                    // 玩家从bot退出，如果不在web和游戏中，标记为bot离线状态
+                    if (!this.onlineWeb.includes(name) && !this.onlineGame.includes(name)) {
+                        this.offlineMembers[name] = {
+                            lastSeen: now,
+                            status: 'bot'
                         };
                     }
                 }
@@ -435,16 +474,22 @@ function chatApp() {
             }
         },
         
-        // 清理过期的离线成员缓存（超过一周）
+        // 清理过期的离线成员缓存
         cleanupExpiredOfflineMembers() {
             const now = Math.floor(Date.now() / 1000);
             const oneWeekInSeconds = 7 * 24 * 60 * 60; // 7天 * 24小时 * 60分钟 * 60秒
-            const cutoffTime = now - oneWeekInSeconds;
+            const fiveMinutesInSeconds = 5 * 60; // 5分钟
             
             let removedCount = 0;
             Object.keys(this.offlineMembers).forEach(name => {
                 const member = this.offlineMembers[name];
-                if (member.lastSeen < cutoffTime) {
+                const timeDiff = now - member.lastSeen;
+                
+                // bot状态5分钟后清除，其他状态一周后清除
+                if (member.status === 'bot' && timeDiff > fiveMinutesInSeconds) {
+                    delete this.offlineMembers[name];
+                    removedCount++;
+                } else if (member.status !== 'bot' && timeDiff > oneWeekInSeconds) {
                     delete this.offlineMembers[name];
                     removedCount++;
                 }
@@ -483,6 +528,25 @@ function chatApp() {
                 }
             });
             
+            // 处理bot在线玩家
+            this.onlineBot.forEach(name => {
+                if (!playerStatus.has(name)) {
+                    playerStatus.set(name, { status: 'bot', lastSeen: now });
+                } else {
+                    // 如果已经在其他状态中，标记为both
+                    const currentStatus = playerStatus.get(name).status;
+                    if (currentStatus === 'web') {
+                        playerStatus.set(name, { status: 'web_bot', lastSeen: now });
+                    } else if (currentStatus === 'game') {
+                        playerStatus.set(name, { status: 'game_bot', lastSeen: now });
+                    } else if (currentStatus === 'both') {
+                        playerStatus.set(name, { status: 'all', lastSeen: now });
+                    } else {
+                        playerStatus.set(name, { status: 'bot', lastSeen: now });
+                    }
+                }
+            });
+            
             // 转换为数组格式
             playerStatus.forEach((info, name) => {
                 allMembers.push([name, info]);
@@ -490,7 +554,7 @@ function chatApp() {
             
             // 添加离线成员
             Object.entries(this.offlineMembers).forEach(([name, info]) => {
-                allMembers.push([name, { status: 'offline', lastSeen: info.lastSeen }]);
+                allMembers.push([name, { status: info.status, lastSeen: info.lastSeen }]);
             });
             
             return allMembers;
