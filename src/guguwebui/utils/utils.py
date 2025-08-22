@@ -52,6 +52,11 @@ def change_user_account(user_name:str, old_password:str, new_password:str)->bool
     return False
 # MCDR command
 def create_account_command(src, ctx, host:str, port:int):
+    # 检查是否为玩家发送的命令
+    if hasattr(src, 'player') and src.player is not None:
+        src.reply("§c此命令只能在终端中执行！请在MCDR控制台中使用此命令。")
+        return
+    
     account, password = ctx['account'], ctx['password']
     success = create_user_account(account, password)
     if success:
@@ -60,6 +65,11 @@ def create_account_command(src, ctx, host:str, port:int):
         src.reply("账户已存在！")
 # MCDR command
 def change_account_command(src, ctx, host:str, port:int):
+    # 检查是否为玩家发送的命令
+    if hasattr(src, 'player') and src.player is not None:
+        src.reply("§c此命令只能在终端中执行！请在MCDR控制台中使用此命令。")
+        return
+    
     account = ctx['account']
     old_password, new_password = ctx['old password'], ctx['new password']
     success = change_user_account(account, old_password, new_password)
@@ -69,6 +79,11 @@ def change_account_command(src, ctx, host:str, port:int):
         src.reply("用户不存在 或 密码错误！")
 # MCDR command
 def get_temp_password_command(src, ctx, host:str, port:int):
+    # 检查是否为玩家发送的命令
+    if hasattr(src, 'player') and src.player is not None:
+        src.reply("§c此命令只能在终端中执行！请在MCDR控制台中使用此命令。")
+        return
+    
     temp_password = create_temp_password()
     src.reply(f"临时密码(15分钟后过期): {temp_password}\nguguwebui 地址: http://{host}:{port}")
 
@@ -101,6 +116,12 @@ def cleanup_chat_verifications():
 # MCDR command for chat verification
 def verify_chat_code_command(src, ctx):
 	code = ctx['code']
+	
+	# 检查是否为玩家发送的命令
+	if not hasattr(src, 'player') or src.player is None:
+		src.reply("§c此命令只能由玩家在游戏内使用！")
+		return
+	
 	player_id = src.player
 	
 	# 先清理一次过期验证码
@@ -1225,15 +1246,7 @@ def is_player(name: str, server_interface=None) -> bool:
             if plugin_instance and hasattr(plugin_instance, 'is_player'):
                 return plugin_instance.is_player(name)
             else:
-                # 插件实例不存在或没有is_player方法，尝试通过命令查询
-                try:
-                    # 使用player_ip_logger插件的命令来检查
-                    result = server_interface.execute_command(f"!!player_ip_logger is_player {name}")
-                    # 这里需要根据插件的实际输出格式来解析结果
-                    # 暂时返回True，避免误判
-                    return True
-                except Exception:
-                    return True
+                return True
         except Exception as e:
             if server_interface:
                 server_interface.logger.debug(f"调用player_ip_logger.is_player失败: {e}")
