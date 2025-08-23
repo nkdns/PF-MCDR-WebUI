@@ -163,9 +163,11 @@ def on_load(server: PluginServerInterface, old):
     # 初始化聊天消息监听器
     try:
         from .utils.chat_logger import ChatLogger
+        from .utils.utils import create_chat_logger_status_rtext
         global chat_logger
         chat_logger = ChatLogger()
-        server.logger.info("聊天消息监听器初始化成功")
+        status_msg = create_chat_logger_status_rtext('init', True)
+        server.logger.info(status_msg)
     except Exception as e:
         server.logger.error(f"聊天消息监听器初始化失败: {e}")
         chat_logger = None
@@ -582,7 +584,9 @@ def on_user_info(server: PluginServerInterface, info):
                 if player_name and message_content and player_name.strip() and message_content.strip():
                     # 记录聊天消息
                     chat_logger.add_message(player_name.strip(), message_content.strip())
-                    server.logger.debug(f"记录玩家 {player_name} 的聊天消息: {message_content}")
+                    from .utils.utils import create_chat_logger_status_rtext
+                    status_msg = create_chat_logger_status_rtext('record', True, player_name.strip(), message_content.strip())
+                    server.logger.debug(status_msg)
                 else:
                     server.logger.debug(f"跳过无效的聊天消息: player={player_name}, content={message_content}")
     except Exception as e:

@@ -3386,7 +3386,9 @@ async def chat_clear_messages(request: Request):
         
         server:PluginServerInterface = app.state.server_interface
         if server:
-            server.logger.info("聊天消息已清空")
+            from .utils.utils import create_chat_logger_status_rtext
+            status_msg = create_chat_logger_status_rtext('clear', True)
+            server.logger.info(status_msg)
         
         return JSONResponse({"status": "success", "message": "聊天消息已清空"})
         
@@ -3483,18 +3485,9 @@ async def send_chat_message(request: Request):
             server.logger.debug(f"获取玩家UUID失败: {e}")
             player_uuid = "未知"
         
-        # 构建tellraw命令
-        tellraw_json = {
-            "text": f"<{player_id}> {message}",
-            "hoverEvent": {
-                "action": "show_text",
-                "value": [
-                    {"text": f"{player_id}\n"},
-                    {"text": "来源: WebUI\n"},
-                    {"text": f"{player_uuid}"}
-                ]
-            }
-        }
+        # 构建tellraw命令 - 使用RText美化
+        from .utils.utils import create_chat_message_rtext
+        tellraw_json = create_chat_message_rtext(player_id, message, player_uuid)
         
         # 执行tellraw命令
         tellraw_command = f'/tellraw @a {json.dumps(tellraw_json, ensure_ascii=False)}'
@@ -3514,7 +3507,10 @@ async def send_chat_message(request: Request):
         except Exception as e:
             server.logger.warning(f"记录聊天消息失败: {e}")
         
-        server.logger.info(f"<{player_id}> {message}")
+        # 使用RText美化成功消息
+        from .utils.utils import create_chat_message_rtext
+        success_msg = create_chat_message_rtext(player_id, message, player_uuid)
+        server.logger.debug(f"WebUI聊天消息: {success_msg}")
         
         return JSONResponse({
             "status": "success",

@@ -17,6 +17,8 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 
 from mcdreforged.api.types import PluginServerInterface
 from mcdreforged.plugin.meta.metadata import Metadata
+from mcdreforged.api.rtext import RText, RTextList, RTextBase
+from mcdreforged.minecraft.rtext.style import RColor
 from pathlib import Path
 
 from .constant import user_db, pwd_context, SERVER_PROPERTIES_PATH
@@ -54,38 +56,64 @@ def change_user_account(user_name:str, old_password:str, new_password:str)->bool
 def create_account_command(src, ctx, host:str, port:int):
     # 检查是否为玩家发送的命令
     if hasattr(src, 'player') and src.player is not None:
-        src.reply("§c此命令只能在终端中执行！请在MCDR控制台中使用此命令。")
+        error_msg = RText("此命令只能在终端中执行！请在MCDR控制台中使用此命令。", color=RColor.red)
+        src.reply(error_msg)
         return
     
     account, password = ctx['account'], ctx['password']
     success = create_user_account(account, password)
     if success:
-        src.reply(f"账户: {account} 创建成功。\nguguwebui 地址: http://{host}:{port}")
+        success_msg = RTextList(
+            RText("账户: ", color=RColor.green),
+            RText(account, color=RColor.yellow),
+            RText(" 创建成功。\n", color=RColor.green),
+            RText("guguwebui 地址: ", color=RColor.blue),
+            RText(f"http://{host}:{port}", color=RColor.aqua)
+        )
+        src.reply(success_msg)
     else:
-        src.reply("账户已存在！")
+        error_msg = RText("账户已存在！", color=RColor.red)
+        src.reply(error_msg)
 # MCDR command
 def change_account_command(src, ctx, host:str, port:int):
     # 检查是否为玩家发送的命令
     if hasattr(src, 'player') and src.player is not None:
-        src.reply("§c此命令只能在终端中执行！请在MCDR控制台中使用此命令。")
+        error_msg = RText("此命令只能在终端中执行！请在MCDR控制台中使用此命令。", color=RColor.red)
+        src.reply(error_msg)
         return
     
     account = ctx['account']
     old_password, new_password = ctx['old password'], ctx['new password']
     success = change_user_account(account, old_password, new_password)
     if success:
-        src.reply(f"账户: {account} 修改成功。\nguguwebui 地址: http://{host}:{port}")
+        success_msg = RTextList(
+            RText("账户: ", color=RColor.green),
+            RText(account, color=RColor.yellow),
+            RText(" 修改成功。\n", color=RColor.green),
+            RText("guguwebui 地址: ", color=RColor.blue),
+            RText(f"http://{host}:{port}", color=RColor.aqua)
+        )
+        src.reply(success_msg)
     else:
-        src.reply("用户不存在 或 密码错误！")
+        error_msg = RText("用户不存在 或 密码错误！", color=RColor.red)
+        src.reply(error_msg)
 # MCDR command
 def get_temp_password_command(src, ctx, host:str, port:int):
     # 检查是否为玩家发送的命令
     if hasattr(src, 'player') and src.player is not None:
-        src.reply("§c此命令只能在终端中执行！请在MCDR控制台中使用此命令。")
+        error_msg = RText("此命令只能在终端中执行！请在MCDR控制台中使用此命令。", color=RColor.red)
+        src.reply(error_msg)
         return
     
     temp_password = create_temp_password()
-    src.reply(f"临时密码(15分钟后过期): {temp_password}\nguguwebui 地址: http://{host}:{port}")
+    temp_msg = RTextList(
+        RText("临时密码(15分钟后过期): ", color=RColor.yellow),
+        RText(temp_password, color=RColor.gold),
+        RText("\n", color=RColor.reset),
+        RText("guguwebui 地址: ", color=RColor.blue),
+        RText(f"http://{host}:{port}", color=RColor.aqua)
+    )
+    src.reply(temp_msg)
 
 # 清理过期或失效的聊天验证码
 def cleanup_chat_verifications():
@@ -119,7 +147,8 @@ def verify_chat_code_command(src, ctx):
 	
 	# 检查是否为玩家发送的命令
 	if not hasattr(src, 'player') or src.player is None:
-		src.reply("§c此命令只能由玩家在游戏内使用！")
+		error_msg = RText("此命令只能由玩家在游戏内使用！", color=RColor.red)
+		src.reply(error_msg)
 		return
 	
 	player_id = src.player
@@ -129,7 +158,12 @@ def verify_chat_code_command(src, ctx):
 	
 	# 检查验证码是否存在
 	if code not in user_db['chat_verification']:
-		src.reply(f"§c验证码 {code} 不存在！")
+		error_msg = RTextList(
+			RText("验证码 ", color=RColor.red),
+			RText(code, color=RColor.yellow),
+			RText(" 不存在！", color=RColor.red)
+		)
+		src.reply(error_msg)
 		return
 	
 	verification = user_db['chat_verification'][code]
@@ -139,17 +173,34 @@ def verify_chat_code_command(src, ctx):
 	if datetime.datetime.now(datetime.timezone.utc) > expire_time:
 		del user_db['chat_verification'][code]
 		user_db.save()
-		src.reply(f"§c验证码 {code} 已过期！")
+		error_msg = RTextList(
+			RText("验证码 ", color=RColor.red),
+			RText(code, color=RColor.yellow),
+			RText(" 已过期！", color=RColor.red)
+		)
+		src.reply(error_msg)
 		return
 	
 	# 检查是否已被使用（已验证）
 	if verification.get('used'):
-		src.reply(f"§c验证码 {code} 已被使用！")
+		error_msg = RTextList(
+			RText("验证码 ", color=RColor.red),
+			RText(code, color=RColor.yellow),
+			RText(" 已被使用！", color=RColor.red)
+		)
+		src.reply(error_msg)
 		return
 	
 	# 检查是否已绑定其他玩家
 	if verification['player_id'] is not None and verification['player_id'] != player_id:
-		src.reply(f"§c验证码 {code} 已被玩家 {verification['player_id']} 使用！")
+		error_msg = RTextList(
+			RText("验证码 ", color=RColor.red),
+			RText(code, color=RColor.yellow),
+			RText(" 已被玩家 ", color=RColor.red),
+			RText(verification['player_id'], color=RColor.yellow),
+			RText(" 使用！", color=RColor.red)
+		)
+		src.reply(error_msg)
 		return
 	
 	# 绑定玩家ID到验证码，并立刻使验证码失效（不可再次用于游戏内验证）
@@ -158,7 +209,117 @@ def verify_chat_code_command(src, ctx):
 	verification['verified_time'] = str(datetime.datetime.now(datetime.timezone.utc))
 	user_db.save()
 	
-	src.reply(f"§a验证码 {code} 验证成功！请在聊天页设置密码完成注册。")
+	success_msg = RTextList(
+		RText("验证码 ", color=RColor.green),
+		RText(code, color=RColor.yellow),
+		RText(" 验证成功！请在聊天页设置密码完成注册。", color=RColor.green)
+	)
+	src.reply(success_msg)
+#============================================================#
+# 创建聊天消息的RText格式
+def create_chat_message_rtext(player_id: str, message: str, player_uuid: str = "未知") -> dict:
+    """创建用于tellraw命令的RText格式聊天消息
+    
+    Args:
+        player_id: 玩家ID
+        message: 消息内容
+        player_uuid: 玩家UUID
+        
+    Returns:
+        tellraw命令的JSON格式
+    """
+    return {
+        "text": "",
+        "extra": [
+            {
+                "text": "<",
+                "color": "gray"
+            },
+            {
+                "text": player_id,
+                "color": "yellow",
+                "hoverEvent": {
+                    "action": "show_text",
+                    "value": [
+                        {"text": f"玩家: {player_id}\n", "color": "yellow"},
+                        {"text": "来源: WebUI\n", "color": "blue"},
+                        {"text": f"UUID: {player_uuid}\n", "color": "gray"},
+                        {"text": "点击快速填入 /tell 命令", "color": "aqua"}
+                    ]
+                },
+                "clickEvent": {
+                    "action": "suggest_command",
+                    "value": f"/tell {player_id} "
+                }
+            },
+            {
+                "text": "> ",
+                "color": "gray"
+            },
+            {
+                "text": message,
+                "color": "white"
+            }
+        ]
+    }
+
+def create_chat_status_rtext(status_type: str, message: str) -> RTextBase:
+    """创建聊天状态消息的RText格式
+    
+    Args:
+        status_type: 状态类型 ('success', 'info', 'warning', 'error')
+        message: 状态消息
+        
+    Returns:
+        RText对象
+    """
+    color_map = {
+        'success': RColor.green,
+        'info': RColor.blue, 
+        'warning': RColor.yellow,
+        'error': RColor.red
+    }
+    
+    color = color_map.get(status_type, RColor.white)
+    return RText(message, color=color)
+
+def create_chat_logger_status_rtext(action: str, success: bool = True, player_name: str = None, message_content: str = None) -> RTextBase:
+    """创建聊天日志记录器状态消息的RText格式
+    
+    Args:
+        action: 操作类型 ('init', 'clear', 'record')
+        success: 是否成功
+        player_name: 玩家名称（用于record操作）
+        message_content: 消息内容（用于record操作）
+        
+    Returns:
+        RText对象
+    """
+    if action == 'init':
+        if success:
+            return RText("聊天消息监听器初始化成功", color=RColor.green)
+        else:
+            return RText("聊天消息监听器初始化失败", color=RColor.red)
+    elif action == 'clear':
+        if success:
+            return RText("聊天消息已清空", color=RColor.green)
+        else:
+            return RText("聊天消息清空失败", color=RColor.red)
+    elif action == 'record':
+        if success and player_name and message_content:
+            return RTextList(
+                RText("记录玩家 ", color=RColor.green),
+                RText(player_name, color=RColor.yellow),
+                RText(" 的聊天消息: ", color=RColor.green),
+                RText(message_content, color=RColor.white)
+            )
+        elif success:
+            return RText("聊天消息记录成功", color=RColor.green)
+        else:
+            return RText("聊天消息记录失败", color=RColor.red)
+    else:
+        return RText(f"聊天日志操作: {action}", color=RColor.blue)
+
 #============================================================#
 # Find all configs for a plugin
 def find_plugin_config_paths(plugin_id:str)->list:
