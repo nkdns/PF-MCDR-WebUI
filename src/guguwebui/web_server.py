@@ -82,6 +82,9 @@ log_watcher = LogWatcher()
 # Web在线玩家心跳（基于 /api/chat/get_new_messages 请求），值为最近心跳Unix秒
 WEB_ONLINE_PLAYERS: dict[str, int] = {}
 
+# WebUI消息队列，用于存储来自其他插件的消息
+WEBUI_MESSAGE_QUEUE: list = []
+
 # RCON 在线玩家缓存，降低查询频率
 RCON_ONLINE_CACHE = {
     "names": set(),
@@ -94,6 +97,8 @@ pip_tasks = {}
 
 # 尝试迁移旧配置
 migrate_old_config()
+
+
 
 # 初始化函数，在应用程序启动时调用
 def init_app(server_instance):
@@ -3450,29 +3455,9 @@ async def send_chat_message(request: Request):
         config = server.load_config_simple("config.json", DEFALUT_CONFIG, echo_in_console=False)
         if not config.get("public_chat_to_game_enabled", False):
             return JSONResponse({"status": "error", "message": "聊天到游戏功能未启用"}, status_code=403)
-
-        # 如果当前服务器内没有玩家在线，则仅记录，不下发到游戏
-        try:
-            from .utils.utils import get_java_server_info
-            info = get_java_server_info()
-            player_count_raw = info.get("server_player_count")
-            player_count = int(player_count_raw) if player_count_raw is not None and str(player_count_raw).isdigit() else 0
-        except Exception:
-            player_count = 0
-        if player_count <= 0:
-            # 仅记录到聊天日志
-            try:
-                from .utils.chat_logger import ChatLogger
-                chat_logger = ChatLogger()
-                chat_logger.add_message(player_id, message)
-            except Exception as e:
-                server.logger.warning(f"记录聊天消息失败: {e}")
-            return JSONResponse({
-                "status": "success",
-                "message": "已记录（当前无在线玩家）"
-            })
         
         # 获取玩家UUID（如果可用）
+        player_uuid = "未知"  # 默认值
         try:
             # 使用新的get_player_uuid函数获取UUID
             from .utils.utils import get_player_uuid
@@ -3488,9 +3473,50 @@ async def send_chat_message(request: Request):
         # 构建tellraw命令 - 使用RText美化
         from .utils.utils import create_chat_message_rtext
         tellraw_json = create_chat_message_rtext(player_id, message, player_uuid)
-        
-        # 执行tellraw命令
         tellraw_command = f'/tellraw @a {json.dumps(tellraw_json, ensure_ascii=False)}'
+        
+        # 首先分发WebUI聊天消息事件，供其他插件监听和处理
+        # 无论是否有玩家在线，事件都应该被分发
+        try:
+            from mcdreforged.api.event import LiteralEvent
+            # 创建事件数据元组 - MCDR会将元组展开为多个参数
+            event_data = (
+                "webui",           # source
+                player_id,         # player_id
+                player_uuid,       # player_uuid
+                message,           # message
+                session_id,        # session_id
+                int(datetime.datetime.now(datetime.timezone.utc).timestamp()),  # timestamp (Unix时间戳)
+                tellraw_command    # tellraw_command
+            )
+            # 分发事件
+            server.dispatch_event(LiteralEvent("webui.chat_message_sent"), event_data)
+        except Exception as e:
+            server.logger.error(f"分发WebUI聊天消息事件失败: {e}")
+        
+        # 如果当前服务器内没有玩家在线，则仅记录，不下发到游戏
+        try:
+            from .utils.utils import get_java_server_info
+            info = get_java_server_info()
+            player_count_raw = info.get("server_player_count")
+            player_count = int(player_count_raw) if player_count_raw is not None and str(player_count_raw).isdigit() else 0
+        except Exception:
+            player_count = 0
+        
+        if player_count <= 0:
+            # 仅记录到聊天日志
+            try:
+                from .utils.chat_logger import ChatLogger
+                chat_logger = ChatLogger()
+                chat_logger.add_message(player_id, message)
+            except Exception as e:
+                server.logger.warning(f"记录聊天消息失败: {e}")
+            return JSONResponse({
+                "status": "success",
+                "message": "已记录（当前无在线玩家）"
+            })
+        
+        # 有玩家在线，执行tellraw命令
         server.execute(tellraw_command)
         
         # 记录Web在线心跳（发送者计为在线5秒）

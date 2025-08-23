@@ -160,6 +160,19 @@ Q: 对于开发者如何提供配置文件以支持多语言（中文、英文�
 
 A: 查看 [插件兼容](https://pf-doc.pfingan.com/main/#/PF-webui/开发/插件兼容) 文档。
 
+## 功能开发
+
+### 事件系统
+
+> [!NOTE]
+> 本功能尚处于测试开发阶段，可能会随时更新，请注意本文档的更新情况。
+
+- 为WebUI的聊天消息提供事件分发机制
+- 其他MCDR插件可以监听 `webui.chat_message_sent` 和 `webui.message_received` 事件
+- 发送消息到WebUI `send_message_to_webui` 函数
+- 详细文档请参考 [WebUI事件系统文档](docs/WebUI事件系统.md)
+- 示例插件请参考 [examples/](examples/) 目录
+
 ## 示例图
 
 > 截图来源v1.3.4本地测试(部分未改动截图为v1.3.0)

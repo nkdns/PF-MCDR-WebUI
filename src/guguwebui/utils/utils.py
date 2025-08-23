@@ -1466,3 +1466,83 @@ def get_bot_list(server_interface=None) -> list:
         if server_interface:
             server_interface.logger.error(f"获取假人列表失败: {e}")
         return []
+
+def send_message_to_webui(server_interface, source: str, message: str, message_type: str = "info", target_players: list = None, metadata: dict = None):
+    """
+    供其他插件调用的函数，用于发送消息到WebUI
+    
+    使用方法：
+    from mcdreforged.api.all import *
+    
+    def your_function(server):
+        # 获取WebUI插件实例
+        webui_plugin = server.get_plugin_instance("guguwebui")
+        if webui_plugin and hasattr(webui_plugin, 'send_message_to_webui'):
+            webui_plugin.send_message_to_webui(
+                server_interface=server,
+                source="your_plugin_name",
+                message="这是一条来自插件的消息",
+                message_type="info"
+            )
+    
+    Args:
+        server_interface: MCDR服务器接口
+        source: 消息来源（插件名称等）
+        message: 消息内容
+        message_type: 消息类型（info, warning, error, success等）
+        target_players: 目标玩家列表，None表示所有玩家
+        metadata: 额外的元数据
+    
+    Returns:
+        bool: 是否成功发送
+    """
+    try:
+        from mcdreforged.api.event import LiteralEvent
+        import datetime
+        import uuid
+        
+        # 准备事件数据
+        event_data = (
+            source,                    # 消息来源
+            message,                   # 消息内容
+            message_type,              # 消息类型
+            target_players or [],      # 目标玩家列表
+            metadata or {},            # 额外元数据
+            int(datetime.datetime.now(datetime.timezone.utc).timestamp()),  # 时间戳
+            str(uuid.uuid4())         # 消息ID
+        )
+        
+        # 分发事件
+        server_interface.dispatch_event(LiteralEvent("webui.message_received"), event_data)
+        
+        # 将消息添加到队列中，供前端获取
+        try:
+            from guguwebui.web_server import WEBUI_MESSAGE_QUEUE
+            
+            message_entry = {
+                "id": event_data[6],
+                "source": source,
+                "message": message,
+                "type": message_type,
+                "target_players": target_players or [],
+                "metadata": metadata or {},
+                "timestamp": event_data[5],
+                "read_by": []
+            }
+            
+            WEBUI_MESSAGE_QUEUE.append(message_entry)
+            
+            # 限制队列大小，避免内存泄漏
+            if len(WEBUI_MESSAGE_QUEUE) > 1000:
+                WEBUI_MESSAGE_QUEUE.pop(0)
+                
+        except ImportError:
+            # 如果无法导入队列，只记录日志
+            server_interface.logger.debug("无法访问WebUI消息队列，仅分发事件")
+        
+        return True
+        
+    except Exception as e:
+        if server_interface:
+            server_interface.logger.error(f"发送WebUI消息失败: {e}")
+        return False
