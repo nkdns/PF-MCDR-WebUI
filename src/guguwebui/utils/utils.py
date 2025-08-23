@@ -209,6 +209,10 @@ def load_plugin_info(server_interface:PluginServerInterface):
 
     # extract metadata by reading files
     for plugin_path in disabled_plugins + unloaded_plugins:
+        # 只处理.py和.mcdr文件
+        if not (plugin_path.endswith('.py') or plugin_path.endswith('.mcdr')):
+            continue
+        
         # extract metadata
         metadata = extract_metadata(plugin_path)
 
@@ -1254,7 +1258,7 @@ def is_player(name: str, server_interface=None) -> bool:
             
     except Exception as e:
         if server_interface:
-            server_interface.logger.error(f"is_player检查失败: {e}")
+            server_interface.logger.debug(f"is_player检查失败: {e}")
         return True  # 出错时默认返回True，避免误判
 
 def get_bot_list(server_interface=None) -> list:

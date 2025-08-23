@@ -521,9 +521,9 @@ def register_command(server:PluginServerInterface, host:str, port:int):
     # 注册指令
     server.register_command(
         Literal('!!webui')
-        .requires(lambda src: src.has_permission(3))
         .then(
             Literal('create')
+            .requires(lambda src: src.has_permission(3))
             .then(
                 Text('account')
                 .then(
@@ -534,6 +534,7 @@ def register_command(server:PluginServerInterface, host:str, port:int):
         )
         .then(
             Literal('change')
+            .requires(lambda src: src.has_permission(3))
             .then(
                 Text('account')
                 .then(
@@ -544,10 +545,12 @@ def register_command(server:PluginServerInterface, host:str, port:int):
         )
         .then(
             Literal('temp')
+            .requires(lambda src: src.has_permission(3))
             .runs(lambda src, ctx: get_temp_password_command(src, ctx, host, port))
         )
         .then(
             Literal('verify')
+            .requires(lambda src: src.has_permission(1))
             .then(
                 Text('code')
                 .runs(lambda src, ctx: verify_chat_code_command(src, ctx))

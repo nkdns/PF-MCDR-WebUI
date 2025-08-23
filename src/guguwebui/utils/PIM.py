@@ -2646,6 +2646,10 @@ class PIMHelper:
                 for plugin_dir in plugin_dirs:
                     if os.path.exists(plugin_dir) and os.path.isdir(plugin_dir):
                         for file_name in os.listdir(plugin_dir):
+                            # 只处理.py和.mcdr文件
+                            if not (file_name.endswith('.py') or file_name.endswith('.mcdr')):
+                                continue
+                                
                             file_path = os.path.join(plugin_dir, file_name)
                             # 检查文件名是否包含插件ID
                             if plugin_id.lower() in file_name.lower() and os.path.isfile(file_path):
