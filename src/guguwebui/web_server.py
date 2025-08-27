@@ -3521,10 +3521,9 @@ async def send_chat_message(request: Request):
             server.logger.debug(f"获取玩家UUID失败: {e}")
             player_uuid = "未知"
         
-        # 构建tellraw命令 - 使用RText美化
+        # 构建用于广播的 RText 消息
         from .utils.utils import create_chat_message_rtext
-        tellraw_json = create_chat_message_rtext(player_id, message, player_uuid)
-        tellraw_command = f'/tellraw @a {json.dumps(tellraw_json, ensure_ascii=False)}'
+        rtext_message = create_chat_message_rtext(player_id, message, player_uuid)
         
         # 首先分发WebUI聊天消息事件，供其他插件监听和处理
         # 无论是否有玩家在线，事件都应该被分发
@@ -3537,8 +3536,7 @@ async def send_chat_message(request: Request):
                 player_uuid,       # player_uuid
                 message,           # message
                 session_id,        # session_id
-                int(datetime.datetime.now(datetime.timezone.utc).timestamp()),  # timestamp (Unix时间戳)
-                tellraw_command    # tellraw_command
+                int(datetime.datetime.now(datetime.timezone.utc).timestamp())  # timestamp (Unix时间戳)
             )
             # 分发事件
             server.dispatch_event(LiteralEvent("webui.chat_message_sent"), event_data)
@@ -3567,8 +3565,8 @@ async def send_chat_message(request: Request):
                 "message": "已记录（当前无在线玩家）"
             })
         
-        # 有玩家在线，执行tellraw命令
-        server.execute(tellraw_command)
+        # 有玩家在线，使用广播发送消息
+        server.broadcast(rtext_message)
         
         # 记录Web在线心跳（发送者计为在线5秒）
         try:

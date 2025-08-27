@@ -18,7 +18,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from mcdreforged.api.types import PluginServerInterface
 from mcdreforged.plugin.meta.metadata import Metadata
 from mcdreforged.api.rtext import RText, RTextList, RTextBase
-from mcdreforged.minecraft.rtext.style import RColor
+from mcdreforged.minecraft.rtext.style import RColor, RAction
 from pathlib import Path
 
 from .constant import user_db, pwd_context, SERVER_PROPERTIES_PATH
@@ -217,8 +217,8 @@ def verify_chat_code_command(src, ctx):
 	src.reply(success_msg)
 #============================================================#
 # 创建聊天消息的RText格式
-def create_chat_message_rtext(player_id: str, message: str, player_uuid: str = "未知") -> dict:
-    """创建用于tellraw命令的RText格式聊天消息
+def create_chat_message_rtext(player_id: str, message: str, player_uuid: str = "未知") -> RTextBase:
+    """创建用于广播的 RText 聊天消息
     
     Args:
         player_id: 玩家ID
@@ -226,42 +226,18 @@ def create_chat_message_rtext(player_id: str, message: str, player_uuid: str = "
         player_uuid: 玩家UUID
         
     Returns:
-        tellraw命令的JSON格式
+        RText 对象，可直接用于 server.broadcast
     """
-    return {
-        "text": "",
-        "extra": [
-            {
-                "text": "<",
-                "color": "gray"
-            },
-            {
-                "text": player_id,
-                "color": "yellow",
-                "hoverEvent": {
-                    "action": "show_text",
-                    "value": [
-                        {"text": f"玩家: {player_id}\n", "color": "yellow"},
-                        {"text": "来源: WebUI\n", "color": "blue"},
-                        {"text": f"UUID: {player_uuid}\n", "color": "gray"},
-                        {"text": "点击快速填入 /tell 命令", "color": "aqua"}
-                    ]
-                },
-                "clickEvent": {
-                    "action": "suggest_command",
-                    "value": f"/tell {player_id} "
-                }
-            },
-            {
-                "text": "> ",
-                "color": "gray"
-            },
-            {
-                "text": message,
-                "color": "white"
-            }
-        ]
-    }
+    name_part = RText(player_id, color=RColor.white)
+    hover_text = f"玩家: {player_id}\n来源: WebUI\nUUID: {player_uuid}\n点击快速填入 /tell 命令"
+    name_part.h(hover_text)
+    name_part.c(RAction.suggest_command, f"/tell {player_id} ")
+    return RTextList(
+        RText("<", color=RColor.white),
+        name_part,
+        RText("> ", color=RColor.white),
+        RText(message, color=RColor.white)
+    )
 
 def create_chat_status_rtext(status_type: str, message: str) -> RTextBase:
     """创建聊天状态消息的RText格式

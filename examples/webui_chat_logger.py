@@ -62,8 +62,13 @@ class WebUIChatLogger:
                 
             server.logger.info(f"已记录WebUI消息: {player_id}: {message}")
             
-            # 可选：同时发送到游戏内
-            server.execute(f"tellraw @a {{\"text\":\"[WebUI日志] {player_id}: {message}\",\"color\":\"gray\"}}")
+            # 可选：同时发送到游戏内（使用广播）
+            server.broadcast(RTextList(
+                RText("[WebUI日志] ", color=RColor.gray),
+                RText(player_id, color=RColor.yellow),
+                RText(": ", color=RColor.gray),
+                RText(str(message), color=RColor.white)
+            ))
             
         except Exception as e:
             server.logger.error(f"记录WebUI消息失败: {e}")
