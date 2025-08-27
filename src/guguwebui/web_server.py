@@ -71,7 +71,25 @@ def get_redirect_url(request: Request, path: str) -> str:
     if root_path:
         return f"{root_path}{path}"
     else:
-        return f".{path}"
+        return path
+
+# 辅助函数：根据当前应用路径生成正确的index_path
+def get_index_path(request: Request) -> str:
+    """根据当前应用路径生成正确的index_path"""
+    root_path = request.scope.get("root_path", "")
+    if root_path:
+        return f"{root_path}/index"
+    else:
+        return "/index"
+
+# 辅助函数：根据当前应用路径生成正确的导航链接
+def get_nav_path(request: Request, path: str) -> str:
+    """根据当前应用路径生成正确的导航链接"""
+    root_path = request.scope.get("root_path", "")
+    if root_path:
+        return f"{root_path}{path}"
+    else:
+        return path
 
 # template engine -> jinja2
 templates = Jinja2Templates(directory=f"{STATIC_PATH}/templates")
@@ -324,7 +342,17 @@ async def login_page(request: Request):
         if token in user_db["token"]:
             del user_db["token"][token]
             user_db.save()
-        response.delete_cookie("token")
+        
+        # 删除过期token的cookie，确保在不同模式下都能正确删除
+        root_path = request.scope.get("root_path", "")
+        if root_path:
+            # fastapi_mcdr模式下，删除cookie时需要指定正确的路径
+            response.delete_cookie("token", path=root_path)
+            # 同时尝试删除根路径的cookie，确保完全清除
+            response.delete_cookie("token", path="/")
+        else:
+            # 独立模式下，删除根路径的cookie
+            response.delete_cookie("token", path="/")
     return response
 
 
@@ -349,7 +377,7 @@ async def login(
         cookie_path = root_path
     else:
         # 独立运行模式
-        redirect_url = "./index"
+        redirect_url = "/index"
         cookie_path = "/"
 
     # check account & password
@@ -454,11 +482,21 @@ def logout(request: Request):
         cookie_path = root_path
     else:
         # 独立运行模式
-        redirect_url = "./login"
+        redirect_url = "/login"
         cookie_path = "/"
     
     response = RedirectResponse(url=redirect_url, status_code=status.HTTP_302_FOUND)
-    response.delete_cookie("token", path=cookie_path)  # delete token cookie
+    
+    # 删除token cookie，确保在不同模式下都能正确删除
+    if root_path:
+        # fastapi_mcdr模式下，删除cookie时需要指定正确的路径
+        response.delete_cookie("token", path=cookie_path)
+        # 同时尝试删除根路径的cookie，确保完全清除
+        response.delete_cookie("token", path="/")
+    else:
+        # 独立模式下，删除根路径的cookie
+        response.delete_cookie("token", path=cookie_path)
+    
     return response
 
 app.add_middleware(SessionMiddleware, secret_key=SECRET_KEY)
@@ -469,7 +507,11 @@ async def read_index(request: Request, token_valid: bool = Depends(verify_token)
     if not request.session.get("logged_in"):
         return RedirectResponse(url=get_redirect_url(request, "/login"))
     return templates.TemplateResponse(
-        "index.html", {"request": request, "index_path": "./index"}
+        "index.html", {
+            "request": request, 
+            "index_path": get_index_path(request),
+            "nav_path": lambda path: get_nav_path(request, path)
+        }
     )
 
 
@@ -478,14 +520,23 @@ async def read_home(request: Request, token_valid: bool = Depends(verify_token))
     if not request.session.get("logged_in"):
         return RedirectResponse(url=get_redirect_url(request, "/login"))
     return templates.TemplateResponse(
-        "home.html", {"request": request, "message": "欢迎进入后台主页！", "index_path": "./index"}
+        "home.html", {
+            "request": request, 
+            "message": "欢迎进入后台主页！", 
+            "index_path": get_index_path(request),
+            "nav_path": lambda path: get_nav_path(request, path)
+        }
     )
 
 
 async def render_template_if_logged_in(request: Request, template_name: str):
     if not request.session.get("logged_in"):
         return RedirectResponse(url=get_redirect_url(request, "/login"))
-    return templates.TemplateResponse(template_name, {"request": request, "index_path": "./index"})
+    return templates.TemplateResponse(template_name, {
+        "request": request, 
+        "index_path": get_index_path(request),
+        "nav_path": lambda path: get_nav_path(request, path)
+    })
 
 @app.get("/gugubot", response_class=HTMLResponse)
 async def gugubot(request: Request, token_valid: bool = Depends(verify_token)):
