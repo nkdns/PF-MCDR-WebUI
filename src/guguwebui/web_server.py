@@ -40,7 +40,7 @@ from .utils.server_util import *
 from .utils.table import yaml
 from .utils.utils import *
 
-import mcdreforged.api.all as MCDR
+from mcdreforged.api.all import MCDRPluginEvents
 
 from .utils.utils import __copyFile
 
@@ -152,11 +152,11 @@ def init_app(server_instance):
     # 注册MCDR事件监听器，每种事件只注册一次
     # 修正：GENERAL_INFO应该映射到on_mcdr_info，处理MCDR和服务器的常规信息
     # USER_INFO应该映射到on_server_output，处理用户输入的命令
-    server_instance.register_event_listener(MCDR.MCDRPluginEvents.GENERAL_INFO, on_mcdr_info)
-    server_instance.register_event_listener(MCDR.MCDRPluginEvents.USER_INFO, on_server_output)
+    server_instance.register_event_listener(MCDRPluginEvents.GENERAL_INFO, on_mcdr_info)
+    server_instance.register_event_listener(MCDRPluginEvents.USER_INFO, on_server_output)
     # 注册玩家进出事件，刷新RCON在线缓存
-    server_instance.register_event_listener(MCDR.MCDRPluginEvents.PLAYER_JOINED, on_player_joined)
-    server_instance.register_event_listener(MCDR.MCDRPluginEvents.PLAYER_LEFT, on_player_left)
+    server_instance.register_event_listener(MCDRPluginEvents.PLAYER_JOINED, on_player_joined)
+    server_instance.register_event_listener(MCDRPluginEvents.PLAYER_LEFT, on_player_left)
     
     # 初始化PIM模块
     try:
@@ -3528,7 +3528,7 @@ async def send_chat_message(request: Request):
         # 首先分发WebUI聊天消息事件，供其他插件监听和处理
         # 无论是否有玩家在线，事件都应该被分发
         try:
-            from mcdreforged.api.event import LiteralEvent
+            from mcdreforged.api.all import LiteralEvent
             # 创建事件数据元组 - MCDR会将元组展开为多个参数
             event_data = (
                 "webui",           # source
@@ -3600,3 +3600,4 @@ async def send_chat_message(request: Request):
             "status": "error",
             "message": f"发送消息失败: {e}"
         }, status_code=500)
+

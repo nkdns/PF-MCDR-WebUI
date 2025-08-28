@@ -7,7 +7,7 @@ from typing import Optional
 
 from fastapi import Request, status
 from fastapi.responses import RedirectResponse
-from mcdreforged.api.types import PluginServerInterface as ServerInterface
+from mcdreforged.api.all import PluginServerInterface as ServerInterface
 
 # 辅助函数：根据当前应用路径生成正确的重定向URL
 def get_redirect_url(request, path: str) -> str:

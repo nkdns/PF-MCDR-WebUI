@@ -13,21 +13,8 @@ from typing import List, Dict, Optional, Union, Tuple, Any, Set
 from dataclasses import dataclass
 import hashlib
 
-from mcdreforged.api.all import *
 from mcdreforged.plugin.meta.version import Version, VersionRequirement
-
-# 兼容性导入：MCDR 2.15.0+ 中 RAction 移动到了 click_event 模块
-try:
-    # 尝试新版本的导入路径 (MCDR 2.15.0+)
-    from mcdreforged.minecraft.rtext.click_event import RAction
-    from mcdreforged.minecraft.rtext.style import RColor, RStyle
-    _MCDR_NEW_VERSION = True
-except ImportError:
-    # 回退到旧版本的导入路径 (MCDR < 2.15.0)
-    from mcdreforged.minecraft.rtext.style import RColor, RAction, RStyle
-    _MCDR_NEW_VERSION = False
-
-from mcdreforged.minecraft.rtext.text import RText, RTextList
+from mcdreforged.api.all import PluginServerInterface, RText, RTextList, RColor, RStyle, RAction
 
 # 添加元数据信息
 PLUGIN_METADATA = {

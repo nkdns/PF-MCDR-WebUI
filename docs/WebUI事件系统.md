@@ -57,7 +57,7 @@ WebUI 提供了两个事件系统，一个是用于其他插件向WebUI发送消
 #### 通过插件管理器调用
 
 ```python
-from mcdreforged.api.all import *
+from mcdreforged.api.all import PluginServerInterface, LiteralEvent
 
 # 获取WebUI插件实例
 webui_plugin = server.get_plugin_instance("guguwebui")
@@ -88,7 +88,7 @@ if webui_plugin and hasattr(webui_plugin, 'send_message_to_webui'):
 在你的插件中注册事件监听器：
 
 ```python
-from mcdreforged.api.event import LiteralEvent
+from mcdreforged.api.all import LiteralEvent
 
 def on_load(server, old):
     # 注册WebUI聊天消息事件监听器

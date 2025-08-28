@@ -1,9 +1,7 @@
 import os
 import platform
 
-from mcdreforged.api.command import *
-from mcdreforged.api.types import PluginServerInterface
-from mcdreforged.api.event import LiteralEvent
+from mcdreforged.api.all import PluginServerInterface, LiteralEvent, Literal, Text
 
 # 全局变量声明
 web_server_interface = None
@@ -129,9 +127,9 @@ def on_load(server: PluginServerInterface, old):
         
         # 也尝试注册到 MCDR 的内置事件
         try:
-            import mcdreforged.api.event as MCDREvents
+            from mcdreforged.api.all import MCDRPluginEvents
             server.register_event_listener(
-                MCDREvents.MCDRPluginEvents.PLUGIN_UNLOADED,
+                MCDRPluginEvents.PLUGIN_UNLOADED,
                 lambda plugin_id: on_plugin_unloaded(server, plugin_id)
             )
             server.logger.info("已注册 MCDR 内置事件监听器")
@@ -591,3 +589,4 @@ def on_user_info(server: PluginServerInterface, info):
                     server.logger.debug(f"跳过无效的聊天消息: player={player_name}, content={message_content}")
     except Exception as e:
         server.logger.error(f"记录聊天消息时出错: {e}")
+

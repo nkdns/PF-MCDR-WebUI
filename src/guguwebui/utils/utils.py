@@ -15,39 +15,11 @@ import time
 from threading import Thread, Lock
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
-from mcdreforged.api.types import PluginServerInterface
 from mcdreforged.plugin.meta.metadata import Metadata
-from mcdreforged.api.rtext import RText, RTextList, RTextBase
-
-# 兼容性导入：MCDR 2.15.0+ 中 RAction 移动到了 click_event 模块
-try:
-    # 尝试新版本的导入路径 (MCDR 2.15.0+)
-    from mcdreforged.minecraft.rtext.click_event import RAction
-    from mcdreforged.minecraft.rtext.style import RColor
-    _MCDR_NEW_VERSION = True
-except ImportError:
-    # 回退到旧版本的导入路径 (MCDR < 2.15.0)
-    from mcdreforged.minecraft.rtext.style import RColor, RAction
-    _MCDR_NEW_VERSION = False
+from mcdreforged.api.all import RAction, RColor, PluginServerInterface, RText, RTextList, RTextBase
 from pathlib import Path
 
 from .constant import user_db, pwd_context, SERVER_PROPERTIES_PATH
-
-#============================================================#
-# MCDR 版本检测函数
-def get_mcdr_version():
-    """
-    获取当前 MCDR 版本
-
-    Returns:
-        tuple: (版本字符串, 是否为新版本)
-    """
-    try:
-        import mcdreforged
-        version = getattr(mcdreforged, '__version__', 'unknown')
-        return version, _MCDR_NEW_VERSION
-    except Exception:
-        return 'unknown', _MCDR_NEW_VERSION
 
 #============================================================#
 # verify password
@@ -1474,7 +1446,7 @@ def send_message_to_webui(server_interface, source: str, message: str, message_t
     供其他插件调用的函数，用于发送消息到WebUI
     
     使用方法：
-    from mcdreforged.api.all import *
+    from mcdreforged.api.all import VersionRequirement
     
     def your_function(server):
         # 获取WebUI插件实例
@@ -1499,7 +1471,7 @@ def send_message_to_webui(server_interface, source: str, message: str, message_t
         bool: 是否成功发送
     """
     try:
-        from mcdreforged.api.event import LiteralEvent
+        from mcdreforged.api.all import LiteralEvent
         import datetime
         import uuid
         

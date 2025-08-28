@@ -2,8 +2,7 @@
 # 文件名: webui_chat_logger.py
 # 功能: 监听来自WebUI的聊天消息并记录到文件
 
-from mcdreforged.api.all import *
-from mcdreforged.api.event import LiteralEvent
+from mcdreforged.api.all import PluginServerInterface, LiteralEvent
 import json
 import os
 from datetime import datetime
