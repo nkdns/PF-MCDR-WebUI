@@ -5,13 +5,88 @@
 
 import os
 import datetime
+import zipfile
+import tempfile
+from pathlib import Path
 from fastapi import Request
 from fastapi.responses import JSONResponse
 from fastapi import status, Body, Depends
 from ..utils.constant import DEFALUT_CONFIG, toggleconfig, plugin_info
 from ..utils.PIM import create_installer
-from ..utils.utils import load_plugin_info, __copyFile
+from ..utils.utils import load_plugin_info, __copyFile, __copyFolder
 from ..web_server import verify_token
+
+
+async def package_pim_plugin(server, plugins_dir: str) -> str:
+    """
+    将 PIM 文件夹打包为独立的 MCDR 插件
+
+    Args:
+        server: MCDR 服务器接口
+        plugins_dir: MCDR 插件目录路径
+
+    Returns:
+        str: 打包后的插件文件路径
+    """
+    try:
+        # 创建临时目录用于打包
+        with tempfile.TemporaryDirectory() as temp_dir:
+            # 创建插件根目录结构
+            plugin_root_dir = os.path.join(temp_dir, "pim_helper")  # 插件根目录
+            pim_plugin_dir = os.path.join(plugin_root_dir, "pim_helper")  # 插件ID同名文件夹
+
+            # 创建目录结构
+            os.makedirs(pim_plugin_dir, exist_ok=True)
+
+            # 获取 WebUI 插件的实际文件路径
+            current_file = __file__  # api/plugins.py 的路径
+            # 从 plugins.py 向上找到 guguwebui 包的根目录
+            guguwebui_root = os.path.dirname(os.path.dirname(current_file))  # guguwebui 包根目录
+            pim_source_dir = os.path.join(guguwebui_root, "utils", "PIM")
+
+            # 直接复制 PIM 文件夹的内容到插件ID同名文件夹（排除 __pycache__）
+            pim_source_pim_dir = os.path.join(pim_source_dir, "pim_helper")
+            if os.path.exists(pim_source_pim_dir):
+                import shutil
+
+                # 自定义复制函数，排除 __pycache__ 目录
+                def copytree_ignore_pycache(src, dst, ignore=None):
+                    """复制目录树，忽略 __pycache__ 文件夹"""
+                    if ignore is None:
+                        ignore = shutil.ignore_patterns('__pycache__')
+                    shutil.copytree(src, dst, ignore=ignore, dirs_exist_ok=True)
+
+                copytree_ignore_pycache(pim_source_pim_dir, pim_plugin_dir)
+            else:
+                server.logger.error(f"PIM 源文件夹不存在: {pim_source_pim_dir}")
+                raise FileNotFoundError(f"PIM source directory not found: {pim_source_pim_dir}")
+
+            # 复制插件元数据文件到插件根目录
+            meta_source_path = os.path.join(pim_source_dir, "mcdreforged.plugin.json")
+            if os.path.exists(meta_source_path):
+                shutil.copy2(meta_source_path, os.path.join(plugin_root_dir, "mcdreforged.plugin.json"))
+            else:
+                server.logger.error(f"元数据文件不存在: {meta_source_path}")
+                raise FileNotFoundError(f"Metadata file not found: {meta_source_path}")
+
+            # 创建 .mcdr 文件（实际上是 zip 文件）
+            pim_plugin_path = os.path.join(plugins_dir, "pim_helper.mcdr")
+
+            with zipfile.ZipFile(pim_plugin_path, 'w', zipfile.ZIP_DEFLATED) as zipf:
+                # 遍历插件根目录中的所有文件
+                for root, dirs, files in os.walk(plugin_root_dir):
+                    for file in files:
+                        file_path = os.path.join(root, file)
+                        # 计算相对路径（相对于插件根目录）
+                        relative_path = os.path.relpath(file_path, plugin_root_dir)
+                        zipf.write(file_path, relative_path)
+
+            server.logger.info(f"PIM 插件已打包到: {pim_plugin_path}")
+            return pim_plugin_path
+
+    except Exception as e:
+        server.logger.error(f"打包 PIM 插件时出错: {e}")
+        raise
 
 
 async def install_plugin(
@@ -597,8 +672,8 @@ async def install_pim_plugin(
         # 获取已加载插件列表
         loaded_plugin_metadata, unloaded_plugin_metadata, loaded_plugin, disabled_plugin = load_plugin_info(server)
 
-        # 检查是否已安装
-        if "pim_helper" in loaded_plugin_metadata or "pim_helper" in unloaded_plugin_metadata:
+        # 检查是否已安装（检查插件ID为pim_helper的插件）
+        if 'pim_helper' in loaded_plugin_metadata or 'pim_helper' in unloaded_plugin_metadata:
             return JSONResponse(
                 content={
                     "status": "success",
@@ -615,15 +690,11 @@ async def install_pim_plugin(
         # 创建plugins目录（如果不存在）
         os.makedirs(plugins_dir, exist_ok=True)
 
-        # 使用__copyFile从插件包中复制PIM.py
-        source_path = "guguwebui/utils/PIM.py"  # 相对于插件包的路径
-        target_path = os.path.join(plugins_dir, "pim_helper.py")
-
-        # 使用utils中的__copyFile函数
-        __copyFile(server, source_path, target_path)
+        # 将PIM文件夹打包为独立插件
+        pim_plugin_path = await package_pim_plugin(server, plugins_dir)
 
         # 加载插件
-        server.load_plugin(target_path)
+        server.load_plugin(pim_plugin_path)
 
         return JSONResponse(
             content={

@@ -153,8 +153,8 @@ A: 前往 [Releases页面](https://github.com/LoosePrince/PF-MCDR-WebUI/releases
 Q: 我有个插件，我觉得很适合WebUI，可以作为WebUI的前置吗？<br>
 A: WebUI不打算使用任何插件前置，如果有好的方案我们会考虑直接加入WebUI并在关于页感谢贡献。
 
-Q: [PIM插件](https://github.com/LoosePrince/PF-MCDR-WebUI/blob/main/src/guguwebui/utils/PIM.py) 是什么？<br>
-A: [PIM插件](https://github.com/LoosePrince/PF-MCDR-WebUI/blob/main/src/guguwebui/utils/PIM.py) 是WebUI的插件安装管理器，它可以帮助您安装、卸载、更新插件，并且可以查看插件信息。
+Q: [PIM插件](https://github.com/LoosePrince/PF-MCDR-WebUI/tree/main/src/guguwebui/utils/PIM) 是什么？<br>
+A: [PIM插件](https://github.com/LoosePrince/PF-MCDR-WebUI/tree/main/src/guguwebui/utils/PIM) 是WebUI的插件安装管理器，它可以帮助您安装、卸载、更新插件，并且可以查看插件信息。
 
 Q: 对于开发者如何提供配置文件以支持多语言（中文、英文等）描述？
 
