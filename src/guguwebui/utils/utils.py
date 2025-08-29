@@ -18,6 +18,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from mcdreforged.plugin.meta.metadata import Metadata
 from mcdreforged.api.all import RAction, RColor, PluginServerInterface, RText, RTextList, RTextBase
 from pathlib import Path
+from ruamel.yaml.comments import CommentedSeq
 
 from .constant import user_db, pwd_context, SERVER_PROPERTIES_PATH
 
@@ -1444,10 +1445,10 @@ def get_bot_list(server_interface=None) -> list:
 def send_message_to_webui(server_interface, source: str, message: str, message_type: str = "info", target_players: list = None, metadata: dict = None):
     """
     供其他插件调用的函数，用于发送消息到WebUI
-    
+
     使用方法：
     from mcdreforged.api.all import VersionRequirement
-    
+
     def your_function(server):
         # 获取WebUI插件实例
         webui_plugin = server.get_plugin_instance("guguwebui")
@@ -1458,7 +1459,7 @@ def send_message_to_webui(server_interface, source: str, message: str, message_t
                 message="这是一条来自插件的消息",
                 message_type="info"
             )
-    
+
     Args:
         server_interface: MCDR服务器接口
         source: 消息来源（插件名称等）
@@ -1466,7 +1467,7 @@ def send_message_to_webui(server_interface, source: str, message: str, message_t
         message_type: 消息类型（info, warning, error, success等）
         target_players: 目标玩家列表，None表示所有玩家
         metadata: 额外的元数据
-    
+
     Returns:
         bool: 是否成功发送
     """
@@ -1474,7 +1475,7 @@ def send_message_to_webui(server_interface, source: str, message: str, message_t
         from mcdreforged.api.all import LiteralEvent
         import datetime
         import uuid
-        
+
         # 准备事件数据
         event_data = (
             source,                    # 消息来源
@@ -1485,14 +1486,14 @@ def send_message_to_webui(server_interface, source: str, message: str, message_t
             int(datetime.datetime.now(datetime.timezone.utc).timestamp()),  # 时间戳
             str(uuid.uuid4())         # 消息ID
         )
-        
+
         # 分发事件
         server_interface.dispatch_event(LiteralEvent("webui.message_received"), event_data)
-        
+
         # 将消息添加到队列中，供前端获取
         try:
             from guguwebui.web_server import WEBUI_MESSAGE_QUEUE
-            
+
             message_entry = {
                 "id": event_data[6],
                 "source": source,
@@ -1503,20 +1504,304 @@ def send_message_to_webui(server_interface, source: str, message: str, message_t
                 "timestamp": event_data[5],
                 "read_by": []
             }
-            
+
             WEBUI_MESSAGE_QUEUE.append(message_entry)
-            
+
             # 限制队列大小，避免内存泄漏
             if len(WEBUI_MESSAGE_QUEUE) > 1000:
                 WEBUI_MESSAGE_QUEUE.pop(0)
-                
+
         except ImportError:
             # 如果无法导入队列，只记录日志
             server_interface.logger.debug("无法访问WebUI消息队列，仅分发事件")
-        
+
         return True
-        
+
     except Exception as e:
         if server_interface:
             server_interface.logger.error(f"发送WebUI消息失败: {e}")
         return False
+
+#============================================================#
+# URL 路径处理工具函数
+def get_plugin_version():
+    """获取插件的真实版本号"""
+    try:
+        import mcdreforged.api.types as MCDRTypes
+        # 获取当前插件的元数据
+        metadata = MCDRTypes.PluginServerInterface.get_self_metadata()
+        return metadata.version
+    except Exception:
+        # 如果无法获取，返回默认版本
+        return "1.0.0"
+
+def get_redirect_url(request, path: str) -> str:
+    """根据当前应用路径生成正确的重定向URL
+
+    Args:
+        request: FastAPI请求对象
+        path: 目标路径
+
+    Returns:
+        str: 完整的重定向URL
+    """
+    root_path = request.scope.get("root_path", "")
+    if root_path:
+        return f"{root_path}{path}"
+    else:
+        return path
+
+def get_index_path(request) -> str:
+    """根据当前应用路径生成正确的index路径
+
+    Args:
+        request: FastAPI请求对象
+
+    Returns:
+        str: index页面路径
+    """
+    root_path = request.scope.get("root_path", "")
+    if root_path:
+        return f"{root_path}/index"
+    else:
+        return "/index"
+
+def get_nav_path(request, path: str) -> str:
+    """根据当前应用路径生成正确的导航链接
+
+    Args:
+        request: FastAPI请求对象
+        path: 导航路径
+
+    Returns:
+        str: 完整的导航路径
+    """
+    root_path = request.scope.get("root_path", "")
+    if root_path:
+        return f"{root_path}{path}"
+    else:
+        return path
+
+#============================================================#
+# 配置更新工具函数
+def consistent_type_update(original, updates, remove_missing=False):
+    """
+    更新配置数据，保持类型一致性
+
+    Args:
+        original: 原始配置数据
+        updates: 新的配置数据
+        remove_missing: 是否删除原始数据中存在但新数据中不存在的键
+    """
+    # 如果启用删除功能，先找出需要删除的键
+    if remove_missing and isinstance(original, dict) and isinstance(updates, dict):
+        keys_to_remove = [key for key in original if key not in updates]
+        for key in keys_to_remove:
+            del original[key]
+
+    # 更新现有键或添加新键
+    for key, value in updates.items():
+        # setting to None
+        if key in original and original[key] is None and \
+            (not value or (isinstance(value,list) and not any(value))):
+            continue
+        # dict -> recurssive update
+        elif isinstance(value, dict) and key in original and isinstance(original[key], dict):
+            consistent_type_update(original[key], value, remove_missing)
+        # get previous type
+        elif isinstance(value, list) and key in original:
+            # 如果原值是字典而新值是列表，直接替换
+            if isinstance(original[key], dict):
+                original[key] = value
+                continue
+
+            # save old comment
+            original_ca = original[key].ca.items if isinstance(original[key], CommentedSeq) else None
+
+            targe_type = list( # search the first type in the original list
+                {type(item) for item in original[key] if item}
+            ) if original[key] else None
+
+            temp_list = [
+                (targe_type[0](item) if targe_type else item) if item else None
+                for item in value
+            ]
+
+            if original_ca: # save comment to last attribute
+                original[key] = CommentedSeq(temp_list)
+                original[key].ca.items[len(original[key])-1] = original_ca[max(original_ca)]
+            else:
+                original[key] = temp_list
+
+        # Force type convertion
+        elif key in original and original[key]:
+            original_type = type(original[key])
+            original[key] = original_type(value)
+        # new attributes
+        else:
+            original[key] = value
+
+#============================================================#
+# Pip 包管理工具函数
+def get_installed_pip_packages():
+    """获取已安装的pip包列表
+
+    Returns:
+        dict: 包含状态和包信息的字典
+    """
+    try:
+        import subprocess
+        import sys
+
+        process = subprocess.Popen(
+            [sys.executable, "-m", "pip", "list", "--format=json"],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True
+        )
+        stdout, stderr = process.communicate()
+
+        if process.returncode != 0:
+            return {"status": "error", "message": f"获取包列表失败: {stderr}"}
+
+        packages = json.loads(stdout)
+        return {"status": "success", "packages": packages}
+    except Exception as e:
+        return {"status": "error", "message": f"获取包列表时出错: {str(e)}"}
+
+async def pip_task(task_id, action, package):
+    """异步执行pip安装/卸载任务
+
+    Args:
+        task_id: 任务ID
+        action: 操作类型 ('install' 或 'uninstall')
+        package: 包名
+    """
+    try:
+        import asyncio
+        import subprocess
+        import sys
+
+        # 需要导入全局变量，这里会通过web_server.py导入
+        from guguwebui.web_server import pip_tasks
+
+        output = []
+
+        if action == "install":
+            cmd = [sys.executable, "-m", "pip", "install", package]
+            output.append(f"正在安装包: {package}")
+        elif action == "uninstall":
+            cmd = [sys.executable, "-m", "pip", "uninstall", "-y", package]
+            output.append(f"正在卸载包: {package}")
+        else:
+            pip_tasks[task_id] = {
+                "completed": True,
+                "success": False,
+                "output": ["不支持的操作类型"],
+            }
+            return
+
+        process = subprocess.Popen(
+            cmd,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+            bufsize=1
+        )
+
+        # 更新初始状态
+        pip_tasks[task_id] = {
+            "completed": False,
+            "success": False,
+            "output": output.copy(),
+        }
+
+        # 读取输出
+        while True:
+            stdout_line = process.stdout.readline()
+            if stdout_line:
+                output.append(stdout_line.strip())
+                pip_tasks[task_id]["output"] = output.copy()
+
+            stderr_line = process.stderr.readline()
+            if stderr_line:
+                output.append(stderr_line.strip())
+                pip_tasks[task_id]["output"] = output.copy()
+
+            if not stdout_line and not stderr_line and process.poll() is not None:
+                break
+
+        # 获取最终退出码
+        exit_code = process.wait()
+        success = exit_code == 0
+
+        if success:
+            output.append("操作成功完成")
+        else:
+            output.append(f"操作失败，退出码: {exit_code}")
+
+        # 更新最终状态
+        pip_tasks[task_id] = {
+            "completed": True,
+            "success": success,
+            "output": output,
+        }
+    except Exception as e:
+        import asyncio
+        from guguwebui.web_server import pip_tasks
+
+        error_msg = f"执行pip操作时出错: {str(e)}"
+        output.append(error_msg)
+        pip_tasks[task_id] = {
+            "completed": True,
+            "success": False,
+            "output": output,
+        }
+
+#============================================================#
+# 仓库缓存检查工具函数
+def check_repository_cache(server):
+    """检查插件仓库缓存，如果不存在则尝试下载
+
+    Args:
+        server: MCDR服务器接口
+    """
+    try:
+        # 获取PIM缓存目录
+        from guguwebui.utils.PIM import PIMHelper
+
+        pim_helper = PIMHelper(server)
+        cache_dir = pim_helper.get_temp_dir()
+        cache_file = os.path.join(cache_dir, "everything_slim.json")
+
+        # 创建一个命令源模拟对象
+        class CacheCheckSource:
+            def __init__(self, server):
+                self.server = server
+
+            def reply(self, message):
+                self.server.logger.info(f"[仓库缓存] {message}")
+
+            def get_server(self):
+                return self.server
+
+        source = CacheCheckSource(server)
+
+        # 检查缓存是否存在
+        if not os.path.exists(cache_file):
+            server.logger.info("插件仓库缓存不存在，尝试下载")
+
+            # 使用PIM获取仓库数据，会自动缓存，使用ignore_ttl=False以利用PIM的失败缓存机制
+            # 无需额外的try-except，因为PIM内部已经实现了失败处理和重试
+            pim_helper.get_cata_meta(source, ignore_ttl=False)
+
+            # 检查下载后缓存是否存在
+            if os.path.exists(cache_file):
+                server.logger.info("插件仓库缓存已成功下载")
+            else:
+                server.logger.warning("插件仓库缓存下载可能失败，但这是正常的，请参考日志了解详情")
+                server.logger.info("WebUI将使用PIM模块的下载失败缓存机制，在15分钟内不会重复尝试下载失败的仓库")
+        else:
+            server.logger.debug("插件仓库缓存已存在")
+    except Exception as e:
+        server.logger.error(f"检查仓库缓存时出错: {e}")
