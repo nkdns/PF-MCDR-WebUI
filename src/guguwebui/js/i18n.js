@@ -59,7 +59,7 @@
       state.dict = cached;
       state.lang = lang;
       localStorage.setItem('lang', lang);
-      applyTranslations();
+      // 不在这里立即调用 applyTranslations，避免时序竞争
       document.documentElement.setAttribute('lang', lang);
       document.dispatchEvent(new CustomEvent('i18n:changed', { detail: { lang } }));
       return;
@@ -74,7 +74,7 @@
       state.lang = lang;
       localStorage.setItem('lang', lang);
       writeCachedDict(lang, dict);
-      applyTranslations();
+      // 不在这里立即调用 applyTranslations，避免时序竞争
       document.documentElement.setAttribute('lang', lang);
       document.dispatchEvent(new CustomEvent('i18n:changed', { detail: { lang } }));
     } catch (e) {
@@ -89,24 +89,39 @@
 
   function applyTranslations(root) {
     const scope = root || document;
-    scope.querySelectorAll('[data-i18n]').forEach((el) => {
+    let hasUntranslatedElements = false;
+
+    scope.querySelectorAll('[data-i18n]:not([data-i18n-translated])').forEach((el) => {
       const key = el.getAttribute('data-i18n');
       const attr = el.getAttribute('data-i18n-attr');
       const txt = t(key, el.textContent.trim());
-      if (attr) {
-        el.setAttribute(attr, txt);
-      } else {
-        el.textContent = txt;
+
+      // 只有当翻译结果与原始文本不同时才应用翻译
+      if (txt !== el.textContent.trim() || attr) {
+        if (attr) {
+          el.setAttribute(attr, txt);
+        } else {
+          el.textContent = txt;
+        }
+        // 标记为已翻译
+        el.setAttribute('data-i18n-translated', 'true');
+      } else if (!attr) {
+        // 如果翻译结果与原始文本相同，说明可能是还未渲染的元素
+        hasUntranslatedElements = true;
       }
     });
 
     // Support placeholder translation via data-i18n-placeholder
-    scope.querySelectorAll('[data-i18n-placeholder]').forEach((el) => {
+    scope.querySelectorAll('[data-i18n-placeholder]:not([data-i18n-translated])').forEach((el) => {
       const key = el.getAttribute('data-i18n-placeholder');
       const fallback = el.getAttribute('placeholder') || '';
       const txt = t(key, fallback);
       el.setAttribute('placeholder', txt);
+      // 标记为已翻译
+      el.setAttribute('data-i18n-translated', 'true');
     });
+
+    return hasUntranslatedElements;
   }
 
   // 简单的节流器，避免频繁重复翻译
@@ -114,7 +129,7 @@
   function scheduleApply(root) {
     if (pendingApply) cancelAnimationFrame(pendingApply);
     pendingApply = requestAnimationFrame(() => {
-      applyTranslations(root || document);
+      applyTranslations(root || document); // 返回值在这里不需要使用
       pendingApply = null;
     });
   }
@@ -246,7 +261,30 @@
   document.addEventListener('DOMContentLoaded', () => {
     loadLang(state.lang).then(() => {
       mountSwitcher();
-      applyTranslations();
+
+      // 延迟多次执行，确保 Alpine.js 等框架完全渲染完成后再应用翻译
+      let retryCount = 0;
+      const maxRetries = 8;
+      const retryInterval = 150; // 150ms
+
+      const retryApplyTranslations = () => {
+        const hasUntranslated = applyTranslations();
+        retryCount++;
+
+        // 如果还有未翻译的元素且未达到最大重试次数，则继续重试
+        if (hasUntranslated && retryCount < maxRetries) {
+          setTimeout(retryApplyTranslations, retryInterval);
+        }
+      };
+
+      // 立即执行一次
+      setTimeout(retryApplyTranslations, 50);
+
+      // 额外延迟执行一次作为保险
+      setTimeout(() => {
+        applyTranslations();
+      }, 800);
+
       ensureObserver();
     });
   });

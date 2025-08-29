@@ -89,7 +89,7 @@ document.addEventListener('alpine:init', () => {
         
         // 添加仓库选择相关
         repositories: [],
-        selectedRepository: null,
+        selectedRepository: { name: '加载中...', url: '', repoId: -1 }, // 默认值防止 null 引用
         
         // 添加安装确认相关属性
         showInstallConfirmModal: false,
@@ -286,6 +286,13 @@ document.addEventListener('alpine:init', () => {
             } catch (error) {
                 console.error('Error loading repositories:', error);
                 this.showNotificationMsg('page.online_plugins.msg.load_repos_failed', 'error');
+                // 出错时设置默认仓库
+                this.repositories = [{
+                    name: this.t('page.settings.repo.official', '官方仓库'),
+                    url: 'https://api.mcdreforged.com/catalogue/everything_slim.json.xz',
+                    repoId: 0
+                }];
+                this.selectedRepository = this.repositories[0];
             }
         },
         

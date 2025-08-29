@@ -559,7 +559,7 @@
                                     class="inline-flex items-center justify-center px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm text-sm font-medium text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none transition-colors"
                                 >
                                     <i class="fas fa-server mr-2"></i>
-                                    <span x-show="selectedRepository && selectedRepository.name" x-text="selectedRepository.name"></span>
+                                    <span x-show="selectedRepository && selectedRepository.name" x-text="selectedRepository?.name || ''"></span>
                                     <span x-show="!selectedRepository" data-i18n="page.online_plugins.select_repo"></span>
                                     <i class="fas fa-chevron-down ml-2"></i>
                                 </button>
