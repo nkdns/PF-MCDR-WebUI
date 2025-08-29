@@ -969,8 +969,8 @@
                             <div class="flex items-center text-sm text-gray-600 dark:text-gray-300">
                                 <i class="fas fa-server mr-2 text-orange-500"></i>
                                 <span data-i18n="plugins.version_modal.source_repository"></span>
-                                <span class="font-medium ml-1" x-text="currentPluginRepository?.name || ''"></span>
-                                <span x-show="currentPluginRepository?.is_official" class="ml-2 px-2 py-0.5 bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 text-xs rounded-full">
+                                <span class="font-medium ml-1" x-text="currentPluginRepository && currentPluginRepository.name"></span>
+                                <span x-show="currentPluginRepository && currentPluginRepository.is_official" class="ml-2 px-2 py-0.5 bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 text-xs rounded-full">
                                     <span data-i18n="plugins.version_modal.official"></span>
                                 </span>
                             </div>

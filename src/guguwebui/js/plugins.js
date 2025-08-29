@@ -138,7 +138,7 @@ document.addEventListener('alpine:init', () => {
         currentVersionPlugin: null, 
         versions: [],
         installedVersion: null,
-        currentPluginRepository: { name: '', url: '' }, // 添加当前插件仓库信息，默认值防止 null 引用
+        currentPluginRepository: null, // 添加当前插件仓库信息
 
         // 比较两个版本号的函数 
         // 返回值: 如果v1 > v2，返回1；如果v1 < v2，返回-1；如果相等，返回0
