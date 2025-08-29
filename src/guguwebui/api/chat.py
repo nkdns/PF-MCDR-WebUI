@@ -8,6 +8,7 @@ import secrets
 import time
 import random
 import string
+import concurrent.futures
 from typing import Dict, List, Any, Optional, Tuple
 
 from mcdreforged.api.all import PluginServerInterface
@@ -305,7 +306,7 @@ def chat_user_logout(session_id: str, server: PluginServerInterface) -> Dict[str
 #============================================================#
 # 消息处理功能
 def get_chat_messages_handler(limit: int = 50, offset: int = 0, after_id: Optional[int] = None,
-                              server: PluginServerInterface = None) -> Dict[str, Any]:
+                              before_id: Optional[int] = None, server: PluginServerInterface = None) -> Dict[str, Any]:
     """
     获取聊天消息
 
@@ -313,6 +314,7 @@ def get_chat_messages_handler(limit: int = 50, offset: int = 0, after_id: Option
         limit: 消息数量限制
         offset: 偏移量
         after_id: 消息ID起点
+        before_id: 获取ID小于此值的历史消息
         server: MCDR服务器接口
 
     Returns:
@@ -324,6 +326,9 @@ def get_chat_messages_handler(limit: int = 50, offset: int = 0, after_id: Option
     if after_id is not None:
         # 获取指定ID之后的新消息
         messages = chat_logger.get_new_messages(after_id)
+    elif before_id is not None:
+        # 获取指定ID之前的历史消息
+        messages = chat_logger.get_messages(limit=limit, before_id=before_id)
     else:
         # 兼容旧版本，使用offset方式
         messages = chat_logger.get_messages(limit, offset)
@@ -372,9 +377,18 @@ def get_new_chat_messages_handler(after_id: int = 0, player_id_heartbeat: str = 
 
     messages = chat_logger.get_new_messages(after_id)
 
-    # 为消息补充UUID信息
+    # 为消息补充UUID信息（带超时处理）
     try:
         uuid_cache = {}
+
+        def get_uuid_with_timeout(player_id):
+            """带超时的UUID获取"""
+            try:
+                return get_player_uuid(player_id, server)
+            except Exception:
+                return None
+
+        # 为每个玩家并行获取UUID，单个玩家1秒超时
         for m in messages:
             pid = m.get('player_id')
             if not pid:
@@ -383,8 +397,10 @@ def get_new_chat_messages_handler(after_id: int = 0, player_id_heartbeat: str = 
                 uuid_val = uuid_cache[pid]
             else:
                 try:
-                    uuid_val = get_player_uuid(pid, server)
-                except Exception:
+                    with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
+                        future = executor.submit(get_uuid_with_timeout, pid)
+                        uuid_val = future.result(timeout=1.0)  # 1秒超时
+                except (concurrent.futures.TimeoutError, Exception):
                     uuid_val = None
                 uuid_cache[pid] = uuid_val
             m['uuid'] = uuid_val
@@ -402,12 +418,31 @@ def get_new_chat_messages_handler(after_id: int = 0, player_id_heartbeat: str = 
     online_web = set(pid for pid, until in WEB_ONLINE_PLAYERS.items() if until >= int(time.time()))
     online_game = set()
 
+    # 快速获取服务器信息（1秒超时）
+    def get_server_info_with_timeout():
+        """带超时的服务器信息获取"""
+        try:
+            return get_java_server_info()
+        except Exception:
+            return {}
+
+    # 使用线程池执行器获取服务器信息，1秒超时
+    server_info = {}
     try:
-        # 优先通过RCON获取具体在线玩家列表（5秒缓存）
-        if hasattr(server, "is_rcon_running") and server.is_rcon_running():
-            now_sec = int(time.time())
-            if RCON_ONLINE_CACHE["dirty"] or (now_sec - int(RCON_ONLINE_CACHE["ts"]) >= 300):
-                try:
+        with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
+            future = executor.submit(get_server_info_with_timeout)
+            server_info = future.result(timeout=1.0)  # 1秒超时
+    except (concurrent.futures.TimeoutError, Exception):
+        # 超时或异常时使用空字典
+        server_info = {}
+
+    # 快速RCON查询（1秒超时）
+    def get_rcon_online_players():
+        """带超时的RCON查询"""
+        try:
+            if hasattr(server, "is_rcon_running") and server.is_rcon_running():
+                now_sec = int(time.time())
+                if RCON_ONLINE_CACHE["dirty"] or (now_sec - int(RCON_ONLINE_CACHE["ts"]) >= 300):
                     feedback = server.rcon_query("list")
                     names = set()
                     if isinstance(feedback, str) and ":" in feedback:
@@ -418,20 +453,37 @@ def get_new_chat_messages_handler(after_id: int = 0, player_id_heartbeat: str = 
                     RCON_ONLINE_CACHE["names"] = names
                     RCON_ONLINE_CACHE["ts"] = now_sec
                     RCON_ONLINE_CACHE["dirty"] = False
-                except Exception:
-                    # 保留旧缓存
-                    pass
-            online_game = set(RCON_ONLINE_CACHE["names"])
-    except Exception:
-        pass
+                return set(RCON_ONLINE_CACHE["names"])
+        except Exception:
+            # RCON失败时保留旧缓存
+            return set(RCON_ONLINE_CACHE["names"])
+        return set()
 
-    # 获取假人列表
-    online_bot = []
+    # 使用线程池执行器，1秒超时
     try:
-        online_bot = get_bot_list(server)
-    except Exception as e:
-        if server:
-            server.logger.debug(f"获取假人列表失败: {e}")
+        with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
+            future = executor.submit(get_rcon_online_players)
+            online_game = future.result(timeout=1.0)  # 1秒超时
+    except (concurrent.futures.TimeoutError, Exception):
+        # 超时或异常时使用缓存数据
+        online_game = set(RCON_ONLINE_CACHE["names"])
+
+    # 快速获取假人列表（1秒超时）
+    def get_bot_list_with_timeout():
+        """带超时的假人列表获取"""
+        try:
+            return get_bot_list(server)
+        except Exception:
+            return []
+
+    # 使用线程池执行器获取假人列表，1秒超时
+    try:
+        with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
+            future = executor.submit(get_bot_list_with_timeout)
+            online_bot = future.result(timeout=1.0)  # 1秒超时
+    except (concurrent.futures.TimeoutError, Exception):
+        # 超时或异常时使用空列表
+        online_bot = []
 
     return {
         "status": "success",

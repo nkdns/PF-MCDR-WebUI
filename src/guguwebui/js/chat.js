@@ -98,13 +98,13 @@ function chatApp() {
         loginPlayerId: '',
         loginPassword: '',
         chatMessage: '',
-        
+
         // 聊天消息相关
         chatMessages: [],
-        isLoadingMessages: false,
+        isLoadingMessages: false,      // 历史消息加载状态
+        isLoadingNewMessages: false,   // 新消息加载状态
         messageOffset: 0,
         hasMoreMessages: true,
-        lastMessageId: 0,  // 最后一条消息的ID
         refreshInterval: null,  // 定时刷新间隔
         isSending: false,  // 发送消息状态
         lastSendAtMs: 0,   // 前端冷却：上次发送时间戳（ms）
@@ -232,6 +232,9 @@ function chatApp() {
                 clearInterval(this.offlineCleanupInterval);
                 this.offlineCleanupInterval = null;
             }
+            // 重置请求状态
+            this.isLoadingMessages = false;
+            this.isLoadingNewMessages = false;
         },
         
         // 获取聊天消息（首次加载或加载更多历史消息）
@@ -252,20 +255,35 @@ function chatApp() {
                 if (result.status === 'success') {
                     if (offset === 0) {
                         // 首次加载
-                        this.chatMessages = result.messages;
-                        // 设置最后一条消息的ID
-                        if (result.messages.length > 0) {
-                            this.lastMessageId = Math.max(...result.messages.map(m => m.id));
+                        if (Array.isArray(result.messages)) {
+                            this.chatMessages = result.messages;
+                            console.log(`[Chat] 首次加载成功，消息数量: ${this.chatMessages.length}`);
+                        } else {
+                            console.error('[Chat] 首次加载失败：返回的消息不是数组');
+                            this.chatMessages = [];
                         }
                         // 首次加载后更新离线成员缓存
                         this.updateOfflineMembers();
                     } else {
                         // 加载更多历史消息
-                        this.chatMessages = [...this.chatMessages, ...result.messages];
+                        if (Array.isArray(result.messages) && result.messages.length > 0) {
+                            const newChatMessages = [...this.chatMessages, ...result.messages];
+                            const expectedLength = this.chatMessages.length + result.messages.length;
+
+                            if (newChatMessages.length === expectedLength) {
+                                this.chatMessages = newChatMessages;
+                                console.log(`[Chat] 历史消息加载成功，消息数量: ${this.chatMessages.length}`);
+                            } else {
+                                console.error(`[Chat] 历史消息插入失败：期望长度 ${expectedLength}，实际长度 ${newChatMessages.length}`);
+                            }
+                        } else {
+                            console.warn('[Chat] 历史消息加载完成或返回空数组');
+                        }
                     }
                     
                     this.messageOffset = this.chatMessages.length;
-                    this.hasMoreMessages = result.has_more;
+                    // 更新hasMoreMessages：如果消息的最小ID大于1，说明有历史消息
+                    this.hasMoreMessages = this.chatMessages.length > 0 && Math.min(...this.chatMessages.map(m => m.id || 0)) > 1;
                 }
             } catch (error) {
                 console.error('加载聊天消息失败:', error);
@@ -274,59 +292,138 @@ function chatApp() {
             }
         },
         
-        // 加载新消息（基于最后消息ID）
+        // 获取当前消息列表中的最大消息ID
+        getMaxMessageId() {
+            if (!this.chatMessages || this.chatMessages.length === 0) {
+                return 0;
+            }
+            return Math.max(...this.chatMessages.map(m => m.id || 0));
+        },
+
+        // 加载新消息（基于列表中的最大消息ID）
         async loadNewMessages() {
-            if (this.isLoadingMessages || this.lastMessageId === 0) return;
-            
+            // 防止并发请求
+            if (this.isLoadingNewMessages) {
+                return;
+            }
+
+            // 检查用户是否已登录
+            if (!this.isLoggedIn) {
+                return;
+            }
+
+            // 获取当前列表中的最大消息ID
+            const currentMaxId = this.getMaxMessageId();
+            if (currentMaxId === 0) return;
+
+            this.isLoadingNewMessages = true;
+
             try {
                 const response = await fetch('api/chat/get_new_messages', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
                     },
-                    body: JSON.stringify({ after_id: this.lastMessageId, player_id: this.currentPlayer })
+                    body: JSON.stringify({ after_id: currentMaxId, player_id: this.currentPlayer })
                 });
-                
+
                 const result = await response.json();
                 if (result.status === 'success' && result.messages && result.messages.length > 0) {
-                    // 将新消息添加到列表顶部
-                    this.chatMessages = [...result.messages, ...this.chatMessages];
-                    
-                    // 更新最后消息ID
-                    this.lastMessageId = result.last_message_id;
-                    
-                    // 限制消息数量，避免内存占用过多
-                    if (this.chatMessages.length > 200) {
-                        this.chatMessages = this.chatMessages.slice(0, 200);
+                    // 验证消息数据的完整性
+                    const validMessages = result.messages.filter(msg =>
+                        msg && typeof msg.id === 'number' && msg.player_id && msg.message
+                    );
+
+                    if (validMessages.length > 0) {
+                        // 创建新的消息列表（确保原子性操作）
+                        const newChatMessages = [...validMessages, ...this.chatMessages];
+
+                        // 验证新列表的完整性
+                        const expectedLength = this.chatMessages.length + validMessages.length;
+                        if (newChatMessages.length === expectedLength) {
+                            // 只有在消息成功插入后才更新状态
+                            this.chatMessages = newChatMessages;
+
+                            // 更新消息计数
+                            this.messageOffset = this.chatMessages.length;
+
+                            console.log(`[Chat] 成功插入 ${validMessages.length} 条新消息，当前消息总数: ${this.chatMessages.length}`);
+                        } else {
+                            console.error(`[Chat] 消息插入失败：期望长度 ${expectedLength}，实际长度 ${newChatMessages.length}`);
+                        }
+                    } else {
+                        console.warn('[Chat] 收到消息但全部无效，跳过处理');
                     }
-                    
-                    // 更新消息计数
-                    this.messageOffset = this.chatMessages.length;
                 }
                 if (result.status === 'success' && result.online) {
                     const oldOnlineWeb = [...this.onlineWeb];
                     const oldOnlineGame = [...this.onlineGame];
                     const oldOnlineBot = [...this.onlineBot];
-                    
+
                     this.onlineWeb = Array.isArray(result.online.web) ? result.online.web : [];
                     this.onlineGame = Array.isArray(result.online.game) ? result.online.game : [];
                     this.onlineBot = Array.isArray(result.online.bot) ? result.online.bot : [];
-                    
+
                     // 检测玩家状态变化
                     this.detectPlayerStatusChanges(oldOnlineWeb, oldOnlineGame, oldOnlineBot);
-                    
+
                     // 更新离线成员缓存
                     this.updateOfflineMembers();
                 }
             } catch (error) {
                 console.error('加载新消息失败:', error);
+            } finally {
+                this.isLoadingNewMessages = false;
             }
         },
         
         // 加载更多历史消息
         loadMoreMessages() {
             if (this.hasMoreMessages && !this.isLoadingMessages) {
-                this.loadChatMessages(50, this.messageOffset);
+                const minId = Math.min(...this.chatMessages.map(m => m.id || 0));
+                this.loadHistoricalMessages(50, minId);
+            }
+        },
+
+        // 加载历史消息（根据最小ID向前获取）
+        async loadHistoricalMessages(limit = 50, beforeId = 0) {
+            if (this.isLoadingMessages) return;
+
+            this.isLoadingMessages = true;
+            try {
+                const response = await fetch('api/chat/get_messages', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ limit, before_id: beforeId })
+                });
+
+                const result = await response.json();
+                if (result.status === 'success') {
+                    if (Array.isArray(result.messages) && result.messages.length > 0) {
+                        // 将历史消息添加到列表底部
+                        const newChatMessages = [...this.chatMessages, ...result.messages];
+                        const expectedLength = this.chatMessages.length + result.messages.length;
+
+                        if (newChatMessages.length === expectedLength) {
+                            this.chatMessages = newChatMessages;
+                            console.log(`[Chat] 历史消息加载成功，消息数量: ${this.chatMessages.length}`);
+                        } else {
+                            console.error(`[Chat] 历史消息插入失败：期望长度 ${expectedLength}，实际长度 ${newChatMessages.length}`);
+                        }
+                    } else {
+                        console.warn('[Chat] 历史消息加载完成或返回空数组');
+                    }
+
+                    this.messageOffset = this.chatMessages.length;
+                    // 更新hasMoreMessages：如果消息的最小ID大于1，说明有历史消息
+                    this.hasMoreMessages = this.chatMessages.length > 0 && Math.min(...this.chatMessages.map(m => m.id || 0)) > 1;
+                }
+            } catch (error) {
+                console.error('加载历史消息失败:', error);
+            } finally {
+                this.isLoadingMessages = false;
             }
         },
         
@@ -868,7 +965,6 @@ function chatApp() {
                 this.isLoggedIn = false;
                 this.currentPlayer = '';
                 this.currentStep = 1;
-                this.lastMessageId = 0;
                 this.chatMessages = [];
                 localStorage.removeItem('chat_session_id');
                 // 停止消息刷新

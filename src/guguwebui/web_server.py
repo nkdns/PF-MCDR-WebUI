@@ -1248,9 +1248,10 @@ async def get_chat_messages(request: Request):
         limit = data.get("limit", 50)
         offset = data.get("offset", 0)
         after_id = data.get("after_id")  # 新增：基于消息ID获取
+        before_id = data.get("before_id")  # 新增：获取历史消息
 
         server:PluginServerInterface = app.state.server_interface
-        result = get_chat_messages_handler(limit=limit, offset=offset, after_id=after_id, server=server)
+        result = get_chat_messages_handler(limit=limit, offset=offset, after_id=after_id, before_id=before_id, server=server)
 
         return JSONResponse(result)
 

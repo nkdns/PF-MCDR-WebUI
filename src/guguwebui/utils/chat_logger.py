@@ -166,74 +166,159 @@ class ChatLogger:
         self._write_index(index)
         
         return message_id
-    
-    def get_messages(self, limit=50, offset=0, after_id=None):
+
+    def get_messages(self, limit=50, offset=0, after_id=None, before_id=None):
         """获取消息
-        
+
         Args:
             limit: 限制返回的消息数量
             offset: 偏移量（用于向后兼容）
             after_id: 只返回ID大于此值的消息（新消息）
+            before_id: 只返回ID小于此值的消息（历史消息）
         """
         if not self.chat_messages_file.exists():
             return []
-        
+
         messages = []
         max_attempts = 1000  # 防止无限循环
-        
+
         try:
             with open(self.chat_messages_file, 'rb') as f:
                 data = f.read()
-            
+
             if not data:
                 return []
-            
-            offset_pos = 0
-            attempt_count = 0
-            
+
             # 如果指定了after_id，找到对应的位置
             if after_id is not None:
-                temp_offset = 0
-                while temp_offset < len(data) and attempt_count < max_attempts:
-                    message, temp_offset = self._unpack_message(data, temp_offset)
+                offset_pos = 0
+                attempt_count = 0
+                while offset_pos < len(data) and attempt_count < max_attempts:
+                    message, new_offset = self._unpack_message(data, offset_pos)
                     if message is None:
                         break
                     if message['id'] > after_id:
-                        offset_pos = temp_offset
                         break
+                    offset_pos = new_offset
                     attempt_count += 1
-                # 重置偏移量，从找到的位置开始读取
+
+                # 从找到的位置开始读取消息
+                attempt_count = 0
+                while offset_pos < len(data) and len(messages) < limit and attempt_count < max_attempts:
+                    message, offset_pos = self._unpack_message(data, offset_pos)
+                    if message is None:
+                        break
+
+                    # 确保返回的数据可以被JSON序列化
+                    serializable_message = {
+                        'id': message['id'],
+                        'player_id': message['player_id'],
+                        'message': message['message'],
+                        'timestamp': int(message['timestamp'].timestamp()),  # Unix时间戳（秒）
+                        'timestamp_ms': int(message['timestamp'].timestamp() * 1000),  # 毫秒时间戳
+                        'timestamp_str': message['timestamp_str']  # 可读的时间字符串
+                    }
+                    messages.append(serializable_message)
+                    attempt_count += 1
+
+            # 如果指定了before_id，获取指定ID之前的历史消息
+            elif before_id is not None:
+                all_messages = []
                 offset_pos = 0
-            
-            # 读取消息
-            while offset_pos < len(data) and len(messages) < limit and attempt_count < max_attempts:
-                message, offset_pos = self._unpack_message(data, offset_pos)
-                if message is None:
-                    break
-                
-                # 如果指定了after_id，只返回ID大于此值的消息
-                if after_id is not None and message['id'] <= after_id:
-                    continue
-                
-                # 确保返回的数据可以被JSON序列化
-                serializable_message = {
-                    'id': message['id'],
-                    'player_id': message['player_id'],
-                    'message': message['message'],
-                    'timestamp': int(message['timestamp'].timestamp()),  # Unix时间戳（秒）
-                    'timestamp_ms': int(message['timestamp'].timestamp() * 1000),  # 毫秒时间戳
-                    'timestamp_str': message['timestamp_str']  # 可读的时间字符串
-                }
-                messages.append(serializable_message)
-                attempt_count += 1
-            
-            # 按时间顺序排序（最新的在前）
-            messages.sort(key=lambda x: x['timestamp'], reverse=True)
-            
+                attempt_count = 0
+
+                # 先读取所有消息
+                while offset_pos < len(data) and attempt_count < max_attempts:
+                    message, new_offset = self._unpack_message(data, offset_pos)
+                    if message is None:
+                        break
+
+                    # 确保返回的数据可以被JSON序列化
+                    serializable_message = {
+                        'id': message['id'],
+                        'player_id': message['player_id'],
+                        'message': message['message'],
+                        'timestamp': int(message['timestamp'].timestamp()),  # Unix时间戳（秒）
+                        'timestamp_ms': int(message['timestamp'].timestamp() * 1000),  # 毫秒时间戳
+                        'timestamp_str': message['timestamp_str']  # 可读的时间字符串
+                    }
+                    all_messages.append(serializable_message)
+                    offset_pos = new_offset
+                    attempt_count += 1
+
+                # 筛选出ID小于before_id的消息，按时间排序（最新的在前），然后取前limit条
+                historical_messages = [msg for msg in all_messages if msg['id'] < before_id]
+                historical_messages.sort(key=lambda x: x['timestamp'], reverse=True)
+                messages = historical_messages[:limit]
+
+            # 如果没有指定after_id（首次加载或历史消息）
+            else:
+                # 当offset=0时，获取最近的消息（从文件末尾开始）
+                if offset == 0:
+                    # 从文件末尾开始向前读取
+                    all_messages = []
+                    offset_pos = 0
+                    attempt_count = 0
+
+                    # 先读取所有消息
+                    while offset_pos < len(data) and attempt_count < max_attempts:
+                        message, new_offset = self._unpack_message(data, offset_pos)
+                        if message is None:
+                            break
+
+                        # 确保返回的数据可以被JSON序列化
+                        serializable_message = {
+                            'id': message['id'],
+                            'player_id': message['player_id'],
+                            'message': message['message'],
+                            'timestamp': int(message['timestamp'].timestamp()),  # Unix时间戳（秒）
+                            'timestamp_ms': int(message['timestamp'].timestamp() * 1000),  # 毫秒时间戳
+                            'timestamp_str': message['timestamp_str']  # 可读的时间字符串
+                        }
+                        all_messages.append(serializable_message)
+                        offset_pos = new_offset
+                        attempt_count += 1
+
+                    # 按时间排序（最新的在前），然后取前limit条
+                    all_messages.sort(key=lambda x: x['timestamp'], reverse=True)
+                    messages = all_messages[:limit]
+
+                # 当offset>0时，使用传统的offset方式（用于加载更多历史消息）
+                else:
+                    offset_pos = 0
+                    attempt_count = 0
+                    messages_read = 0
+
+                    # 读取消息，直到达到offset
+                    while offset_pos < len(data) and messages_read < (offset + limit) and attempt_count < max_attempts:
+                        message, offset_pos = self._unpack_message(data, offset_pos)
+                        if message is None:
+                            break
+
+                        messages_read += 1
+
+                        # 只保留offset之后的消息
+                        if messages_read > offset:
+                            # 确保返回的数据可以被JSON序列化
+                            serializable_message = {
+                                'id': message['id'],
+                                'player_id': message['player_id'],
+                                'message': message['message'],
+                                'timestamp': int(message['timestamp'].timestamp()),  # Unix时间戳（秒）
+                                'timestamp_ms': int(message['timestamp'].timestamp() * 1000),  # 毫秒时间戳
+                                'timestamp_str': message['timestamp_str']  # 可读的时间字符串
+                            }
+                            messages.append(serializable_message)
+
+                        attempt_count += 1
+
+                    # 按时间顺序排序（最新的在前）
+                    messages.sort(key=lambda x: x['timestamp'], reverse=True)
+
         except Exception as e:
             print(f"读取消息失败: {e}")
             return []
-        
+
         return messages
     
     def get_new_messages(self, after_id):
@@ -268,3 +353,7 @@ class ChatLogger:
         if self.chat_messages_file.exists():
             return self.chat_messages_file.stat().st_size
         return 0
+
+
+
+
