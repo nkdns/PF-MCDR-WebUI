@@ -38,36 +38,79 @@ async def package_pim_plugin(server, plugins_dir: str) -> str:
             # 创建目录结构
             os.makedirs(pim_plugin_dir, exist_ok=True)
 
-            # 获取 WebUI 插件的实际文件路径
-            current_file = __file__  # api/plugins.py 的路径
-            # 从 plugins.py 向上找到 guguwebui 包的根目录
-            guguwebui_root = os.path.dirname(os.path.dirname(current_file))  # guguwebui 包根目录
-            pim_source_dir = os.path.join(guguwebui_root, "utils", "PIM")
+            # 从插件包内部提取 PIM 源文件（与前端静态资源导出一致的方式），
+            # 但为确保源码完整打包，这里不忽略 .py 文件，仅忽略 __pycache__。
 
-            # 直接复制 PIM 文件夹的内容到插件ID同名文件夹（排除 __pycache__）
-            pim_source_pim_dir = os.path.join(pim_source_dir, "pim_helper")
-            if os.path.exists(pim_source_pim_dir):
-                import shutil
+            def copy_folder_from_package(plugin_server, src_folder: str, dst_folder: str) -> bool:
+                """
+                递归从插件包内复制目录到文件系统，仅忽略 __pycache__。
+                与 utils.__copyFolder 类似，但不忽略 .py 与 "utils" 目录。
+                """
+                try:
+                    from pathlib import Path as _Path
+                    dst_path = _Path(dst_folder)
+                    dst_path.mkdir(parents=True, exist_ok=True)
 
-                # 自定义复制函数，排除 __pycache__ 目录
-                def copytree_ignore_pycache(src, dst, ignore=None):
-                    """复制目录树，忽略 __pycache__ 文件夹"""
-                    if ignore is None:
-                        ignore = shutil.ignore_patterns('__pycache__')
-                    shutil.copytree(src, dst, ignore=ignore, dirs_exist_ok=True)
+                    # 列出目录项
+                    items = []
+                    try:
+                        items = plugin_server._PluginServerInterface__plugin.list_directory(src_folder)
+                    except Exception:
+                        try:
+                            from mcdreforged.plugin.type.multi_file_plugin import MultiFilePlugin
+                            if isinstance(plugin_server._PluginServerInterface__plugin, MultiFilePlugin):
+                                items = plugin_server._PluginServerInterface__plugin.list_directory(src_folder)
+                        except Exception:
+                            items = []
 
-                copytree_ignore_pycache(pim_source_pim_dir, pim_plugin_dir)
-            else:
-                server.logger.error(f"PIM 源文件夹不存在: {pim_source_pim_dir}")
-                raise FileNotFoundError(f"PIM source directory not found: {pim_source_pim_dir}")
+                    if not items:
+                        # 尝试作为单文件复制
+                        try:
+                            with plugin_server.open_bundled_file(src_folder) as _:
+                                # 目标若为目录，补上文件名
+                                filename = src_folder.split("/")[-1]
+                                target_file = dst_path / filename
+                                # 使用已有的文件复制函数
+                                __copyFile(plugin_server, src_folder, str(target_file))
+                                return True
+                        except Exception:
+                            return False
 
-            # 复制插件元数据文件到插件根目录
-            meta_source_path = os.path.join(pim_source_dir, "mcdreforged.plugin.json")
-            if os.path.exists(meta_source_path):
-                shutil.copy2(meta_source_path, os.path.join(plugin_root_dir, "mcdreforged.plugin.json"))
-            else:
-                server.logger.error(f"元数据文件不存在: {meta_source_path}")
-                raise FileNotFoundError(f"Metadata file not found: {meta_source_path}")
+                    for name in items:
+                        if name == "__pycache__":
+                            continue
+                        child_src = f"{src_folder}/{name}"
+                        child_dst = str(_Path(dst_folder) / name)
+                        # 判断文件或目录
+                        try:
+                            with plugin_server.open_bundled_file(child_src) as _:
+                                __copyFile(plugin_server, child_src, child_dst)
+                        except Exception:
+                            if not copy_folder_from_package(plugin_server, child_src, child_dst):
+                                return False
+
+                    return True
+                except Exception as _e:
+                    try:
+                        server.logger.error(f"复制目录失败: {src_folder} -> {dst_folder}, 错误: {_e}")
+                    except Exception:
+                        pass
+                    return False
+
+            # 1) 复制 pim_helper 目录到 pim_plugin_dir
+            pim_helper_src = "guguwebui/utils/PIM/pim_helper"
+            if not copy_folder_from_package(server, pim_helper_src, pim_plugin_dir):
+                server.logger.error(f"无法从插件包内提取目录: {pim_helper_src}")
+                raise FileNotFoundError(f"PIM source directory not found inside package: {pim_helper_src}")
+
+            # 2) 复制 mcdreforged.plugin.json 到插件根目录
+            meta_src = "guguwebui/utils/PIM/mcdreforged.plugin.json"
+            meta_dst = os.path.join(plugin_root_dir, "mcdreforged.plugin.json")
+            try:
+                __copyFile(server, meta_src, meta_dst)
+            except Exception as e:
+                server.logger.error(f"无法从插件包内提取元数据文件: {meta_src}, 错误: {e}")
+                raise FileNotFoundError(f"Metadata file not found inside package: {meta_src}")
 
             # 创建 .mcdr 文件（实际上是 zip 文件）
             pim_plugin_path = os.path.join(plugins_dir, "pim_helper.mcdr")
