@@ -496,5 +496,48 @@
 
     <script src="custom/overall.js"></script>
     <script src="js/chat.js"></script>
+
+    <!-- ICP备案信息 -->
+    <div id="icp-records" class="fixed bottom-2 right-2 text-xs text-gray-500 dark:text-gray-400 hidden z-50">
+        <div class="bg-white dark:bg-gray-800 px-2 py-1 rounded shadow-sm border border-gray-200 dark:border-gray-600">
+            <!-- 备案信息将通过JavaScript动态添加 -->
+        </div>
+    </div>
+
+    <script>
+        // 加载ICP备案信息
+        document.addEventListener('DOMContentLoaded', function() {
+            fetch('api/config/icp-records')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === 'success' && data.icp_records && data.icp_records.length > 0) {
+                        displayIcpRecords(data.icp_records);
+                    }
+                })
+                .catch(error => {
+                    console.error('Failed to load ICP records:', error);
+                });
+        });
+
+        function displayIcpRecords(records) {
+            const container = document.getElementById('icp-records');
+            if (!container || records.length === 0) return;
+
+            const recordsDiv = container.querySelector('div');
+            recordsDiv.innerHTML = '';
+
+            records.forEach(record => {
+                const link = document.createElement('a');
+                link.href = record.url;
+                link.target = '_blank';
+                link.rel = 'noopener noreferrer';
+                link.className = 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors mr-2 last:mr-0';
+                link.textContent = record.icp;
+                recordsDiv.appendChild(link);
+            });
+
+            container.classList.remove('hidden');
+        }
+    </script>
 </body>
 </html>

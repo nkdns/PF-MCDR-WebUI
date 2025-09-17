@@ -60,6 +60,11 @@ def create_account_command(src, ctx, host:str, port:int):
         return
     
     account, password = ctx['account'], ctx['password']
+
+    # 防呆处理：自动去除可能存在的<>字符
+    account = account.replace('<', '').replace('>', '')
+    password = password.replace('<', '').replace('>', '')
+
     success = create_user_account(account, password)
     if success:
         success_msg = RTextList(
@@ -83,6 +88,12 @@ def change_account_command(src, ctx, host:str, port:int):
     
     account = ctx['account']
     old_password, new_password = ctx['old password'], ctx['new password']
+
+    # 防呆处理：自动去除可能存在的<>字符
+    account = account.replace('<', '').replace('>', '')
+    old_password = old_password.replace('<', '').replace('>', '')
+    new_password = new_password.replace('<', '').replace('>', '')
+
     success = change_user_account(account, old_password, new_password)
     if success:
         success_msg = RTextList(

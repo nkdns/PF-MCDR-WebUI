@@ -119,6 +119,9 @@ def set_chat_user_password(code: str, password: str, server: PluginServerInterfa
     Returns:
         Dict: 设置结果
     """
+    # 防呆处理：自动去除密码中可能存在的<>字符
+    password = password.replace('<', '').replace('>', '')
+
     if not code or not password:
         return {"status": "error", "message": "验证码和密码不能为空"}
 
@@ -180,6 +183,10 @@ def chat_user_login(player_id: str, password: str, client_ip: str, server: Plugi
     Returns:
         Dict: 登录结果
     """
+    # 防呆处理：自动去除可能存在的<>字符
+    player_id = player_id.replace('<', '').replace('>', '')
+    password = password.replace('<', '').replace('>', '')
+
     if not player_id or not password:
         return {"status": "error", "message": "玩家ID和密码不能为空"}
 

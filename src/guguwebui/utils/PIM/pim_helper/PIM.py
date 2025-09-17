@@ -443,8 +443,8 @@ class ReleaseDownloader:
             temp_filename = f"download_{str(uuid.uuid4())}.tmp"
             temp_path = os.path.join(temp_dir, temp_filename) if temp_dir else None
             
-            # 下载文件
-            response = requests.get(url, timeout=30)
+            # 下载文件，使用较短的超时时间避免卡死线程
+            response = requests.get(url, timeout=10)
             if response.status_code == 200:
                 # 确保目标目录存在
                 os.makedirs(os.path.dirname(target_path), exist_ok=True)
@@ -610,20 +610,18 @@ class PIMHelper:
                 cache_expired = False
                 self.logger.debug(f"使用缓存文件: {cache_file}, 未过期")
         
-        # 如果缓存已过期或不存在，则下载并解压新文件
+        # 如果缓存已过期或不存在，则尝试下载新文件
         if cache_expired:
-            # 初始化尝试次数，如果失败记录中没有该URL，初始化为0
-            attempt_count = PIMHelper._download_failure_cache.get(url, {}).get('attempt_count', 0)  # 使用类变量
-            max_attempts = 2  # 最多尝试2次（1次初始 + 1次重试）
-            
-            for attempt in range(max_attempts - attempt_count):
-                try:
-                    source.reply(f"正在获取插件目录元数据...{'' if attempt == 0 else '(重试)'}")
-                    self.logger.debug(f"下载仓库数据: {url}{'' if attempt == 0 else ' (重试)'}")
-                    
-                    response = requests.get(url, timeout=30)  # 增加超时时间设置
-                    
-                    if response.status_code == 200:
+            download_success = False
+
+            source.reply("正在获取插件目录元数据...")
+            self.logger.debug(f"下载仓库数据: {url}")
+
+            # 使用更短的超时时间，避免卡死线程
+            try:
+                response = requests.get(url, timeout=5)
+
+                if response.status_code == 200:
                         # 判断是否是xz压缩文件
                         if url.endswith('.xz'):
                             # 保存压缩文件
@@ -651,57 +649,40 @@ class PIMHelper:
                             self.logger.debug(f"下载完成: {cache_file}")
                         
                         source.reply("获取元数据成功")
-                        
+                        download_success = True
+
                         # 下载成功，清除失败记录
                         if url in PIMHelper._download_failure_cache:  # 使用类变量
                             del PIMHelper._download_failure_cache[url]  # 使用类变量
-                        
-                        # 下载成功，跳出重试循环
-                        break
-                    else:
-                        source.reply(f"获取元数据失败: HTTP {response.status_code}")
-                        self.logger.error(f"获取元数据失败: HTTP {response.status_code}, URL: {url}")
-                        
-                        # 更新失败记录
-                        current_attempt = attempt_count + attempt + 1
-                        PIMHelper._download_failure_cache[url] = {  # 使用类变量
-                            'failed_at': current_time,
-                            'attempt_count': current_attempt
-                        }
-                        
-                        # 如果这是最后一次尝试且失败
-                        if current_attempt >= max_attempts - 1:
-                            source.reply(f"仓库 {url} 下载失败，15分钟内将不再尝试下载")
-                            self.logger.warning(f"仓库 {url} 已达到最大尝试次数，15分钟内将不再尝试下载")
-                            
-                            # 如果下载失败但缓存文件存在，继续使用旧缓存
-                            if not os.path.exists(cache_file):
-                                source.reply("缓存不存在，返回空元数据")
-                                return EmptyMetaRegistry()
-                        else:
-                            # 不是最后一次尝试，等待1秒后重试
-                            source.reply("1秒后重试...")
-                            time.sleep(1)
-                except Exception as e:
-                    source.reply(f"获取元数据失败: {e}")
-                    self.logger.error(f"获取元数据失败: {e}, URL: {url}")
-                    
-                    # 更新失败记录
-                    current_attempt = attempt_count + attempt + 1
+
+                else:
+                    source.reply(f"获取元数据失败: HTTP {response.status_code}")
+                    self.logger.error(f"获取元数据失败: HTTP {response.status_code}, URL: {url}")
+
+                    # 记录失败信息，但不等待重试
                     PIMHelper._download_failure_cache[url] = {  # 使用类变量
                         'failed_at': current_time,
-                        'attempt_count': current_attempt
+                        'attempt_count': 1
                     }
-                    
-                    # 如果这是最后一次尝试且失败
-                    if current_attempt >= max_attempts - 1:
-                        # 下载或解压出错，如果缓存文件存在则使用旧缓存
-                        if not os.path.exists(cache_file):
-                            return EmptyMetaRegistry()
-                    else:
-                        # 不是最后一次尝试，等待1秒后重试
-                        source.reply("1秒后重试...")
-                        time.sleep(1)
+
+            except Exception as e:
+                source.reply(f"获取元数据失败: {e}")
+                self.logger.error(f"获取元数据失败: {e}, URL: {url}")
+
+                # 记录失败信息，但不等待重试
+                PIMHelper._download_failure_cache[url] = {  # 使用类变量
+                    'failed_at': current_time,
+                    'attempt_count': 1
+                }
+
+            # 请求失败后，直接使用缓存（如果存在）或返回空数据
+            if not download_success:
+                if os.path.exists(cache_file):
+                    source.reply("使用缓存数据")
+                    self.logger.debug(f"使用现有缓存文件: {cache_file}")
+                else:
+                    source.reply("无缓存数据，返回空结果")
+                    return EmptyMetaRegistry()
         
         # 读取并解析文件
         try:
@@ -3026,7 +3007,7 @@ class PIMHelper:
                 'User-Agent': 'MCDR-WebUI'
             }
             
-            response = requests.get(api_url, headers=headers, timeout=30)
+            response = requests.get(api_url, headers=headers, timeout=10)
             
             if response.status_code == 200:
                 releases_data = response.json()

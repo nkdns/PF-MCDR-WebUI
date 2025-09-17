@@ -87,8 +87,8 @@ class ConfigValidator:
         
         # 验证布尔值配置
         bool_configs = [
-            'disable_other_admin', 'allow_temp_password', 'ssl_enabled',
-            'public_chat_enabled', 'public_chat_to_game_enabled'
+            'disable_other_admin', 'allow_temp_password', 'force_standalone',
+            'ssl_enabled', 'public_chat_enabled', 'public_chat_to_game_enabled'
         ]
         for key in bool_configs:
             value = config.get(key)
@@ -112,6 +112,44 @@ class ConfigValidator:
         if not isinstance(repositories, list):
             self.warnings.append(f"repositories 类型错误，期望 list，实际: {type(repositories)}")
             validated_config['repositories'] = DEFALUT_CONFIG['repositories']
+
+        # 验证ICP备案配置
+        icp_records = config.get('icp_records')
+        if not isinstance(icp_records, list):
+            self.warnings.append(f"icp_records 类型错误，期望 list，实际: {type(icp_records)}")
+            validated_config['icp_records'] = DEFALUT_CONFIG['icp_records']
+        else:
+            # 验证ICP备案数量（最多两个）
+            if len(icp_records) > 2:
+                self.warnings.append(f"icp_records 数量超出限制，最多支持2个备案，当前: {len(icp_records)}")
+                validated_config['icp_records'] = icp_records[:2]  # 只保留前两个
+
+            # 验证每个备案的格式
+            validated_icp_records = []
+            for i, record in enumerate(icp_records):
+                if not isinstance(record, dict):
+                    self.warnings.append(f"icp_records[{i}] 类型错误，期望 dict，实际: {type(record)}")
+                    continue
+
+                icp = record.get('icp', '').strip()
+                url = record.get('url', '').strip()
+
+                if not icp:
+                    self.warnings.append(f"icp_records[{i}] 缺少 icp 字段或为空")
+                    continue
+
+                if not url:
+                    self.warnings.append(f"icp_records[{i}] 缺少 url 字段或为空")
+                    continue
+
+                # 验证URL格式
+                if not url.startswith(('http://', 'https://')):
+                    self.warnings.append(f"icp_records[{i}] url 格式错误，期望以 http:// 或 https:// 开头: {url}")
+                    continue
+
+                validated_icp_records.append({'icp': icp, 'url': url})
+
+            validated_config['icp_records'] = validated_icp_records
         
         # 验证整数配置
         int_configs = [

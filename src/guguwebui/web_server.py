@@ -315,14 +315,15 @@ async def login(
 
     # check account & password
     if account and password:
+        # 防呆处理：自动去除可能存在的<>字符
+        account = account.replace('<', '').replace('>', '')
+        password = password.replace('<', '').replace('>', '')
         # check if super admin & only_super_admin
         disable_other_admin = server_config.get("disable_other_admin", False)
         super_admin_account = str(server_config.get("super_admin_account"))
         
         if disable_other_admin and account != super_admin_account:
-            return templates.TemplateResponse(
-                "login.html", {"request": request, "error": "只有超级管理才能登录。"}
-            )
+            return JSONResponse({"status": "error", "message": "只有超级管理才能登录。"}, status_code=403)
 
         if account in user_db["user"] and verify_password(
             password, user_db["user"][account]
@@ -337,32 +338,29 @@ async def login(
             max_age = datetime.timedelta(days=365) if remember else datetime.timedelta(days=1)
             max_age = max_age.total_seconds()
 
-            response = RedirectResponse(url=redirect_url, status_code=status.HTTP_302_FOUND)
-            response.set_cookie("token", token, expires=expiry, path=cookie_path, httponly=True, max_age=max_age)
-
-            # save token & username session
+            # 设置session和token
             request.session["logged_in"] = True
             request.session["token"] = token
             request.session["username"] = account
 
             user_db["token"][token] = {"user_name": account, "expire_time": str(expiry)}
             user_db.save()
-            
+
+            # 创建响应并设置cookie
+            response = JSONResponse({"status": "success", "message": "登录成功"})
+            response.set_cookie("token", token, expires=expiry, path=cookie_path, httponly=True, max_age=max_age)
+
             return response
 
         else:
-            return templates.TemplateResponse(
-                "login.html", {"request": request, "error": "账号或密码错误。"}
-            )
+            return JSONResponse({"status": "error", "message": "账号或密码错误。"}, status_code=401)
 
     # temp password
     elif temp_code:
         # disallow temp_password check
         allow_temp_password = server_config.get('allow_temp_password', True)
         if not allow_temp_password:
-            return templates.TemplateResponse(
-                "login.html", {"request": request, "error": "已禁止临时登录码登录。"}
-            )
+            return JSONResponse({"status": "error", "message": "已禁止临时登录码登录。"}, status_code=403)
 
         if temp_code in user_db["temp"] and user_db["temp"][temp_code] > str(now):
             # token Generation
@@ -371,34 +369,31 @@ async def login(
             max_age = datetime.timedelta(hours=2)
             max_age = max_age.total_seconds()
 
-            response = RedirectResponse(url=redirect_url, status_code=status.HTTP_302_FOUND)
-            response.set_cookie("token", token, expires=expiry, path=cookie_path, httponly=True, max_age=max_age)
-
-            # save token & username in session
+            # 设置session和token
             request.session["logged_in"] = True
             request.session["token"] = token
             request.session["username"] = "tempuser"
 
             user_db["token"][token] = {"user_name": "tempuser", "expire_time": str(expiry)}
             user_db.save()
-            
-            server.logger.info(f"临时用户登录成功，重定向到: {redirect_url}")
+
+            # 创建响应并设置cookie
+            response = JSONResponse({"status": "success", "message": "临时登录成功"})
+            response.set_cookie("token", token, expires=expiry, path=cookie_path, httponly=True, max_age=max_age)
+
+            server.logger.info(f"临时用户登录成功")
             return response
 
         else:
             if temp_code in user_db["temp"]:  # delete expired token
                 del user_db["temp"][temp_code]
                 user_db.save()
-            # Inavalid temp password
-            return templates.TemplateResponse(
-                "login.html", {"request": request, "error": "临时登录码无效。"}
-            )
+            # Invalid temp password
+            return JSONResponse({"status": "error", "message": "临时登录码无效。"}, status_code=401)
 
     else:
         # 如果未提供完整的登录信息
-        return templates.TemplateResponse(
-            "login.html", {"request": request, "error": "请填写完整的登录信息。"}
-        )
+        return JSONResponse({"status": "error", "message": "请填写完整的登录信息。"}, status_code=400)
 
 
 # logout Endpoint
@@ -661,6 +656,26 @@ async def api_list_config_files(request: Request, plugin_id:str):
             {"status": "error", "message": "User not logged in"}, status_code=401
         )
     return await list_config_files(request, plugin_id)
+
+
+@app.get("/api/config/icp-records")
+async def api_get_icp_records(request: Request):
+    """获取ICP备案信息"""
+    try:
+        server = app.state.server_interface
+        plugin_config = server.load_config_simple("config.json", DEFALUT_CONFIG, echo_in_console=False)
+        icp_records = plugin_config.get('icp_records', [])
+
+        return JSONResponse({
+            "status": "success",
+            "icp_records": icp_records
+        })
+    except Exception as e:
+        server.logger.error(f"获取ICP备案信息失败: {e}")
+        return JSONResponse({
+            "status": "error",
+            "message": "获取ICP备案信息失败"
+        }, status_code=500)
 
 
 @app.get("/api/get_web_config")

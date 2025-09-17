@@ -67,6 +67,13 @@ def on_load(server: PluginServerInterface, old):
     # 检查是否存在 fastapi_mcdr 插件
     fastapi_mcdr = server.get_plugin_instance('fastapi_mcdr')
     use_fastapi_mcdr = False
+
+    # 检查是否强制独立运行
+    force_standalone = plugin_config.get('force_standalone', False)
+    if force_standalone:
+        server.logger.info("强制独立运行模式已启用，将忽略fastapi_mcdr插件")
+        fastapi_mcdr = None  # 强制设为None，模拟插件不存在
+        use_fastapi_mcdr = False
     
     # 无论是否独立运行都检查配置
     try:
@@ -75,9 +82,12 @@ def on_load(server: PluginServerInterface, old):
         is_valid, validated_config, has_critical_error = validator.validate_config(plugin_config)
         
         if has_critical_error:
-            # 如果使用 fastapi_mcdr，则忽略绑定设置错误
-            if fastapi_mcdr is not None:
-                server.logger.warning("由于使用 fastapi_mcdr 插件，将忽略IP和端口设置")
+            # 如果使用 fastapi_mcdr 或强制独立运行，则忽略绑定设置错误
+            if fastapi_mcdr is not None or force_standalone:
+                if fastapi_mcdr is not None:
+                    server.logger.warning("由于使用 fastapi_mcdr 插件，将忽略IP和端口设置")
+                else:
+                    server.logger.warning("由于强制独立运行模式，将忽略IP和端口设置")
                 plugin_config = validated_config
             else:
                 # 独立模式下，配置错误则拒绝启动
@@ -104,10 +114,10 @@ def on_load(server: PluginServerInterface, old):
         server.logger.error(f"配置验证过程中发生错误: {e}")
         server.logger.warning("将使用原始配置继续启动")
     
-    if fastapi_mcdr is not None:
+    if fastapi_mcdr is not None and not force_standalone:
         server.logger.info("检测到 fastapi_mcdr 插件，将挂载为子应用")
         use_fastapi_mcdr = True
-        
+
         # 如果 fastapi_mcdr 已准备好，直接挂载
         if fastapi_mcdr.is_ready():
             mount_to_fastapi_mcdr(server, fastapi_mcdr)
@@ -118,28 +128,14 @@ def on_load(server: PluginServerInterface, old):
                 lambda: mount_to_fastapi_mcdr(server, fastapi_mcdr)
             )
             server.logger.info("fastapi_mcdr 尚未准备好，已注册事件监听器")
-        
+
         # 注册插件卸载事件监听器
         server.register_event_listener(
             LiteralEvent("mcdreforged.plugin_manager.plugin_unloaded"),
             lambda plugin_id: on_plugin_unloaded(server, plugin_id)
         )
-        
-        # 也尝试注册到 MCDR 的内置事件
-        try:
-            from mcdreforged.api.all import MCDRPluginEvents
-            server.register_event_listener(
-                MCDRPluginEvents.PLUGIN_UNLOADED,
-                lambda plugin_id: on_plugin_unloaded(server, plugin_id)
-            )
-            server.logger.info("已注册 MCDR 内置事件监听器")
-        except Exception as e:
-            server.logger.debug(f"注册 MCDR 内置事件监听器失败: {e}")
-        
-        server.logger.info("已注册 fastapi_mcdr 插件状态监控")
-        
-        # 启动定期检查任务，作为事件监听的备用方案
-        start_plugin_status_checker(server)
+    elif force_standalone:
+        server.logger.info("强制独立运行模式，已忽略fastapi_mcdr插件")
     else:
         server.logger.info("未检测到 fastapi_mcdr 插件，将使用独立服务器模式")
     
@@ -271,22 +267,38 @@ def mount_to_fastapi_mcdr(server: PluginServerInterface, fastapi_mcdr):
 def on_plugin_unloaded(server: PluginServerInterface, plugin_id: str):
     """处理插件卸载事件"""
     if plugin_id == "fastapi_mcdr":
-        server.logger.warning("检测到 fastapi_mcdr 插件被卸载，WebUI 将切换到独立服务器模式")
-        
-        # 启动独立服务器模式
-        try:
-            start_standalone_server(server)
-            server.logger.info("已成功切换到独立服务器模式")
-        except Exception as e:
-            server.logger.error(f"切换到独立服务器模式失败: {e}")
+        # 检查是否强制独立运行
+        from .utils.constant import DEFALUT_CONFIG
+        plugin_config = server.load_config_simple("config.json", DEFALUT_CONFIG, echo_in_console=False)
+        force_standalone = plugin_config.get('force_standalone', False)
+
+        if force_standalone:
+            server.logger.info("强制独立运行模式，忽略fastapi_mcdr插件卸载事件")
+        else:
+            server.logger.warning("检测到 fastapi_mcdr 插件被卸载，WebUI 将切换到独立服务器模式")
+
+            # 启动独立服务器模式
+            try:
+                start_standalone_server(server)
+                server.logger.info("已成功切换到独立服务器模式")
+            except Exception as e:
+                server.logger.error(f"切换到独立服务器模式失败: {e}")
 
 
 def on_plugin_loaded(server: PluginServerInterface, plugin_id: str):
     """处理插件加载事件"""
     server.logger.info(f"插件加载事件触发: {plugin_id}")
     if plugin_id == "fastapi_mcdr":
-        server.logger.info("检测到 fastapi_mcdr 插件被重新加载")
-        # 不需要主动切换，fastapi_mcdr 准备好时会自动挂载 WebUI
+        # 检查是否强制独立运行
+        from .utils.constant import DEFALUT_CONFIG
+        plugin_config = server.load_config_simple("config.json", DEFALUT_CONFIG, echo_in_console=False)
+        force_standalone = plugin_config.get('force_standalone', False)
+
+        if force_standalone:
+            server.logger.info("强制独立运行模式，忽略fastapi_mcdr插件加载事件")
+        else:
+            server.logger.info("检测到 fastapi_mcdr 插件被重新加载")
+            # 不需要主动切换，fastapi_mcdr 准备好时会自动挂载 WebUI
 
 
 def start_standalone_server(server: PluginServerInterface):
@@ -381,14 +393,22 @@ def start_plugin_status_checker(server: PluginServerInterface):
                 # 检查 fastapi_mcdr 插件是否还存在
                 fastapi_mcdr = server.get_plugin_instance('fastapi_mcdr')
                 if fastapi_mcdr is None:
-                    server.logger.warning("定期检查发现 fastapi_mcdr 插件已卸载，切换到独立服务器模式")
-                    try:
-                        start_standalone_server(server)
-                        server.logger.info("已成功切换到独立服务器模式")
-                        break  # 退出检查循环
-                    except Exception as e:
-                        server.logger.error(f"切换到独立服务器模式失败: {e}")
-                        break
+                    # 检查是否强制独立运行
+                    from .utils.constant import DEFALUT_CONFIG
+                    plugin_config = server.load_config_simple("config.json", DEFALUT_CONFIG, echo_in_console=False)
+                    force_standalone = plugin_config.get('force_standalone', False)
+
+                    if force_standalone:
+                        server.logger.debug("强制独立运行模式，忽略fastapi_mcdr插件状态变化")
+                    else:
+                        server.logger.warning("定期检查发现 fastapi_mcdr 插件已卸载，切换到独立服务器模式")
+                        try:
+                            start_standalone_server(server)
+                            server.logger.info("已成功切换到独立服务器模式")
+                            break  # 退出检查循环
+                        except Exception as e:
+                            server.logger.error(f"切换到独立服务器模式失败: {e}")
+                            break
                         
             except Exception as e:
                 server.logger.debug(f"插件状态检查时出错: {e}")
@@ -411,25 +431,34 @@ def on_unload(server: PluginServerInterface):
             _checker_thread.join(timeout=1)
             server.logger.debug("已停止插件状态检查线程")
     
-    # 检查是否挂载在 fastapi_mcdr 上，如果是则卸载
+    # 检查是否挂载在 fastapi_mcdr 上，如果是则卸载（仅在非强制独立运行模式下）
     try:
-        fastapi_mcdr = server.get_plugin_instance('fastapi_mcdr')
-        if fastapi_mcdr is not None and fastapi_mcdr.is_ready():
-            try:
-                fastapi_mcdr.unmount("guguwebui")
-                server.logger.info("已从 fastapi_mcdr 插件卸载 WebUI")
-            except Exception as e:
-                server.logger.warning(f"从 fastapi_mcdr 卸载时出错: {e}")
+        plugin_config = server.load_config_simple("config.json", DEFALUT_CONFIG, echo_in_console=False)
+        force_standalone = plugin_config.get('force_standalone', False)
+
+        if not force_standalone:
+            fastapi_mcdr = server.get_plugin_instance('fastapi_mcdr')
+            if fastapi_mcdr is not None and fastapi_mcdr.is_ready():
+                try:
+                    fastapi_mcdr.unmount("guguwebui")
+                    server.logger.info("已从 fastapi_mcdr 插件卸载 WebUI")
+                except Exception as e:
+                    server.logger.warning(f"从 fastapi_mcdr 卸载时出错: {e}")
+        else:
+            server.logger.debug("强制独立运行模式，跳过fastapi_mcdr卸载检查")
     except Exception as e:
         server.logger.debug(f"检查 fastapi_mcdr 状态时出错: {e}")
     
     # 停止日志捕获
-    if 'log_watcher' in globals() and log_watcher:
-        try:
+    try:
+        from .web_server import log_watcher
+        if log_watcher:
             log_watcher.stop()
             server.logger.debug("日志捕获器已停止")
-        except Exception as e:
-            server.logger.warning(f"停止日志捕获器时出错: {e}")
+    except (ImportError, AttributeError) as e:
+        server.logger.debug(f"日志捕获器未初始化或导入失败: {e}")
+    except Exception as e:
+        server.logger.warning(f"停止日志捕获器时出错: {e}")
     
     # 停止Web服务器（仅在独立模式下需要）
     try:

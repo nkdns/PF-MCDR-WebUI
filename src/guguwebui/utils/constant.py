@@ -49,6 +49,7 @@ DEFALUT_CONFIG = {
     "super_admin_account": 123456789123456789,
     "disable_other_admin": False,
     "allow_temp_password": True,
+    "force_standalone": False,  # 是否强制独立运行（忽略fastapi_mcdr插件）
     "ai_api_key": "",  # AI API密钥
     "ai_model": "deepseek-chat",  # AI模型名称
     "ai_api_url": "https://api.deepseek.com/chat/completions",  # 自定义API链接
@@ -61,7 +62,13 @@ DEFALUT_CONFIG = {
     "public_chat_enabled": False,  # 是否启用公开聊天页
     "public_chat_to_game_enabled": False,  # 公开聊天页发送消息到游戏
     "chat_verification_expire_minutes": 10,  # 聊天页验证码过期时间（分钟）
-    "chat_session_expire_hours": 24  # 聊天页会话过期时间（小时）
+    "chat_session_expire_hours": 24,  # 聊天页会话过期时间（小时）
+    "icp_records": []  # ICP备案信息，最多两个，每个包含 icp 和 url 字段
+    # 示例配置（请在 config.json 中添加）：
+    # "icp_records": [
+    #     {"icp": "浙ICP备12345678号", "url": "https://beian.miit.gov.cn/"},
+    #     {"icp": "浙公网安备33010602000123号", "url": "https://www.beian.gov.cn/"}
+    # ]
 }
 
 user_db = table(USER_DB_PATH, default_content=DEFALUT_DB)
