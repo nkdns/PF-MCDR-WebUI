@@ -69,7 +69,7 @@ from .api.config import (
 # 导入服务器API模块
 from .api.server import (
     get_server_status, control_server, get_server_logs,
-    get_new_logs, get_command_suggestions, send_command
+    get_new_logs, get_command_suggestions, send_command, get_rcon_status
 )
 
 # 获取插件真实版本号已移至 utils.py
@@ -861,6 +861,17 @@ async def api_send_command(request: Request):
         )
     server = app.state.server_interface
     return await send_command(request, server)
+
+# 获取RCON状态
+@app.get("/api/get_rcon_status")
+async def api_get_rcon_status(request: Request):
+    """获取RCON连接状态（函数已迁移至 api/server.py）"""
+    if not request.session.get("logged_in"):
+        return JSONResponse(
+            {"status": "error", "message": "User not logged in"}, status_code=401
+        )
+    server = app.state.server_interface
+    return await get_rcon_status(request, server)
 
 @app.post("/api/deepseek")
 async def query_deepseek(request: Request, query_data: DeepseekQuery):

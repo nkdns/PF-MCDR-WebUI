@@ -200,6 +200,76 @@ async def get_new_logs(
         )
 
 
+async def get_rcon_status(
+    request: Request,
+    server=None
+) -> JSONResponse:
+    """获取RCON连接状态"""
+    if not server:
+        return JSONResponse(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            content={"success": False, "error": "服务器接口未提供"}
+        )
+
+    try:
+        # 检查是否已登录
+        if not request.session.get("logged_in"):
+            return JSONResponse(
+                {"status": "error", "message": "User not logged in"}, 
+                status_code=401
+            )
+
+        # 检查RCON是否启用和连接
+        rcon_enabled = False
+        rcon_connected = False
+        rcon_info = {}
+        
+        # 读取MCDR配置检查RCON是否启用
+        try:
+            import yaml
+            from pathlib import Path
+            config_path = Path("config.yml")
+            if config_path.exists():
+                with open(config_path, "r", encoding="UTF-8") as f:
+                    mcdr_config = yaml.load(f, Loader=yaml.FullLoader)
+                    rcon_config = mcdr_config.get("rcon", {})
+                    rcon_enabled = rcon_config.get("enable", False)
+        except Exception:
+            pass
+
+        # 检查RCON是否正在运行
+        if hasattr(server, "is_rcon_running") and server.is_rcon_running():
+            rcon_connected = True
+            
+            # 尝试执行/list命令获取在线玩家信息
+            try:
+                feedback = server.rcon_query("list")
+                rcon_info["list_response"] = feedback
+                if isinstance(feedback, str) and ":" in feedback:
+                    parts = feedback.split(":", 1)
+                    if len(parts) == 2:
+                        player_info = parts[1].strip()
+                        rcon_info["player_info"] = player_info
+            except Exception as e:
+                rcon_info["error"] = str(e)
+
+        return JSONResponse({
+            "status": "success",
+            "rcon_enabled": rcon_enabled,
+            "rcon_connected": rcon_connected,
+            "rcon_info": rcon_info
+        })
+
+    except Exception as e:
+        error_msg = f"获取RCON状态失败: {str(e)}\n{traceback.format_exc()}"
+        if server:
+            server.logger.error(error_msg)
+        return JSONResponse(
+            {"status": "error", "message": str(e)},
+            status_code=500
+        )
+
+
 async def get_command_suggestions(
     request: Request,
     input: str = "",

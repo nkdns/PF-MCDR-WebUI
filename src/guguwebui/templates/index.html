@@ -417,9 +417,42 @@
                                 <div class="flex items-center justify-center w-10 h-10 rounded-full bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400">
                                     <i class="fas fa-link"></i>
                                 </div>
-                                <div class="ml-4">
+                                <div class="ml-4 flex-1">
                                     <h3 class="text-sm font-medium text-gray-800 dark:text-white" data-i18n="page.index.connection_status"></h3>
-                                    <p class="text-xs text-gray-500 dark:text-gray-400 mt-1" data-i18n="page.index.normal"></p>
+                                    <div class="flex items-center justify-between">
+                                        <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                                            <template x-if="rconStatus === 'loading'">
+                                                <span data-i18n="common.notice_loading"></span>
+                                            </template>
+                                            <template x-if="rconStatus === 'loaded' && rconConnected">
+                                                <span data-i18n="page.index.normal"></span>
+                                            </template>
+                                            <template x-if="rconStatus === 'loaded' && !rconConnected && rconEnabled">
+                                                <span data-i18n="page.index.rcon_disconnected"></span>
+                                            </template>
+                                            <template x-if="rconStatus === 'loaded' && !rconEnabled">
+                                                <span data-i18n="page.index.rcon_disabled"></span>
+                                            </template>
+                                            <template x-if="rconStatus === 'error'">
+                                                <span data-i18n="page.index.connection_error"></span>
+                                            </template>
+                                        </p>
+                                        <!-- 一键启用RCON按钮 -->
+                                        <template x-if="rconStatus === 'loaded' && !rconConnected">
+                                            <button 
+                                                @click="showRconSetupModal = true"
+                                                class="text-xs px-2 py-1 bg-blue-500 hover:bg-blue-600 text-white rounded transition flex items-center"
+                                                :disabled="settingUpRcon"
+                                            >
+                                                <i class="fas fa-magic mr-1"></i>
+                                                <span x-show="!settingUpRcon" data-i18n="page.mcdr.rcon.setup_button"></span>
+                                                <span x-show="settingUpRcon">
+                                                    <i class="fas fa-circle-notch fa-spin mr-1"></i>
+                                                    <span data-i18n="page.mcdr.rcon.setting_up"></span>
+                                                </span>
+                                            </button>
+                                        </template>
+                                    </div>
                                 </div>
                             </div>
                             
@@ -503,6 +536,47 @@
                     </div>
                 </div>
 
+                <!-- RCON设置模态框 -->
+                <div x-show="showRconSetupModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" @click.self="showRconSetupModal = false">
+                    <div class="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-md w-full mx-4">
+                        <div class="flex items-center justify-between mb-4">
+                            <h3 class="text-lg font-semibold text-gray-900 dark:text-white" data-i18n="page.mcdr.rcon.setup_modal_title"></h3>
+                            <button @click="showRconSetupModal = false" class="text-gray-400 hover:text-gray-600">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        </div>
+
+                        <div class="mb-4">
+                            <p class="text-gray-600 dark:text-gray-400 mb-2" data-i18n="page.mcdr.rcon.setup_description"></p>
+                            <ul class="list-disc list-inside text-sm text-gray-600 dark:text-gray-400 space-y-1">
+                                <li data-i18n="page.mcdr.rcon.setup_ip"></li>
+                                <li data-i18n="page.mcdr.rcon.setup_port"></li>
+                                <li data-i18n="page.mcdr.rcon.setup_password"></li>
+                            </ul>
+                        </div>
+
+                        <div class="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-700 rounded-lg p-3 mb-4">
+                            <div class="flex">
+                                <i class="fas fa-exclamation-triangle text-yellow-600 dark:text-yellow-400 mr-2 mt-0.5"></i>
+                                <p class="text-sm text-yellow-800 dark:text-yellow-300" data-i18n="page.mcdr.rcon.setup_warning"></p>
+                            </div>
+                        </div>
+
+                        <div class="flex space-x-3">
+                            <button @click="showRconSetupModal = false" class="flex-1 px-4 py-2 bg-gray-300 hover:bg-gray-400 text-gray-700 rounded-lg transition-colors" :disabled="settingUpRcon">
+                                <span data-i18n="common.cancel"></span>
+                            </button>
+                            <button @click="setupRcon()" class="flex-1 px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-colors flex items-center justify-center" :disabled="settingUpRcon">
+                                <span x-show="!settingUpRcon" data-i18n="page.mcdr.rcon.setup_confirm"></span>
+                                <span x-show="settingUpRcon" class="flex items-center">
+                                    <i class="fas fa-circle-notch fa-spin mr-2"></i>
+                                    <span data-i18n="page.mcdr.rcon.setting_up"></span>
+                                </span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
                 <!-- 页脚 -->
                 <footer class="mt-12 text-center text-sm text-gray-500 dark:text-gray-400">
                     <p data-i18n="common.copyright"></p>
@@ -542,4 +616,4 @@
     <!-- 控制面板页面脚本 -->
     <script src="js/index.js"></script>
 </body>
-</html> 
+</html>

@@ -50,6 +50,13 @@ document.addEventListener('alpine:init', () => {
         installingPip: false,
         uninstallingPip: false,
 
+        // RCON状态相关变量
+        rconStatus: 'loading',
+        rconEnabled: false,
+        rconConnected: false,
+        showRconSetupModal: false,
+        settingUpRcon: false,
+
         checkLoginStatus: async function() {
             try {
                 const response = await fetch('api/checkLogin');
@@ -73,6 +80,30 @@ document.addEventListener('alpine:init', () => {
             } catch (error) {
                 console.error('Error checking server status:', error);
                 this.serverStatus = 'error';
+            }
+        },
+        
+        checkRconStatus: async function() {
+            try {
+                this.rconStatus = 'loading';
+                const response = await fetch('api/get_rcon_status');
+                const data = await response.json();
+                
+                if (data.status === 'success') {
+                    this.rconStatus = 'loaded';
+                    this.rconEnabled = data.rcon_enabled;
+                    this.rconConnected = data.rcon_connected;
+                    
+                    // 如果RCON未连接且已启用，显示一键启用按钮
+                    if (this.rconEnabled && !this.rconConnected) {
+                        // 状态将在HTML中通过条件渲染处理
+                    }
+                } else {
+                    this.rconStatus = 'error';
+                }
+            } catch (error) {
+                console.error('Error checking RCON status:', error);
+                this.rconStatus = 'error';
             }
         },
         
@@ -280,6 +311,49 @@ document.addEventListener('alpine:init', () => {
             }).join('<br>');
         },
         
+        // RCON设置相关方法
+        
+        // 一键设置RCON
+        setupRcon: async function() {
+            try {
+                this.settingUpRcon = true;
+                
+                const response = await fetch('/api/setup_rcon', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                const result = await response.json();
+                
+                if (result.status === 'success') {
+                    this.showRconSetupModal = false;
+                    
+                    // 刷新RCON状态
+                    await this.checkRconStatus();
+                    
+                    this.showNotificationMsg(
+                        this.t('page.mcdr.rcon.setup_success_msg', 'RCON配置已成功启用'), 
+                        'success'
+                    );
+                } else {
+                    this.showNotificationMsg(
+                        this.t('page.mcdr.rcon.setup_failed_prefix', 'RCON设置失败: ') + (result.message || ''), 
+                        'error'
+                    );
+                }
+            } catch (error) {
+                console.error('Setup RCON error:', error);
+                this.showNotificationMsg(
+                    this.t('page.mcdr.rcon.setup_error', '设置RCON时出错'), 
+                    'error'
+                );
+            } finally {
+                this.settingUpRcon = false;
+            }
+        },
+        
         init() {
             // 语言
             this.loadLangDict();
@@ -291,10 +365,14 @@ document.addEventListener('alpine:init', () => {
 
             this.checkLoginStatus();
             this.checkServerStatus();
+            this.checkRconStatus();
             this.refreshPipPackages();
             
             // 每60秒自动刷新服务器状态
             setInterval(() => this.checkServerStatus(), 10001);
+            
+            // 每60秒自动刷新RCON状态
+            setInterval(() => this.checkRconStatus(), 60000);
             
             // 保存主题设置到本地存储
             this.$watch('darkMode', value => {
