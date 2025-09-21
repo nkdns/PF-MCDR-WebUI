@@ -5,6 +5,9 @@
 
 import json
 import os
+import socket
+import string
+import secrets
 from pathlib import Path
 from typing import List, Optional
 from fastapi import Request
@@ -13,7 +16,8 @@ from fastapi import status, Depends
 from ..utils.constant import DEFALUT_CONFIG, saveconfig, config_data
 from ..utils.utils import (
     find_plugin_config_paths, build_json_i18n_translations,
-    build_yaml_i18n_translations, get_comment, consistent_type_update
+    build_yaml_i18n_translations, get_comment, consistent_type_update,
+    get_server_port
 )
 from ..utils.chat_logger import ChatLogger
 from ..web_server import verify_token
@@ -447,3 +451,165 @@ async def save_config(
     except Exception as e:
         print(f"Error saving config file: {e}")
         return JSONResponse({"status": "error", "message": str(e)}, status_code=500)
+
+
+def _check_port_available(host: str, port: int) -> bool:
+    """检查端口是否可用（未被占用）"""
+    try:
+        # 创建socket测试端口可用性
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+            s.settimeout(1)
+            # 尝试绑定端口，如果成功说明端口可用
+            s.bind((host, port))
+            return True
+    except socket.error:
+        return False
+    except Exception:
+        return False
+
+
+def _generate_random_password(length: int = 16) -> str:
+    """生成随机密码（英文大小写+数字）"""
+    # 定义字符集：大写字母、小写字母、数字
+    charset = string.ascii_letters + string.digits
+    # 生成随机密码
+    return ''.join(secrets.choice(charset) for _ in range(length))
+
+
+def _find_available_port(start_port: int, host: str = "127.0.0.1") -> int:
+    """查找可用端口，从指定端口开始递增"""
+    port = start_port
+    while port <= 65535:
+        if _check_port_available(host, port):
+            return port
+        port += 1
+    raise RuntimeError(f"无法找到从 {start_port} 开始的可用端口")
+
+
+async def setup_rcon_config(
+    request: Request,
+    server=None
+) -> JSONResponse:
+    """一键启用RCON配置"""
+    if not server:
+        return JSONResponse(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            content={"success": False, "error": "服务器接口未提供"}
+        )
+
+    try:
+        # 获取Minecraft服务器端口
+        try:
+            mc_server_port = get_server_port()
+        except Exception as e:
+            return JSONResponse(
+                {"status": "error", "message": f"无法获取Minecraft服务器端口: {str(e)}"},
+                status_code=500
+            )
+
+        # 计算RCON端口（服务器端口+1，如果被占用则继续+1）
+        rcon_host = "127.0.0.1"
+        try:
+            rcon_port = _find_available_port(mc_server_port + 1, rcon_host)
+        except RuntimeError as e:
+            return JSONResponse(
+                {"status": "error", "message": str(e)},
+                status_code=500
+            )
+
+        # 生成随机密码
+        rcon_password = _generate_random_password(16)
+
+        # 更新MC配置
+        mc_config_updated = False
+        try:
+            # 读取server.properties配置
+            from ..utils.constant import SERVER_PROPERTIES_PATH
+            if SERVER_PROPERTIES_PATH.exists():
+                import javaproperties
+                with open(SERVER_PROPERTIES_PATH, "r", encoding="UTF-8") as f:
+                    mc_config = javaproperties.load(f)
+                
+                # 更新RCON设置
+                mc_config["enable-rcon"] = "true"
+                mc_config["rcon.port"] = str(rcon_port)
+                mc_config["rcon.password"] = rcon_password
+                mc_config["broadcast-rcon-to-ops"] = "false"  # 可选：不广播RCON到OP
+                
+                # 保存MC配置
+                with open(SERVER_PROPERTIES_PATH, "w", encoding="UTF-8") as f:
+                    javaproperties.dump(mc_config, f)
+                
+                mc_config_updated = True
+            else:
+                return JSONResponse(
+                    {"status": "error", "message": "找不到server.properties文件"},
+                    status_code=500
+                )
+        except Exception as e:
+            return JSONResponse(
+                {"status": "error", "message": f"更新MC配置失败: {str(e)}"},
+                status_code=500
+            )
+
+        # 更新MCDR配置
+        mcdr_config_updated = False
+        try:
+            # 读取MCDR config.yml配置
+            config_path = Path("config.yml")
+            if config_path.exists():
+                from ..utils.table import yaml
+                with open(config_path, "r", encoding="UTF-8") as f:
+                    mcdr_config = yaml.load(f)
+                
+                # 确保rcon配置节存在
+                if "rcon" not in mcdr_config:
+                    mcdr_config["rcon"] = {}
+                
+                # 更新MCDR RCON设置
+                mcdr_config["rcon"]["enable"] = True
+                mcdr_config["rcon"]["address"] = rcon_host
+                mcdr_config["rcon"]["port"] = rcon_port
+                mcdr_config["rcon"]["password"] = rcon_password
+                
+                # 保存MCDR配置
+                with open(config_path, "w", encoding="UTF-8") as f:
+                    yaml.dump(mcdr_config, f)
+                
+                mcdr_config_updated = True
+            else:
+                return JSONResponse(
+                    {"status": "error", "message": "找不到MCDR config.yml文件"},
+                    status_code=500
+                )
+        except Exception as e:
+            return JSONResponse(
+                {"status": "error", "message": f"更新MCDR配置失败: {str(e)}"},
+                status_code=500
+            )
+
+        # 直接重载MCDR配置，MCDR会自动等待服务器重启完成
+        try:
+            server.execute_command("!!MCDR reload config")
+            server.logger.info("RCON配置完成，已自动重载MCDR配置")
+        except Exception as e:
+            server.logger.warning(f"自动重载MCDR配置时出错: {e}")
+
+        # 返回成功结果
+        return JSONResponse({
+            "status": "success",
+            "message": "RCON配置已成功启用",
+            "config": {
+                "rcon_host": rcon_host,
+                "rcon_port": rcon_port,
+                "rcon_password": rcon_password,
+                "mc_config_updated": mc_config_updated,
+                "mcdr_config_updated": mcdr_config_updated
+            }
+        })
+
+    except Exception as e:
+        return JSONResponse(
+            {"status": "error", "message": f"配置RCON时发生错误: {str(e)}"},
+            status_code=500
+        )

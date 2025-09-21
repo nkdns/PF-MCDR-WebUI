@@ -63,7 +63,7 @@ from .api.plugins import (
 # 导入配置API模块
 from .api.config import (
     list_config_files, get_web_config, save_web_config,
-    load_config, save_config
+    load_config, save_config, setup_rcon_config
 )
 
 # 导入服务器API模块
@@ -102,6 +102,8 @@ pip_tasks = {}
 # 尝试迁移旧配置
 migrate_old_config()
 
+
+# 事件处理函数已移至 api/chat.py
 
 
 # 初始化函数，在应用程序启动时调用
@@ -177,8 +179,6 @@ def on_mcdr_info(server, info):
     global log_watcher
     if log_watcher:
         log_watcher.on_mcdr_info(server, info)
-
-# 事件处理函数已移至 api/chat.py
 
 
 # 语言列表 API：返回 /lang 目录下的 json 文件及其显示名称
@@ -720,6 +720,17 @@ async def api_save_config(request: Request, config_data: config_data):
         )
     server = app.state.server_interface
     return await save_config(request, config_data, server)
+
+
+@app.post("/api/setup_rcon")
+async def api_setup_rcon(request: Request):
+    """一键启用RCON配置"""
+    if not request.session.get("logged_in"):
+        return JSONResponse(
+            {"status": "error", "message": "User not logged in"}, status_code=401
+        )
+    server = app.state.server_interface
+    return await setup_rcon_config(request, server)
 
 
 # load overall.js / overall.css

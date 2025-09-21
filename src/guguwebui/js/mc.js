@@ -15,6 +15,13 @@ document.addEventListener('alpine:init', () => {
         notificationType: 'success',
         showNotification: false,
         serverPath: 'server/', // 默认服务器路径，将在初始化时更新
+        
+        // RCON设置相关状态
+        showRconSetupModal: false,
+        showRconRestartModal: false,
+        settingUpRcon: false,
+        restarting: false,
+        rconConfig: null,
 
         // i18n
         mcLang: 'zh-CN',
@@ -371,6 +378,91 @@ document.addEventListener('alpine:init', () => {
         // 清除搜索
         clearSearch: function() {
             this.searchQuery = '';
+        },
+        
+        // RCON设置相关方法
+        
+        // 一键设置RCON
+        setupRcon: async function() {
+            try {
+                this.settingUpRcon = true;
+                
+                const response = await fetch('/api/setup_rcon', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                const result = await response.json();
+                
+                if (result.status === 'success') {
+                    this.rconConfig = result.config;
+                    this.showRconSetupModal = false;
+                    this.showRconRestartModal = true;
+                    
+                    // 刷新配置数据
+                    await this.loadConfig();
+                    
+                    this.showNotificationMsg(
+                        this.t('page.mc.rcon.setup_success_msg', 'RCON配置已成功启用'), 
+                        'success'
+                    );
+                } else {
+                    this.showNotificationMsg(
+                        this.t('page.mc.rcon.setup_failed_prefix', 'RCON设置失败: ') + (result.message || ''), 
+                        'error'
+                    );
+                }
+            } catch (error) {
+                console.error('Setup RCON error:', error);
+                this.showNotificationMsg(
+                    this.t('page.mc.rcon.setup_error', '设置RCON时出错'), 
+                    'error'
+                );
+            } finally {
+                this.settingUpRcon = false;
+            }
+        },
+        
+        // 重启服务器
+        restartServer: async function() {
+            try {
+                this.restarting = true;
+                
+                const response = await fetch('/api/control_server', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        action: 'restart'
+                    })
+                });
+                
+                const result = await response.json();
+                
+                if (result.status === 'success') {
+                    this.showRconRestartModal = false;
+                    this.showNotificationMsg(
+                        this.t('page.mc.rcon.restart_success', '服务器重启命令已发送'), 
+                        'success'
+                    );
+                } else {
+                    this.showNotificationMsg(
+                        this.t('page.mc.rcon.restart_failed_prefix', '重启服务器失败: ') + (result.message || ''), 
+                        'error'
+                    );
+                }
+            } catch (error) {
+                console.error('Restart server error:', error);
+                this.showNotificationMsg(
+                    this.t('page.mc.rcon.restart_error', '重启服务器时出错'), 
+                    'error'
+                );
+            } finally {
+                this.restarting = false;
+            }
         },
 
         init() {

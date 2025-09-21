@@ -41,6 +41,13 @@ window.mcdrConfigApp = function() {
         serverPlayers: '0/0',
         configData: {},
         activeConfigFile: 'config.yml',
+        
+        // RCON设置相关状态
+        showRconSetupModal: false,
+        showRconRestartModal: false,
+        settingUpRcon: false,
+        restarting: false,
+        rconConfig: null,
 
         // 初始化
         init() {
@@ -340,6 +347,91 @@ window.mcdrConfigApp = function() {
                 return o[k];
             }, obj);
             lastObj[lastKey] = value;
+        },
+        
+        // RCON设置相关方法
+        
+        // 一键设置RCON
+        setupRcon: async function() {
+            try {
+                this.settingUpRcon = true;
+                
+                const response = await fetch('/api/setup_rcon', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                const result = await response.json();
+                
+                if (result.status === 'success') {
+                    this.rconConfig = result.config;
+                    this.showRconSetupModal = false;
+                    this.showRconRestartModal = true;
+                    
+                    // 刷新配置数据
+                    await this.loadConfig(this.activeConfigFile);
+                    
+                    this.showNotification(
+                        this.t('page.mcdr.rcon.setup_success_msg', 'RCON配置已成功启用'), 
+                        'success'
+                    );
+                } else {
+                    this.showNotification(
+                        this.t('page.mcdr.rcon.setup_failed_prefix', 'RCON设置失败: ') + (result.message || ''), 
+                        'error'
+                    );
+                }
+            } catch (error) {
+                console.error('Setup RCON error:', error);
+                this.showNotification(
+                    this.t('page.mcdr.rcon.setup_error', '设置RCON时出错'), 
+                    'error'
+                );
+            } finally {
+                this.settingUpRcon = false;
+            }
+        },
+        
+        // 重启服务器
+        restartServer: async function() {
+            try {
+                this.restarting = true;
+                
+                const response = await fetch('/api/control_server', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        action: 'restart'
+                    })
+                });
+                
+                const result = await response.json();
+                
+                if (result.status === 'success') {
+                    this.showRconRestartModal = false;
+                    this.showNotification(
+                        this.t('page.mcdr.rcon.restart_success', '服务器重启命令已发送'), 
+                        'success'
+                    );
+                } else {
+                    this.showNotification(
+                        this.t('page.mcdr.rcon.restart_failed_prefix', '重启服务器失败: ') + (result.message || ''), 
+                        'error'
+                    );
+                }
+            } catch (error) {
+                console.error('Restart server error:', error);
+                this.showNotification(
+                    this.t('page.mcdr.rcon.restart_error', '重启服务器时出错'), 
+                    'error'
+                );
+            } finally {
+                this.restarting = false;
+            }
         }
     };
 }; 
