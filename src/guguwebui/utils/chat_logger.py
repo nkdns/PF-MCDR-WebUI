@@ -54,10 +54,11 @@ class ChatLogger:
         index = self._read_index()
         return index.get("next_message_id", 1)
     
-    def _pack_message(self, message_id, player_id, message, timestamp):
+    def _pack_message(self, message_id, player_id, message, timestamp, rtext_data=None, message_type=0):
         """打包消息数据为二进制格式
         
-        消息格式: [消息ID(8字节)][时间戳(8字节)][玩家ID长度(4字节)][玩家ID][消息长度(4字节)][消息]
+        消息格式: [消息ID(8字节)][时间戳(8字节)][消息类型(1字节)][玩家ID长度(4字节)][玩家ID][消息长度(4字节)][消息][RText数据长度(4字节)][RText数据]
+        消息类型: 0=玩家消息, 1=WebUI消息, 2=插件消息
         """
         if not isinstance(player_id, str) or not isinstance(message, str):
             raise ValueError("player_id 和 message 必须是字符串")
@@ -70,9 +71,17 @@ class ChatLogger:
         player_id_bytes = player_id.encode('utf-8')
         message_bytes = message.encode('utf-8')
         
+        # 处理RText数据
+        rtext_bytes = b''
+        if rtext_data is not None:
+            rtext_json = json.dumps(rtext_data, ensure_ascii=False)
+            rtext_bytes = rtext_json.encode('utf-8')
+        
         return (message_id_bytes + timestamp_bytes + 
+                struct.pack('B', message_type) +  # 消息类型 (1字节)
                 struct.pack('I', len(player_id_bytes)) + player_id_bytes + 
-                struct.pack('I', len(message_bytes)) + message_bytes)
+                struct.pack('I', len(message_bytes)) + message_bytes +
+                struct.pack('I', len(rtext_bytes)) + rtext_bytes)
     
     def _unpack_message(self, data, offset):
         """从二进制数据中解包消息
@@ -93,6 +102,14 @@ class ChatLogger:
             
             timestamp_ms = struct.unpack('Q', data[offset:offset+8])[0]
             offset += 8
+            
+            # 读取消息类型 (1字节)
+            if offset + 1 > len(data):
+                # 旧格式消息，默认为玩家消息
+                message_type = 0
+            else:
+                message_type = struct.unpack('B', data[offset:offset+1])[0]
+                offset += 1
             
             # 读取玩家ID长度 (4字节)
             if offset + 4 > len(data):
@@ -122,23 +139,80 @@ class ChatLogger:
             message = data[offset:offset+message_len].decode('utf-8')
             offset += message_len
             
+            # 读取RText数据长度 (4字节)
+            if offset + 4 > len(data):
+                # 旧格式消息，没有RText数据
+                rtext_data = None
+            else:
+                rtext_len = struct.unpack('I', data[offset:offset+4])[0]
+                offset += 4
+                
+                # 读取RText数据
+                if offset + rtext_len > len(data):
+                    rtext_data = None
+                else:
+                    if rtext_len > 0:
+                        try:
+                            rtext_json = data[offset:offset+rtext_len].decode('utf-8')
+                            rtext_data = json.loads(rtext_json)
+                        except (UnicodeDecodeError, json.JSONDecodeError):
+                            rtext_data = None
+                    else:
+                        rtext_data = None
+                    offset += rtext_len
+            
             # 转换时间戳
             timestamp = datetime.datetime.fromtimestamp(timestamp_ms / 1000, tz=datetime.timezone.utc)
             
-            return {
+            result = {
                 'id': message_id,
                 'player_id': player_id,
                 'message': message,
                 'timestamp': timestamp,
                 'timestamp_str': timestamp.strftime('%Y-%m-%d %H:%M:%S')
-            }, offset
+            }
+            
+            # 根据消息类型设置相关字段
+            if message_type == 2:  # 插件消息
+                result['is_plugin'] = True
+                result['plugin_id'] = player_id
+                result['uuid'] = None  # 插件消息没有UUID
+                result['message_source'] = 'plugin'
+            elif message_type == 1:  # WebUI消息
+                result['is_plugin'] = False
+                result['plugin_id'] = None
+                result['uuid'] = None  # WebUI消息暂时没有UUID
+                result['message_source'] = 'webui'
+            else:  # 玩家消息 (message_type == 0)
+                result['is_plugin'] = False
+                result['plugin_id'] = None
+                result['uuid'] = None  # 需要从其他地方获取UUID
+                result['message_source'] = 'game'
+            
+            # 如果有RText数据，添加到结果中
+            if rtext_data is not None:
+                result['is_rtext'] = True
+                result['rtext_data'] = rtext_data
+            else:
+                result['is_rtext'] = False
+                result['rtext_data'] = None
+            
+            return result, offset
             
         except (struct.error, UnicodeDecodeError, ValueError) as e:
             print(f"解析消息失败: {e}")
             return None, offset
     
-    def add_message(self, player_id, message, timestamp=None):
-        """添加新消息"""
+    def add_message(self, player_id, message, timestamp=None, rtext_data=None, message_type=0):
+        """添加新消息
+        
+        Args:
+            player_id: 玩家ID
+            message: 消息内容
+            timestamp: 时间戳
+            rtext_data: RText数据
+            message_type: 消息类型 (0=玩家消息, 1=WebUI消息, 2=插件消息)
+        """
         if not isinstance(player_id, str) or not isinstance(message, str):
             raise ValueError("player_id 和 message 必须是字符串")
         
@@ -152,7 +226,37 @@ class ChatLogger:
         message_id = self._get_next_message_id()
         
         # 打包消息
-        packed_message = self._pack_message(message_id, player_id, message, timestamp)
+        packed_message = self._pack_message(message_id, player_id, message, timestamp, rtext_data, message_type)
+        
+        # 追加到文件
+        with open(self.chat_messages_file, 'ab') as f:
+            f.write(packed_message)
+        
+        # 更新索引
+        index = self._read_index()
+        index["message_count"] += 1
+        index["next_message_id"] = message_id + 1
+        index["file_size"] = self.chat_messages_file.stat().st_size
+        self._write_index(index)
+        
+        return message_id
+    
+    def add_plugin_message(self, plugin_id, message, message_type="info", timestamp=None, rtext_data=None, target_players=None, metadata=None):
+        """添加插件消息"""
+        if not isinstance(plugin_id, str) or not isinstance(message, str):
+            raise ValueError("plugin_id 和 message 必须是字符串")
+        
+        if not plugin_id.strip() or not message.strip():
+            raise ValueError("plugin_id 和 message 不能为空")
+        
+        if timestamp is None:
+            timestamp = datetime.datetime.now(datetime.timezone.utc)
+        
+        # 获取下一个消息ID
+        message_id = self._get_next_message_id()
+        
+        # 打包消息，插件消息使用特殊的格式
+        packed_message = self._pack_message(message_id, plugin_id, message, timestamp, rtext_data, message_type=2)
         
         # 追加到文件
         with open(self.chat_messages_file, 'ab') as f:
@@ -216,7 +320,12 @@ class ChatLogger:
                         'message': message['message'],
                         'timestamp': int(message['timestamp'].timestamp()),  # Unix时间戳（秒）
                         'timestamp_ms': int(message['timestamp'].timestamp() * 1000),  # 毫秒时间戳
-                        'timestamp_str': message['timestamp_str']  # 可读的时间字符串
+                        'timestamp_str': message['timestamp_str'],  # 可读的时间字符串
+                        'is_rtext': message.get('is_rtext', False),
+                        'rtext_data': message.get('rtext_data', None),
+                        'is_plugin': message.get('is_plugin', False),
+                        'plugin_id': message.get('plugin_id', None),
+                        'uuid': message.get('uuid', None)
                     }
                     messages.append(serializable_message)
                     attempt_count += 1
@@ -240,7 +349,12 @@ class ChatLogger:
                         'message': message['message'],
                         'timestamp': int(message['timestamp'].timestamp()),  # Unix时间戳（秒）
                         'timestamp_ms': int(message['timestamp'].timestamp() * 1000),  # 毫秒时间戳
-                        'timestamp_str': message['timestamp_str']  # 可读的时间字符串
+                        'timestamp_str': message['timestamp_str'],  # 可读的时间字符串
+                        'is_rtext': message.get('is_rtext', False),
+                        'rtext_data': message.get('rtext_data', None),
+                        'is_plugin': message.get('is_plugin', False),
+                        'plugin_id': message.get('plugin_id', None),
+                        'uuid': message.get('uuid', None)
                     }
                     all_messages.append(serializable_message)
                     offset_pos = new_offset
@@ -273,7 +387,13 @@ class ChatLogger:
                             'message': message['message'],
                             'timestamp': int(message['timestamp'].timestamp()),  # Unix时间戳（秒）
                             'timestamp_ms': int(message['timestamp'].timestamp() * 1000),  # 毫秒时间戳
-                            'timestamp_str': message['timestamp_str']  # 可读的时间字符串
+                            'timestamp_str': message['timestamp_str'],  # 可读的时间字符串
+                            'is_rtext': message.get('is_rtext', False),
+                            'rtext_data': message.get('rtext_data', None),
+                            'is_plugin': message.get('is_plugin', False),
+                            'plugin_id': message.get('plugin_id', None),
+                            'uuid': message.get('uuid', None),
+                            'message_source': message.get('message_source', 'game')
                         }
                         all_messages.append(serializable_message)
                         offset_pos = new_offset

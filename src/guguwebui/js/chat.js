@@ -469,6 +469,84 @@ function chatApp() {
             return date.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
         },
         
+        // 渲染消息内容（支持RText）
+        renderMessage(message) {
+            if (!message) return '';
+            
+            // 对于WebUI消息，不进行RText解析，直接显示原始文本
+            if (message.message_source === 'webui') {
+                return this.escapeHtml(message.message || '');
+            }
+            
+            // 检查是否为RText消息（非WebUI消息）
+            if (message.is_rtext && message.rtext_data && window.rtextParser) {
+                try {
+                    console.log('解析RText消息:', message.rtext_data); // 调试日志
+                    
+                    const result = window.rtextParser.parse(message.rtext_data);
+                    console.log('RText解析结果:', result); // 调试日志
+                    return result;
+                } catch (error) {
+                    console.error('RText解析失败:', error, message.rtext_data);
+                    // 降级到普通文本显示
+                    return this.escapeHtml(message.message || '');
+                }
+            }
+            
+            // 普通文本消息
+            return this.escapeHtml(message.message || '');
+        },
+        
+        // HTML转义
+        escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        },
+        
+        // 创建RText消息的辅助函数
+        createRTextMessage(text, color = 'white', bold = false, italic = false, underlined = false, clickAction = null, clickValue = null, hoverText = null) {
+            const rtext = {
+                text: text,
+                color: color
+            };
+            
+            if (bold) rtext.bold = true;
+            if (italic) rtext.italic = true;
+            if (underlined) rtext.underlined = true;
+            
+            if (clickAction && clickValue) {
+                rtext.clickEvent = {
+                    action: clickAction,
+                    value: clickValue
+                };
+            }
+            
+            if (hoverText) {
+                rtext.hoverEvent = {
+                    action: 'show_text',
+                    value: hoverText
+                };
+            }
+            
+            return JSON.stringify(rtext);
+        },
+        
+        // 创建带颜色的RText消息
+        createColoredMessage(text, color) {
+            return this.createRTextMessage(text, color);
+        },
+        
+        // 创建带点击事件的RText消息
+        createClickableMessage(text, command, color = 'yellow') {
+            return this.createRTextMessage(text, color, false, false, true, 'run_command', command, `点击执行命令: ${command}`);
+        },
+        
+        // 创建带悬停提示的RText消息
+        createHoverMessage(text, hoverText, color = 'aqua') {
+            return this.createRTextMessage(text, color, false, false, false, null, null, hoverText);
+        },
+        
         // 离线成员管理
         updateOfflineMembers() {
             const now = Math.floor(Date.now() / 1000);
@@ -481,14 +559,17 @@ function chatApp() {
                 }
             });
             
-            // 从聊天消息中获取所有玩家，标记为离线
+            // 从聊天消息中获取所有玩家，标记为离线（只处理玩家消息，过滤掉插件消息）
             this.chatMessages.forEach(message => {
-                const playerName = message.player_id;
-                if (!allOnline.has(playerName) && !this.offlineMembers[playerName]) {
-                    this.offlineMembers[playerName] = {
-                        lastSeen: message.timestamp,
-                        status: 'offline'
-                    };
+                // 只处理非插件消息（玩家消息和WebUI消息）
+                if (!message.is_plugin) {
+                    const playerName = message.player_id;
+                    if (!allOnline.has(playerName) && !this.offlineMembers[playerName]) {
+                        this.offlineMembers[playerName] = {
+                            lastSeen: message.timestamp,
+                            status: 'offline'
+                        };
+                    }
                 }
             });
             

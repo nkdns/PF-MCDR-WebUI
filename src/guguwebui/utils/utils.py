@@ -249,6 +249,114 @@ def create_chat_message_rtext(player_id: str, message: str, player_uuid: str = "
         RText(message, color=RColor.white)
     )
 
+def create_rtext_from_data(source: str, rtext_data, player_uuid: str = "未知") -> RTextBase:
+    """从RText数据创建RText对象
+    
+    Args:
+        source: 消息来源
+        rtext_data: RText数据（字典、列表或字符串）
+        player_uuid: 玩家UUID
+        
+    Returns:
+        RText 对象，可直接用于 server.broadcast
+    """
+    from mcdreforged.api.all import RText, RTextList, RColor, RAction
+    
+    # 创建插件标识部分
+    name_part = RText(f"[{source}]", color=RColor.gray)
+    hover_text = f"插件: {source}\n来源: 插件\nUUID: {player_uuid}"
+    name_part.h(hover_text)
+    
+    # 解析RText数据
+    if isinstance(rtext_data, dict):
+        # 单个RText组件
+        rtext_component = _parse_rtext_component(rtext_data)
+        return RTextList(name_part, RText(" "), rtext_component)
+    elif isinstance(rtext_data, list):
+        # RText组件列表
+        components = []
+        for item in rtext_data:
+            if isinstance(item, dict):
+                components.append(_parse_rtext_component(item))
+            else:
+                components.append(RText(str(item)))
+        return RTextList(name_part, RText(" "), *components)
+    else:
+        # 普通字符串
+        return RTextList(name_part, RText(" "), RText(str(rtext_data)))
+
+def _parse_rtext_component(component: dict) -> RTextBase:
+    """解析单个RText组件
+    
+    Args:
+        component: RText组件字典
+        
+    Returns:
+        RText 对象
+    """
+    from mcdreforged.api.all import RText, RTextList, RColor, RAction, RStyle
+    
+    # 获取文本内容
+    text = component.get('text', '')
+    
+    # 创建基础RText对象
+    rtext = RText(text)
+    
+    # 设置颜色
+    if 'color' in component:
+        color_name = component['color']
+        if hasattr(RColor, color_name):
+            rtext = rtext.set_color(getattr(RColor, color_name))
+    
+    # 设置样式 - 使用RStyle
+    styles = []
+    if component.get('bold'):
+        styles.append(RStyle.bold)
+    if component.get('italic'):
+        styles.append(RStyle.italic)
+    if component.get('underlined'):
+        styles.append(RStyle.underlined)
+    if component.get('strikethrough'):
+        styles.append(RStyle.strikethrough)
+    if component.get('obfuscated'):
+        styles.append(RStyle.obfuscated)
+    
+    if styles:
+        rtext = rtext.set_styles(styles)
+    
+    # 设置点击事件
+    if 'clickEvent' in component:
+        click_event = component['clickEvent']
+        action = click_event.get('action')
+        value = click_event.get('value')
+        
+        if action == 'run_command' and value:
+            rtext = rtext.c(RAction.run_command, value)
+        elif action == 'suggest_command' and value:
+            rtext = rtext.c(RAction.suggest_command, value)
+        elif action == 'open_url' and value:
+            rtext = rtext.c(RAction.open_url, value)
+        elif action == 'copy_to_clipboard' and value:
+            rtext = rtext.c(RAction.copy_to_clipboard, value)
+    
+    # 设置悬停事件
+    if 'hoverEvent' in component:
+        hover_event = component['hoverEvent']
+        if hover_event.get('action') == 'show_text' and 'value' in hover_event:
+            rtext = rtext.h(hover_event['value'])
+    
+    # 处理子组件
+    if 'extra' in component and isinstance(component['extra'], list):
+        extra_components = []
+        for extra in component['extra']:
+            if isinstance(extra, dict):
+                extra_components.append(_parse_rtext_component(extra))
+            else:
+                extra_components.append(RText(str(extra)))
+        return RTextList(rtext, *extra_components)
+    
+    return rtext
+
 def create_chat_status_rtext(status_type: str, message: str) -> RTextBase:
     """创建聊天状态消息的RText格式
     
@@ -1453,9 +1561,9 @@ def get_bot_list(server_interface=None) -> list:
             server_interface.logger.error(f"获取假人列表失败: {e}")
         return []
 
-def send_message_to_webui(server_interface, source: str, message: str, message_type: str = "info", target_players: list = None, metadata: dict = None):
+def send_message_to_webui(server_interface, source: str, message, message_type: str = "info", target_players: list = None, metadata: dict = None, is_rtext: bool = False):
     """
-    供其他插件调用的函数，用于发送消息到WebUI
+    供其他插件调用的函数，用于发送消息到WebUI并同步到游戏
 
     使用方法：
     from mcdreforged.api.all import VersionRequirement
@@ -1464,20 +1572,30 @@ def send_message_to_webui(server_interface, source: str, message: str, message_t
         # 获取WebUI插件实例
         webui_plugin = server.get_plugin_instance("guguwebui")
         if webui_plugin and hasattr(webui_plugin, 'send_message_to_webui'):
+            # 发送普通消息
             webui_plugin.send_message_to_webui(
                 server_interface=server,
                 source="your_plugin_name",
                 message="这是一条来自插件的消息",
                 message_type="info"
             )
+            # 发送RText消息
+            webui_plugin.send_message_to_webui(
+                server_interface=server,
+                source="your_plugin_name",
+                message=rtext_object,  # RText对象
+                message_type="info",
+                is_rtext=True
+            )
 
     Args:
         server_interface: MCDR服务器接口
         source: 消息来源（插件名称等）
-        message: 消息内容
+        message: 消息内容（字符串或RText对象）
         message_type: 消息类型（info, warning, error, success等）
         target_players: 目标玩家列表，None表示所有玩家
         metadata: 额外的元数据
+        is_rtext: 是否为RText格式，如果为True，message应该是RText对象或JSON字符串
 
     Returns:
         bool: 是否成功发送
@@ -1486,45 +1604,114 @@ def send_message_to_webui(server_interface, source: str, message: str, message_t
         from mcdreforged.api.all import LiteralEvent
         import datetime
         import uuid
+        import json
+        import time
 
-        # 准备事件数据
-        event_data = (
-            source,                    # 消息来源
-            message,                   # 消息内容
-            message_type,              # 消息类型
-            target_players or [],      # 目标玩家列表
-            metadata or {},            # 额外元数据
-            int(datetime.datetime.now(datetime.timezone.utc).timestamp()),  # 时间戳
-            str(uuid.uuid4())         # 消息ID
-        )
+        # 处理RText消息
+        processed_message = message
+        rtext_data = None
+        
+        if is_rtext:
+            if hasattr(message, 'to_json_object'):  # MCDR的RText对象
+                rtext_data = message.to_json_object()
+                processed_message = str(message)  # 获取纯文本版本
+            elif isinstance(message, (dict, list)):  # 字典或列表格式的RText
+                rtext_data = message
+                processed_message = json.dumps(message, ensure_ascii=False)  # 转换为JSON字符串
+            elif isinstance(message, str):  # JSON字符串格式
+                try:
+                    rtext_data = json.loads(message)
+                    processed_message = message
+                except json.JSONDecodeError:
+                    # 如果不是有效的JSON，当作普通字符串处理
+                    rtext_data = None
+                    processed_message = message
 
-        # 分发事件
-        server_interface.dispatch_event(LiteralEvent("webui.message_received"), event_data)
-
-        # 将消息添加到队列中，供前端获取
+        # 检查是否启用了聊天到游戏功能
         try:
-            from guguwebui.web_server import WEBUI_MESSAGE_QUEUE
+            config = server_interface.load_config_simple("config.json", {}, echo_in_console=False)
+            if not config.get("public_chat_to_game_enabled", False):
+                server_interface.logger.debug("聊天到游戏功能未启用，仅记录消息")
+        except Exception:
+            # 如果无法读取配置，继续执行
+            pass
 
-            message_entry = {
-                "id": event_data[6],
-                "source": source,
-                "message": message,
-                "type": message_type,
-                "target_players": target_players or [],
-                "metadata": metadata or {},
-                "timestamp": event_data[5],
-                "read_by": []
-            }
+        # 对于插件发送的消息，直接使用"插件"作为UUID，避免网络请求
+        player_uuid = f"plugin_{source}"
 
-            WEBUI_MESSAGE_QUEUE.append(message_entry)
+        # 构建用于广播的 RText 消息
+        if is_rtext and rtext_data:
+            # 如果已经是RText格式，直接使用
+            if hasattr(message, 'to_json_object'):
+                rtext_message = message
+            else:
+                # 从rtext_data重新构建RText对象，但需要将RText数据转换为实际的RText对象
+                rtext_message = create_rtext_from_data(source, rtext_data, player_uuid)
+        else:
+            # 创建RText格式的消息
+            rtext_message = create_chat_message_rtext(source, processed_message, player_uuid)
 
-            # 限制队列大小，避免内存泄漏
-            if len(WEBUI_MESSAGE_QUEUE) > 1000:
-                WEBUI_MESSAGE_QUEUE.pop(0)
+        # 首先分发WebUI聊天消息事件，供其他插件监听和处理
+        try:
+            # 创建事件数据元组 - MCDR会将元组展开为多个参数
+            event_data = (
+                source,           # source
+                source,           # player_id (使用source作为player_id)
+                player_uuid,      # player_uuid
+                processed_message, # message
+                f"plugin_{source}", # session_id (使用插件名作为session_id)
+                int(datetime.datetime.now(datetime.timezone.utc).timestamp())  # timestamp (Unix时间戳)
+            )
+            # 分发事件
+            server_interface.dispatch_event(LiteralEvent("webui.chat_message_sent"), event_data)
+        except Exception as e:
+            server_interface.logger.error(f"分发WebUI聊天消息事件失败: {e}")
 
-        except ImportError:
-            # 如果无法导入队列，只记录日志
-            server_interface.logger.debug("无法访问WebUI消息队列，仅分发事件")
+        # 如果当前服务器内没有玩家在线，则仅记录，不下发到游戏
+        try:
+            info = get_java_server_info()
+            player_count_raw = info.get("server_player_count")
+            player_count = int(player_count_raw) if player_count_raw is not None and str(player_count_raw).isdigit() else 0
+        except Exception:
+            player_count = 0
+
+        if player_count <= 0:
+            # 仅记录到聊天日志
+            try:
+                from guguwebui.utils.chat_logger import ChatLogger
+                chat_logger = ChatLogger()
+                # 记录RText格式的消息，标记为插件消息
+                final_rtext_data = rtext_data if rtext_data else (rtext_message.to_json_object() if hasattr(rtext_message, 'to_json_object') else None)
+                chat_logger.add_message(source, processed_message, rtext_data=final_rtext_data, message_type=2)
+            except Exception as e:
+                server_interface.logger.warning(f"记录聊天消息失败: {e}")
+            return True
+
+        # 有玩家在线，使用广播发送消息
+        server_interface.broadcast(rtext_message)
+
+        # 记录Web在线心跳（发送者计为在线5秒）
+        try:
+            # 尝试获取WEB_ONLINE_PLAYERS，如果无法获取则跳过
+            import sys
+            if hasattr(sys.modules.get('guguwebui.api.chat', None), 'WEB_ONLINE_PLAYERS'):
+                from guguwebui.api.chat import WEB_ONLINE_PLAYERS
+                WEB_ONLINE_PLAYERS[source] = int(time.time()) + 5
+        except Exception:
+            pass
+
+        # 记录到聊天日志
+        try:
+            from guguwebui.utils.chat_logger import ChatLogger
+            chat_logger = ChatLogger()
+            # 记录RText格式的消息，标记为插件消息，这样前端显示时就能正确渲染
+            final_rtext_data = rtext_data if rtext_data else (rtext_message.to_json_object() if hasattr(rtext_message, 'to_json_object') else None)
+            chat_logger.add_message(source, processed_message, rtext_data=final_rtext_data, message_type=2)
+        except Exception as e:
+            server_interface.logger.warning(f"记录聊天消息失败: {e}")
+
+        # 记录调试信息
+        server_interface.logger.debug(f"插件 {source} 发送消息到游戏: {rtext_message}")
 
         return True
 
@@ -1532,6 +1719,7 @@ def send_message_to_webui(server_interface, source: str, message: str, message_t
         if server_interface:
             server_interface.logger.error(f"发送WebUI消息失败: {e}")
         return False
+
 
 #============================================================#
 # URL 路径处理工具函数

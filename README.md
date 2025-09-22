@@ -168,7 +168,7 @@ A: 查看 [插件兼容](https://pf-doc.pfingan.com/main/#/PF-webui/开发/插�
 > 本功能尚处于测试开发阶段，可能会随时更新，请注意本文档的更新情况。
 
 - 为WebUI的聊天消息提供事件分发机制
-- 其他MCDR插件可以监听 `webui.chat_message_sent` 和 `webui.message_received` 事件
+- 其他MCDR插件可以监听 `webui.chat_message_sent` 事件
 - 发送消息到WebUI `send_message_to_webui` 函数
 - 详细文档请参考 [WebUI事件系统文档](docs/WebUI事件系统.md)
 - 示例插件请参考 [examples/](examples/) 目录

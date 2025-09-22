@@ -11,7 +11,7 @@ import string
 import concurrent.futures
 from typing import Dict, List, Any, Optional, Tuple
 
-from mcdreforged.api.all import PluginServerInterface
+from mcdreforged.api.all import PluginServerInterface, RText, RTextList, RColor
 from fastapi.responses import JSONResponse
 
 from ..utils.constant import user_db, DEFALUT_CONFIG
@@ -624,7 +624,8 @@ def send_chat_message_handler(message: str, player_id: str, session_id: str,
         # 仅记录到聊天日志
         try:
             chat_logger = ChatLogger()
-            chat_logger.add_message(player_id, message)
+            # 记录RText格式的消息，标记为WebUI消息
+            chat_logger.add_message(player_id, message, rtext_data=rtext_message.to_json_object(), message_type=1)
         except Exception as e:
             server.logger.warning(f"记录聊天消息失败: {e}")
         return {
@@ -644,7 +645,8 @@ def send_chat_message_handler(message: str, player_id: str, session_id: str,
     # 记录到聊天日志
     try:
         chat_logger = ChatLogger()
-        chat_logger.add_message(player_id, message)
+        # 记录RText格式的消息，标记为WebUI消息，这样前端显示时就能正确渲染
+        chat_logger.add_message(player_id, message, rtext_data=rtext_message.to_json_object(), message_type=1)
     except Exception as e:
         server.logger.warning(f"记录聊天消息失败: {e}")
 

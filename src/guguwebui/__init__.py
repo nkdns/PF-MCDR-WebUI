@@ -619,3 +619,8 @@ def on_user_info(server: PluginServerInterface, info):
     except Exception as e:
         server.logger.error(f"记录聊天消息时出错: {e}")
 
+def send_message_to_webui(server_interface, source: str, message, message_type: str = "info", target_players: list = None, metadata: dict = None, is_rtext: bool = False):
+    """供其他插件调用的函数，用于发送消息到WebUI并同步到游戏"""
+    from .utils.utils import send_message_to_webui as _send_message_to_webui
+    return _send_message_to_webui(server_interface, source, message, message_type, target_players, metadata, is_rtext)
+

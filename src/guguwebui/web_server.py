@@ -91,11 +91,6 @@ templates = Jinja2Templates(directory=f"{STATIC_PATH}/templates")
 # 全局LogWatcher实例
 log_watcher = LogWatcher()
 
-# WebUI消息队列，用于存储来自其他插件的消息
-WEBUI_MESSAGE_QUEUE: list = []
-
-# 全局变量已移至 api/chat.py
-
 # 用于保存pip任务状态的字典
 pip_tasks = {}
 
