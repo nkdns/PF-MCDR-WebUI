@@ -163,7 +163,7 @@ class RTextParser {
             }
             
             if (hoverHandler) {
-                html += ` title="${this.escapeHtml(hoverHandler.title)}"`;
+                html += ` data-hover-content="${this.escapeHtml(hoverHandler.content)}" class="rtext-hoverable"`;
             }
             
             html += '>';
@@ -288,15 +288,15 @@ class RTextParser {
                     text = this.parse(value);
                 }
                 return {
-                    title: text
+                    content: text
                 };
             case 'show_item':
                 return {
-                    title: `物品: ${JSON.stringify(value)}`
+                    content: `物品: ${JSON.stringify(value)}`
                 };
             case 'show_entity':
                 return {
-                    title: `实体: ${JSON.stringify(value)}`
+                    content: `实体: ${JSON.stringify(value)}`
                 };
             default:
                 return null;
@@ -326,11 +326,22 @@ window.rtextRunCommand = function(command) {
 };
 
 window.rtextSuggestCommand = function(command) {
-    // 建议命令到输入框
-    const input = document.querySelector('input[type="text"]');
-    if (input) {
-        input.value = command;
-        input.focus();
+    // 建议命令到聊天输入框
+    const chatInput = document.querySelector('input[x-model="chatMessage"]');
+    if (chatInput) {
+        chatInput.value = command;
+        chatInput.focus();
+        // 触发Alpine.js的更新
+        if (window.Alpine && chatInput._x_dataStack) {
+            chatInput._x_dataStack[0].chatMessage = command;
+        }
+    } else {
+        // 降级方案：查找任何文本输入框
+        const input = document.querySelector('input[type="text"]');
+        if (input) {
+            input.value = command;
+            input.focus();
+        }
     }
 };
 
@@ -357,8 +368,118 @@ window.rtextCopyToClipboard = function(text) {
     }
 };
 
+// 悬停提示框管理器
+class RTextHoverManager {
+    constructor() {
+        this.tooltip = null;
+        this.currentTarget = null;
+        this.initTooltip();
+        this.bindEvents();
+    }
+
+    initTooltip() {
+        // 创建悬停提示框元素
+        this.tooltip = document.createElement('div');
+        this.tooltip.className = 'rtext-tooltip';
+        this.tooltip.style.cssText = `
+            position: absolute;
+            background: rgba(0, 0, 0, 0.9);
+            color: white;
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-size: 14px;
+            line-height: 1.4;
+            max-width: 300px;
+            word-wrap: break-word;
+            z-index: 100;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.2s ease;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        `;
+        document.body.appendChild(this.tooltip);
+    }
+
+    bindEvents() {
+        // 绑定鼠标悬停事件
+        document.addEventListener('mouseover', (e) => {
+            const hoverable = e.target.closest('.rtext-hoverable');
+            if (hoverable && hoverable !== this.currentTarget) {
+                this.showTooltip(hoverable, e);
+            }
+        });
+
+        document.addEventListener('mouseout', (e) => {
+            const hoverable = e.target.closest('.rtext-hoverable');
+            if (hoverable === this.currentTarget) {
+                this.hideTooltip();
+            }
+        });
+
+        document.addEventListener('mousemove', (e) => {
+            if (this.currentTarget && this.tooltip.style.opacity === '1') {
+                this.updateTooltipPosition(e);
+            }
+        });
+    }
+
+    showTooltip(element, event) {
+        const content = element.getAttribute('data-hover-content');
+        if (!content) return;
+
+        this.currentTarget = element;
+        this.tooltip.innerHTML = content;
+        this.tooltip.style.opacity = '1';
+        this.updateTooltipPosition(event);
+    }
+
+    hideTooltip() {
+        this.tooltip.style.opacity = '0';
+        this.currentTarget = null;
+    }
+
+    updateTooltipPosition(event) {
+        const rect = this.tooltip.getBoundingClientRect();
+        const viewportWidth = window.innerWidth;
+        const viewportHeight = window.innerHeight;
+        
+        // 默认位置：鼠标右下方，稍微偏移避免遮挡
+        let left = event.clientX + 15;
+        let top = event.clientY + 15;
+
+        // 防止提示框超出视口右边界
+        if (left + rect.width > viewportWidth) {
+            left = event.clientX - rect.width - 15;
+        }
+        
+        // 防止提示框超出视口下边界
+        if (top + rect.height > viewportHeight) {
+            top = event.clientY - rect.height - 15;
+        }
+        
+        // 防止提示框超出视口左边界
+        if (left < 0) {
+            left = 10;
+        }
+        
+        // 防止提示框超出视口上边界
+        if (top < 0) {
+            top = 10;
+        }
+
+        this.tooltip.style.left = `${left}px`;
+        this.tooltip.style.top = `${top}px`;
+    }
+}
+
 // 创建全局实例
 window.rtextParser = new RTextParser();
+
+// 延迟初始化悬停管理器，确保DOM已加载
+document.addEventListener('DOMContentLoaded', () => {
+    window.rtextHoverManager = new RTextHoverManager();
+});
 
 // 导出供模块使用
 if (typeof module !== 'undefined' && module.exports) {
