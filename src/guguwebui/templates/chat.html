@@ -385,18 +385,16 @@
                                                     <div class="w-8 h-8 flex items-center justify-center text-white text-sm font-bold shadow-md ring-2 ring-white dark:ring-gray-800 bg-purple-500" x-text="(message.plugin_id || message.player_id).charAt(0).toUpperCase()"></div>
                                                 </template>
                                                 <!-- 玩家消息头像 -->
-                                                <template x-if="!message.is_plugin">
-                                                    <template x-if="message.uuid && avatarSource === 'crafatar'">
-                                                        <img :src="`https://crafatar.com/avatars/${message.uuid}`" alt="avatar" class="w-8 h-8 object-cover shadow-md ring-2 ring-white dark:ring-gray-800">
-                                                    </template>
-                                                    <template x-if="avatarSource === 'mccag'">
-                                                        <div class="w-8 h-8 overflow-hidden shadow-md ring-2 ring-white dark:ring-gray-800">
-                                                            <img :src="`https://x.xzt.plus/api/generate/minimal/mojang/${message.player_id}`" alt="avatar" class="w-full h-full object-cover transform scale-150 origin-center">
-                                                        </div>
-                                                    </template>
-                                                    <template x-if="!message.uuid && avatarSource === 'crafatar'">
-                                                        <div class="w-8 h-8 flex items-center justify-center text-white text-sm font-bold shadow-md ring-2 ring-white dark:ring-gray-800 bg-blue-500" x-text="message.player_id.charAt(0).toUpperCase()"></div>
-                                                    </template>
+                                                <template x-if="message.uuid && avatarSource === 'crafatar' && !message.is_plugin">
+                                                    <img :src="`https://crafatar.com/avatars/${message.uuid}`" alt="avatar" class="w-8 h-8 object-cover shadow-md ring-2 ring-white dark:ring-gray-800">
+                                                </template>
+                                                <template x-if="avatarSource === 'mccag' && !message.is_plugin">
+                                                    <div class="w-8 h-8 overflow-hidden shadow-md ring-2 ring-white dark:ring-gray-800">
+                                                        <img :src="`https://x.xzt.plus/api/generate/minimal/mojang/${message.player_id}`" alt="avatar" class="w-full h-full object-cover transform scale-150 origin-center">
+                                                    </div>
+                                                </template>
+                                                <template x-if="!message.uuid && avatarSource === 'crafatar' && !message.is_plugin">
+                                                    <div class="w-8 h-8 flex items-center justify-center text-white text-sm font-bold shadow-md ring-2 ring-white dark:ring-gray-800 bg-blue-500" x-text="message.player_id.charAt(0).toUpperCase()"></div>
                                                 </template>
                                             </div>
                                             <div class="flex-1 min-w-0" :class="message.player_id === currentPlayer ? 'text-right' : ''">
@@ -415,19 +413,17 @@
                                                 <template x-if="message.is_plugin">
                                                     <div class="w-5 h-5 flex items-center justify-center bg-purple-500 text-white text-[10px] font-bold" x-text="(message.plugin_id || message.player_id).charAt(0).toUpperCase()"></div>
                                                 </template>
-                                                <!-- 玩家消息头像 (WebUI和游戏消息) -->
-                                                <template x-if="!message.is_plugin">
-                                                    <template x-if="message.uuid && avatarSource === 'crafatar'">
-                                                        <img :src="`https://crafatar.com/avatars/${message.uuid}`" alt="avatar" class="w-5 h-5 object-cover">
-                                                    </template>
-                                                    <template x-if="avatarSource === 'mccag'">
-                                                        <div class="w-5 h-5 overflow-hidden">
-                                                            <img :src="`https://x.xzt.plus/api/generate/minimal/mojang/${message.player_id}`" alt="avatar" class="w-full h-full object-cover transform scale-150 origin-center">
-                                                        </div>
-                                                    </template>
-                                                    <template x-if="!message.uuid && avatarSource === 'crafatar'">
-                                                        <div class="w-5 h-5 flex items-center justify-center bg-blue-500 text-white text-[10px] font-bold" x-text="message.player_id.charAt(0).toUpperCase()"></div>
-                                                    </template>
+                                                <!-- 玩家消息头像 -->
+                                                <template x-if="message.uuid && avatarSource === 'crafatar' && !message.is_plugin">
+                                                    <img :src="`https://crafatar.com/avatars/${message.uuid}`" alt="avatar" class="w-5 h-5 object-cover">
+                                                </template>
+                                                <template x-if="avatarSource === 'mccag' && !message.is_plugin">
+                                                    <div class="w-5 h-5 overflow-hidden">
+                                                        <img :src="`https://x.xzt.plus/api/generate/minimal/mojang/${message.player_id}`" alt="avatar" class="w-full h-full object-cover transform scale-150 origin-center">
+                                                    </div>
+                                                </template>
+                                                <template x-if="!message.uuid && avatarSource === 'crafatar' && !message.is_plugin">
+                                                    <div class="w-5 h-5 flex items-center justify-center bg-blue-500 text-white text-[10px] font-bold" x-text="message.player_id.charAt(0).toUpperCase()"></div>
                                                 </template>
                                             </div>
                                             <span class="text-xs text-gray-500 dark:text-gray-300" x-text="formatTimeOnly(message.timestamp)"></span>
@@ -578,3 +574,4 @@
     </script>
 </body>
 </html>
+
