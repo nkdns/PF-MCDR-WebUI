@@ -340,22 +340,36 @@ def get_chat_messages_handler(limit: int = 50, offset: int = 0, after_id: Option
         # 兼容旧版本，使用offset方式
         messages = chat_logger.get_messages(limit, offset)
 
-    # 为消息补充UUID信息（使用本地usercache优先，失败再尝试API）
+    # 为消息补充UUID信息（优化版本 - 优先使用存储的UUID，减少网络查询）
     try:
         uuid_cache = {}
+        need_uuid_players = set()
+        
+        # 首先检查哪些消息需要补充UUID
         for m in messages:
             pid = m.get('player_id')
-            if not pid:
-                continue
-            if pid in uuid_cache:
-                uuid_val = uuid_cache[pid]
-            else:
+            if pid and not m.get('is_plugin', False):  # 插件消息不需要UUID
+                if m.get('uuid') is None:  # 只有没有UUID的消息才需要查询
+                    need_uuid_players.add(pid)
+        
+        # 只对缺失UUID的玩家进行网络查询
+        if need_uuid_players:
+            for pid in need_uuid_players:
                 try:
-                    uuid_val = get_player_uuid(pid, server)
-                except Exception:
+                    with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
+                        future = executor.submit(get_player_uuid, pid, server)
+                        uuid_val = future.result(timeout=0.5)  # 减少超时时间
+                except (concurrent.futures.TimeoutError, Exception):
                     uuid_val = None
                 uuid_cache[pid] = uuid_val
-            m['uuid'] = uuid_val
+        
+        # 为缺失UUID的消息设置UUID
+        for m in messages:
+            pid = m.get('player_id')
+            if pid and m.get('uuid') is None and not m.get('is_plugin', False):
+                if pid in uuid_cache:
+                    m['uuid'] = uuid_cache[pid]
+                
     except Exception:
         # 静默失败，不影响消息返回
         pass
@@ -625,7 +639,7 @@ def send_chat_message_handler(message: str, player_id: str, session_id: str,
         try:
             chat_logger = ChatLogger()
             # 记录RText格式的消息，标记为WebUI消息
-            chat_logger.add_message(player_id, message, rtext_data=rtext_message.to_json_object(), message_type=1)
+            chat_logger.add_message(player_id, message, rtext_data=rtext_message.to_json_object(), message_type=1, server=server)
         except Exception as e:
             server.logger.warning(f"记录聊天消息失败: {e}")
         return {
@@ -646,7 +660,7 @@ def send_chat_message_handler(message: str, player_id: str, session_id: str,
     try:
         chat_logger = ChatLogger()
         # 记录RText格式的消息，标记为WebUI消息，这样前端显示时就能正确渲染
-        chat_logger.add_message(player_id, message, rtext_data=rtext_message.to_json_object(), message_type=1)
+        chat_logger.add_message(player_id, message, rtext_data=rtext_message.to_json_object(), message_type=1, server=server)
     except Exception as e:
         server.logger.warning(f"记录聊天消息失败: {e}")
 

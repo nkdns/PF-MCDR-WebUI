@@ -1682,7 +1682,7 @@ def send_message_to_webui(server_interface, source: str, message, message_type: 
                 chat_logger = ChatLogger()
                 # 记录RText格式的消息，标记为插件消息
                 final_rtext_data = rtext_data if rtext_data else (rtext_message.to_json_object() if hasattr(rtext_message, 'to_json_object') else None)
-                chat_logger.add_message(source, processed_message, rtext_data=final_rtext_data, message_type=2)
+                chat_logger.add_message(source, processed_message, rtext_data=final_rtext_data, message_type=2, server=server_interface)
             except Exception as e:
                 server_interface.logger.warning(f"记录聊天消息失败: {e}")
             return True
@@ -1706,7 +1706,7 @@ def send_message_to_webui(server_interface, source: str, message, message_type: 
             chat_logger = ChatLogger()
             # 记录RText格式的消息，标记为插件消息，这样前端显示时就能正确渲染
             final_rtext_data = rtext_data if rtext_data else (rtext_message.to_json_object() if hasattr(rtext_message, 'to_json_object') else None)
-            chat_logger.add_message(source, processed_message, rtext_data=final_rtext_data, message_type=2)
+            chat_logger.add_message(source, processed_message, rtext_data=final_rtext_data, message_type=2, server=server_interface)
         except Exception as e:
             server_interface.logger.warning(f"记录聊天消息失败: {e}")
 

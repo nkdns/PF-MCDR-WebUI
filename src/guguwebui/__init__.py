@@ -610,7 +610,7 @@ def on_user_info(server: PluginServerInterface, info):
                 # 检查玩家名称和消息内容是否有效
                 if player_name and message_content and player_name.strip() and message_content.strip():
                     # 记录聊天消息
-                    chat_logger.add_message(player_name.strip(), message_content.strip())
+                    chat_logger.add_message(player_name.strip(), message_content.strip(), server=server)
                     from .utils.utils import create_chat_logger_status_rtext
                     status_msg = create_chat_logger_status_rtext('record', True, player_name.strip(), message_content.strip())
                     server.logger.debug(status_msg)
