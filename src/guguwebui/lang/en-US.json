@@ -40,7 +40,8 @@
     "add_property": "Add Property",
     "confirm": "Confirm",
     "cancel": "Cancel",
-    "unknown": "Unknown"
+    "unknown": "Unknown",
+    "save": "Save"
   },
   "meta": { "name": "English" },
   "main": {
@@ -545,7 +546,8 @@
         "system_prompt": "You are a Minecraft server log analysis expert. Analyze the logs and provide detailed explanations and solutions. Focus only on relevant issues and do not repeat the logs.",
         "error_prefix": "Error: ",
         "request_failed": "Request failed",
-        "request_error_prefix": "Request error: "
+        "request_error_prefix": "Request error: ",
+        "switched_to_free_ai": "Switched to free AI mode"
       },
       "ai_modal": {
         "title": "AI Log Analysis",
@@ -562,6 +564,16 @@
         "title": "Set API Key",
         "label": "API Key",
         "placeholder": "Enter your API key"
+      },
+      "free_ai": {
+        "title": "Free AI Service",
+        "description": "Analyze logs using Pollinations free AI service",
+        "button": "Use Free AI",
+        "loading": "Requesting free AI service...",
+        "error": "Free AI service request failed",
+        "success": "Free AI analysis completed",
+        "switch_button": "Free AI",
+        "switch_tooltip": "Switch to free AI mode"
       }
     },
     "settings": {

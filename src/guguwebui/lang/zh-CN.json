@@ -40,7 +40,8 @@
     "add_property": "添加属性",
     "confirm": "确定",
     "cancel": "取消",
-    "unknown": "未知"
+    "unknown": "未知",
+    "save": "保存"
   },
   "meta": { "name": "中文" },
   "main": {
@@ -546,7 +547,8 @@
         "system_prompt": "你是一个Minecraft服务器日志分析专家，请分析以下日志并提供详细的解释和解决方案。请只关注与问题相关的内容，不要重复日志内容。",
         "error_prefix": "错误: ",
         "request_failed": "请求失败",
-        "request_error_prefix": "请求出错: "
+        "request_error_prefix": "请求出错: ",
+        "switched_to_free_ai": "已切换到免费AI模式"
       },
       "ai_modal": {
         "title": "AI日志分析询问",
@@ -563,6 +565,16 @@
         "title": "设置API密钥",
         "label": "API密钥",
         "placeholder": "请输入您的API密钥"
+      },
+      "free_ai": {
+        "title": "免费AI服务",
+        "description": "使用Pollinations免费AI服务分析日志",
+        "button": "使用免费AI",
+        "loading": "正在请求免费AI服务...",
+        "error": "免费AI服务请求失败",
+        "success": "免费AI分析完成",
+        "switch_button": "免费AI",
+        "switch_tooltip": "切换到免费AI模式"
       }
     },
     "settings": {

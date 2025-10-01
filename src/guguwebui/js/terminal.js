@@ -64,6 +64,7 @@ document.addEventListener('alpine:init', () => {
         aiLoading: false,
         aiContinueChat: false,
         aiChatHistory: [], // 用于连续对话
+        isFreeAIMode: false, // 是否为免费AI模式
 
         // API Key设置相关
         showApiKeyModal: false,
@@ -519,8 +520,8 @@ document.addEventListener('alpine:init', () => {
             // 先检查API Key是否已设置
             const keyIsSet = await this.checkApiKeyStatus();
             if (!keyIsSet) {
-                // 如果API Key未设置，显示设置弹窗
-                this.showApiKeySettingModal();
+                // 如果API Key未设置，显示设置弹窗，并传递选中的文本
+                this.showApiKeySettingModal(selectedText);
                 return;
             }
             
@@ -528,6 +529,7 @@ document.addEventListener('alpine:init', () => {
             this.aiResponse = '';
             this.aiLoading = false;
             this.aiSelectedText = selectedText;
+            this.isFreeAIMode = false; // 重置为API Key模式
             
             // 如果有选中的文本，则使用选中的文本作为询问内容
             if (selectedText) {
@@ -565,10 +567,15 @@ document.addEventListener('alpine:init', () => {
         },
         
         // 显示API Key设置弹窗
-        showApiKeySettingModal() {
+        showApiKeySettingModal(selectedText = null) {
             this.apiKey = '';
             this.apiKeyValidated = false;
             this.showApiKeyModal = true;
+            
+            // 存储选中的文本，以便在免费AI服务中使用
+            if (selectedText !== null) {
+                this.aiSelectedText = selectedText;
+            }
             
             // 显示弹窗
             const modal = document.getElementById('apiKeyModal');
@@ -642,7 +649,124 @@ document.addEventListener('alpine:init', () => {
                 modal.classList.remove('active');
                 setTimeout(() => {
                     this.showAiQueryModal = false;
+                    this.isFreeAIMode = false; // 重置免费AI模式标志
                 }, 300);
+            }
+        },
+        
+        // 使用免费AI服务
+        async useFreeAIService(selectedText = null) {
+            // 关闭API Key设置弹窗
+            this.closeApiKeyModal();
+            
+            // 直接打开AI询问弹窗，使用免费AI模式
+            this.aiQuery = '';
+            this.aiResponse = '';
+            this.aiLoading = false;
+            
+            // 如果有传入选中的文本，使用它；否则保持现有的选中内容
+            if (selectedText !== null) {
+                this.aiSelectedText = selectedText;
+            }
+            
+            // 设置日志预览内容
+            if (this.aiSelectedText) {
+                // 如果有选中的文本，使用选中文本作为预览
+                this.aiLogPreview = this.aiSelectedText;
+            } else {
+                // 否则获取最近的200行日志
+                const recentLogs = this.logs.slice(Math.max(0, this.logs.length - 200));
+                this.aiLogPreview = recentLogs.map(log => {
+                    let prefix = '';
+                    return `${prefix}${log.content}`;
+                }).join('\n');
+            }
+            
+            this.aiQueryTitle = this.t('page.terminal.free_ai.title', '免费AI服务');
+            
+            // 设置免费AI模式标志
+            this.isFreeAIMode = true;
+            
+            // 显示弹窗
+            const modal = document.getElementById('aiQueryModal');
+            if (modal) {
+                modal.classList.add('active');
+                this.showAiQueryModal = true;
+            }
+            
+            // 不再自动触发查询，让用户手动点击询问按钮
+        },
+        
+        // 切换到免费AI模式
+        switchToFreeAIMode() {
+            // 设置免费AI模式标志
+            this.isFreeAIMode = true;
+            
+            // 更新标题为免费AI服务
+            this.aiQueryTitle = this.t('page.terminal.free_ai.title', '免费AI服务');
+            
+            // 显示切换成功的提示
+            this.showNotificationMsg(this.t('page.terminal.msg.switched_to_free_ai', '已切换到免费AI模式'), 'success');
+        },
+        
+        // 提交免费AI询问（使用Pollinations API）
+        async submitFreeAIQuery() {
+            if (this.aiLoading) return;
+            
+            this.aiLoading = true;
+            this.aiResponse = '';
+            
+            // 如果用户没有输入问题，使用默认问题
+            const query = this.aiQuery.trim() || this.t('page.terminal.msg.default_ai_query', '分析这些日志中的错误并提供解决方案');
+            
+            // 准备系统提示词
+            const systemPrompt = this.t('page.terminal.msg.system_prompt', '你是一个Minecraft服务器日志分析专家，请分析以下日志并提供详细的解释和解决方案。请只关注与问题相关的内容，不要重复日志内容。');
+            
+            // 构建完整的问题内容
+            let fullQuery = query;
+            if (this.aiSelectedText) {
+                fullQuery += `\n\n选中的日志内容：\n${this.aiSelectedText}`;
+            } else {
+                fullQuery += `\n\n最近的日志内容：\n${this.aiLogPreview}`;
+            }
+            
+            // 构建Pollinations API的完整提示词
+            const completePrompt = `${systemPrompt}\n\n${fullQuery}`;
+            
+            try {
+                // 使用Pollinations免费文本生成API
+                const encodedPrompt = encodeURIComponent(completePrompt);
+                const apiUrl = `https://text.pollinations.ai/${encodedPrompt}?model=openai&seed=42`;
+                
+                this.showNotificationMsg(this.t('page.terminal.free_ai.loading', '正在请求免费AI服务...'), 'info');
+                
+                const response = await fetch(apiUrl, {
+                    method: 'GET',
+                    headers: {
+                        'Accept': 'text/plain',
+                        'User-Agent': 'MCDR-WebUI/1.0'
+                    }
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                
+                const answer = await response.text();
+                
+                if (answer && answer.trim()) {
+                    this.aiResponse = answer.trim();
+                    this.showNotificationMsg(this.t('page.terminal.free_ai.success', '免费AI分析完成'), 'success');
+                } else {
+                    throw new Error('Empty response from API');
+                }
+                
+            } catch (error) {
+                console.error('免费AI服务请求失败:', error);
+                this.aiResponse = `${this.t('page.terminal.msg.error_prefix', '错误: ')}${this.t('page.terminal.free_ai.error', '免费AI服务请求失败')}: ${error.message}`;
+                this.showNotificationMsg(this.t('page.terminal.free_ai.error', '免费AI服务请求失败'), 'error');
+            } finally {
+                this.aiLoading = false;
             }
         },
         

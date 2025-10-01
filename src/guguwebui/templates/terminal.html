@@ -718,14 +718,26 @@
                     >
                         <span data-i18n="common.cancel"></span>
                     </button>
-                    <button 
-                        @click="submitAIQuery"
-                        class="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 focus:outline-none"
-                        :disabled="aiLoading"
-                    >
-                        <i class="fas fa-paper-plane mr-2"></i>
-                        <span data-i18n="page.terminal.ai_modal.send"></span>
-                    </button>
+                    <div class="flex items-center space-x-2">
+                        <!-- 切换到免费AI按钮 -->
+                        <button 
+                            x-show="!isFreeAIMode"
+                            @click="switchToFreeAIMode()"
+                            class="px-3 py-2 bg-green-500 text-white rounded-md hover:bg-green-600 focus:outline-none text-sm flex items-center"
+                            :disabled="aiLoading"
+                        >
+                            <i class="fas fa-magic mr-1"></i>
+                            <span data-i18n="page.terminal.free_ai.switch_button"></span>
+                        </button>
+                        <button 
+                            @click="isFreeAIMode ? submitFreeAIQuery() : submitAIQuery()"
+                            class="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 focus:outline-none"
+                            :disabled="aiLoading"
+                        >
+                            <i class="fas fa-paper-plane mr-2"></i>
+                            <span data-i18n="page.terminal.ai_modal.send"></span>
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>
@@ -740,6 +752,24 @@
                     </button>
                 </div>
                 <div class="api-key-body">
+                    <!-- 免费AI服务选项 -->
+                    <div class="mb-6 p-4 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <h4 class="text-sm font-medium text-green-800 dark:text-green-300 mb-1" data-i18n="page.terminal.free_ai.title"></h4>
+                                <p class="text-xs text-green-600 dark:text-green-400" data-i18n="page.terminal.free_ai.description"></p>
+                            </div>
+                            <button 
+                                @click="useFreeAIService()"
+                                class="px-3 py-2 bg-green-500 hover:bg-green-600 text-white rounded-md text-sm flex items-center focus:outline-none"
+                                :disabled="aiLoading"
+                            >
+                                <i class="fas fa-magic mr-2"></i>
+                                <span data-i18n="page.terminal.free_ai.button"></span>
+                            </button>
+                        </div>
+                    </div>
+                    
                     <div class="mb-4">
                         <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2" data-i18n="page.terminal.api_key.label"></label>
                         <input 
@@ -779,4 +809,4 @@
     <!-- 终端页面脚本 -->
     <script src="js/terminal.js"></script>
 </body>
-</html> 
+</html>
