@@ -567,8 +567,11 @@ def register_command(server:PluginServerInterface, host:str, port:int):
             .then(
                 Text('account')
                 .then(
-                    Text('password')
-                    .runs(lambda src, ctx: change_account_command(src, ctx, host, port))
+                    Text('old password')
+                    .then(
+                        Text('new password')
+                        .runs(lambda src, ctx: change_account_command(src, ctx, host, port))
+                    )
                 )
             )
         )
