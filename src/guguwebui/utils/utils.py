@@ -1036,7 +1036,6 @@ def build_json_i18n_translations(json_obj: dict) -> dict:
     return {"default": default_lang, "translations": translations}
 #============================================================#
 # read server status
-import socket
 
 # Get server port
 def get_server_port()->int:
@@ -1050,15 +1049,15 @@ def get_java_server_info():
     temp_ip = "127.0.0.1"
     port = get_server_port()
     result_dict = {}
-    server = JavaServer.lookup(f"{temp_ip}:{port}")
-    status = server.status()
     try:
+        server = JavaServer.lookup(f"{temp_ip}:{port}")
+        status = server.status()
         if status:
             result_dict["server_version"] = status.version.name
             result_dict["server_player_count"] = status.players.online
             result_dict["server_maxinum_player_count"] = status.players.max
         return result_dict
-    except socket.error as e:
+    except Exception as e:
         return result_dict
 
  
