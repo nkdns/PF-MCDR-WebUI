@@ -19,6 +19,7 @@ from mcdreforged.plugin.meta.metadata import Metadata
 from mcdreforged.api.all import RAction, RColor, PluginServerInterface, RText, RTextList, RTextBase
 from pathlib import Path
 from ruamel.yaml.comments import CommentedSeq
+from mcstatus import JavaServer
 
 from .constant import user_db, pwd_context, SERVER_PROPERTIES_PATH
 
@@ -1049,25 +1050,17 @@ def get_java_server_info():
     temp_ip = "127.0.0.1"
     port = get_server_port()
     result_dict = {}
-    tcp_client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    server = JavaServer.lookup(f"{temp_ip}:{port}")
+    status = server.status()
     try:
-        tcp_client.connect((temp_ip, port))
-        tcp_client.sendall(b'\xfe\x01')
-        data = tcp_client.recv(1024)
-        # print(data)
-        if data:
-            if data[:2] == b'\xff\x00':
-                data_parts = data.split(b'\x00\x00\x00')
-                if len(data_parts) >= 6:
-                    result_dict["server_version"] = data_parts[2].decode('latin1').replace('\x00', '')
-                    result_dict["server_player_count"] =  data_parts[4].decode('latin1').replace('\x00', '')
-                    result_dict["server_maxinum_player_count"] = data_parts[5].decode('latin1').replace('\x00', '')
-                    return result_dict
+        if status:
+            result_dict["server_version"] = status.version.name
+            result_dict["server_player_count"] = status.players.online
+            result_dict["server_maxinum_player_count"] = status.players.max
         return result_dict
     except socket.error as e:
         return result_dict
-    finally:
-        tcp_client.close()
+
  
 #============================================================#
 # move file from MCDR package
